@@ -267,6 +267,8 @@
     font-size:12px;background:rgba(255,255,255,.95);color:var(--danger);border-color:var(--danger-line);
   }
   .image-thumb .ocr-image{width:100%;margin-top:4px;min-height:32px;padding:2px 4px;font-size:12px;}
+  .image-thumb.selected img{outline:3px solid var(--blue);outline-offset:1px;}
+  .attach-item.selected{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue);}
   .image-count{font-size:13px;color:var(--muted);margin-left:8px;}
   /* 月の添付（PDF・リンク）の行 */
   .attach-item{
@@ -844,12 +846,12 @@
     <div class="image-grid" id="imageGrid"></div>
     <button class="primary" id="addImageBtn">＋ 画像を追加</button>
     <input type="file" id="imageFileInput" accept="image/*" multiple class="hidden">
-    <p class="note">表示中の月に、シフト表の画像を最大3枚まで保存できます。PCではコピーした画像をこのページに貼り付け（Ctrl+V）ても追加できます。画像は自動で縮小・圧縮して保存されます。</p>
+    <p class="note">表示中の月に、シフト表の画像を最大3枚まで保存できます。PCではコピーした画像をこのページに貼り付け（Ctrl+V）ても追加できます。画像は自動で縮小・圧縮して保存されます。読み取りに使うときは、各画像の「この画像で読み取る」ボタンを押してください。</p>
     <h3 class="sub-h">PDF<span class="image-count" id="pdfCount"></span></h3>
     <div id="pdfList"></div>
     <button id="addPdfBtn">＋ PDFを追加</button>
     <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" class="hidden">
-    <p class="note">PDFはそのままの形で保存します。圧縮されないため、大きなファイル（目安：1ファイル2MBを超えるもの）は、ブラウザの保存容量の都合で保存できないことがあります。その場合は、保存できなかった旨の案内が出ます。</p>
+    <p class="note">PDFはそのままの形で保存します。圧縮されないため、大きなファイル（目安：1ファイル2MBを超えるもの）は、ブラウザの保存容量の都合で保存できないことがあります。その場合は、保存できなかった旨の案内が出ます。読み取りに使うときは、各PDFの「このPDFで読み取る」ボタンを押してください（文字データの入ったPDFは、写真よりずっと正確に読み取れます）。</p>
     <h3 class="sub-h">リンク</h3>
     <div id="monthLinkList"></div>
     <label class="field-label" for="linkUrlInput">URL</label>
@@ -869,12 +871,11 @@
     <p class="note">画像はブラウザの中で処理され、外部に送信されません（読み取りライブラリと言語データのダウンロードのみ通信します）。</p>
     <p class="note">【推奨】シフト表をPDFファイルでもらえる場合は、そのPDFから読み取るのがおすすめです。文字データが入っているPDFは、写真とは比べものにならないほど正確に読み取れます。文字データが入っていないPDF（スキャン画像など）は画像として読み取るため、写真と同じくらいの精度になります。</p>
 
-    <label class="ocr-label" for="ocrSavedImage">保存済みの今月の画像から選ぶ</label>
-    <select id="ocrSavedImage" class="ocr-select"></select>
-    <label class="ocr-label">または、新しいファイルを選ぶ（推奨：PDFファイル）</label>
+    <p class="note" id="ocrTargetInfo" style="font-weight:700;color:var(--ink);"></p>
+    <label class="ocr-label">または、手元のファイルを選ぶ（推奨：PDFファイル）</label>
     <button id="ocrFileBtn">ファイルを選ぶ（PDF推奨）</button>
-    <p class="note">PDFファイルが手元にある場合は、写真を撮るよりこのボタンでPDFを選ぶほうが正確です。写真しかない場合は、下の「帯に分けて読み取る」や切り取りを使うと読み取りやすくなります。</p>
-    <input type="file" id="ocrFileInput" accept="image/*,.pdf" class="hidden">
+    <p class="note">読み取りに使う画像とPDFは、上の「シフト表の画像・PDF・リンク」の欄に追加して、各項目の「読み取る」ボタンで選びます。ここのボタンでは、手元にあるPDFファイルを、保存せずにそのまま読み取りに使えます（選べるのはPDFファイルだけです）。写真しかない場合は、下の「帯に分けて読み取る」や切り取りを使うと読み取りやすくなります。</p>
+    <input type="file" id="ocrFileInput" accept="application/pdf,.pdf" class="hidden">
     <img id="ocrPreview" class="ocr-preview hidden" alt="読み取り対象の画像">
     <p class="note hidden" id="ocrPdfName"></p>
     <div id="ocrCropArea" class="hidden">
@@ -3042,10 +3043,11 @@ function renderImages(){
     grid.innerHTML = '<div class="empty">この月のシフト表画像はまだありません</div>';
   } else {
     grid.innerHTML = list.map(function(im){
-      return '<div class="image-thumb">' +
+      const selected = im.id === ocrTargetId;
+      return '<div class="image-thumb' + (selected ? " selected" : "") + '">' +
         '<img src="' + im.dataUrl + '" alt="シフト表の画像" data-view-image="' + im.id + '">' +
         '<button class="del-image" data-del-image="' + im.id + '">削除</button>' +
-        '<button class="ocr-image" data-ocr-image="' + im.id + '">この画像で読み取る</button>' +
+        '<button class="ocr-image" data-ocr-image="' + im.id + '">' + (selected ? "読み取り対象に選択中" : "この画像で読み取る") + '</button>' +
         "</div>";
     }).join("");
   }
@@ -3059,11 +3061,13 @@ function renderImages(){
     pdfListEl.innerHTML = '<div class="empty">この月のPDFはまだありません</div>';
   } else {
     pdfListEl.innerHTML = pdfs.map(function(im){
-      return '<div class="attach-item"><div class="attach-main">' +
+      const selected = im.id === ocrTargetId;
+      return '<div class="attach-item' + (selected ? " selected" : "") + '"><div class="attach-main">' +
         '<div class="attach-name"><span class="pdf-badge">PDF</span>' + esc(im.name || "PDFファイル") + "</div>" +
-        '<div class="attach-meta">' + fmtFileSize(im.size) + "</div>" +
+        '<div class="attach-meta">' + fmtFileSize(im.size) + (selected ? "・読み取り対象に選択中" : "") + "</div>" +
         '</div><div class="attach-actions">' +
         '<button class="small" data-open-pdf="' + im.id + '">開く</button>' +
+        '<button class="small" data-ocr-pdf="' + im.id + '">' + (selected ? "選択中" : "このPDFで読み取る") + '</button>' +
         '<button class="small danger" data-del-pdf="' + im.id + '">削除</button>' +
         "</div></div>";
     }).join("");
@@ -3204,8 +3208,8 @@ function render(){
   // 月のリンク
   renderMonthLinks();
 
-  // OCR 用の保存済み画像セレクト
-  renderOcrSources();
+  // OCR の読み取り対象の表示
+  renderOcrTarget();
 
   // 週のコピーの件数表示を最新化する
   updateWeekCopyInfo();
@@ -4623,6 +4627,12 @@ pdfFileInput.addEventListener("change", function(){
   pdfFileInput.value = "";
 });
 document.getElementById("pdfList").addEventListener("click", function(e){
+  const ocrBtn = e.target.closest("[data-ocr-pdf]");
+  if (ocrBtn){
+    const im = getMonthPdfFiles().find(function(x){ return x.id === ocrBtn.getAttribute("data-ocr-pdf"); });
+    if (im) useAttachmentPdfForOcr(im);
+    return;
+  }
   const openBtn = e.target.closest("[data-open-pdf]");
   if (openBtn){
     openPdf(openBtn.getAttribute("data-open-pdf"));
@@ -4877,6 +4887,8 @@ document.getElementById("tplList").addEventListener("click", function(e){
 // ---------- 写真から読み取り（OCR・実験） ----------
 let ocrImageDataUrl = null; // 読み取り対象の画像（dataURL）
 let ocrPdfBuffer = null;    // 読み取り対象のPDF（ArrayBuffer）
+let ocrTargetId = null;     // 読み取り対象に選ばれている添付（画像・PDF）の id（手元のファイルを直接選んだ場合は null）
+let ocrPdfFileLabel = "";   // 読み取り対象のPDFの表示名
 let ocrDrafts = [];         // 下書き候補
 let ocrPreprocessedUrl = null;  // 前処理後の画像（dataURL）
 let ocrPreprocessedFor = null;  // 前処理の元になった画像（dataURL）
@@ -6209,6 +6221,18 @@ function readFileAsArrayBuffer(file){
   });
 }
 
+// dataURL を ArrayBuffer に変換する（保存済みの添付PDFを読み取りに使うため）
+function dataUrlToArrayBuffer(dataUrl){
+  return new Promise(function(resolve, reject){
+    let blob;
+    try { blob = dataUrlToBlob(dataUrl); } catch (e) { reject(e); return; }
+    const reader = new FileReader();
+    reader.onload = function(){ resolve(reader.result); };
+    reader.onerror = function(){ reject(new Error("ファイルを読み込めませんでした")); };
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
 // ファイルをテキストとして読み込む（バックアップ読み込み用）
 function readFileAsText(file){
   return new Promise(function(resolve, reject){
@@ -6222,6 +6246,8 @@ function readFileAsText(file){
 // 読み取り対象のPDFをセットする
 function setOcrPdf(buffer, fileName){
   ocrPdfBuffer = buffer || null;
+  ocrPdfFileLabel = fileName || "";
+  ocrTargetId = null; // 添付から選んだ場合は、呼び出し側がこの後に id を入れ直す
   ocrImageDataUrl = null;
   ocrPdfPositionDrafts = null;
   ocrPreprocessedUrl = null;
@@ -6247,6 +6273,7 @@ function setOcrPdf(buffer, fileName){
     note.classList.add("hidden");
   }
   document.getElementById("ocrRunBtn").disabled = !ocrPdfBuffer;
+  renderOcrTarget();
 }
 
 // 位置情報つきアイテム（{str,x0,x1,cy,h,page}）から、行ごとに並べたテキストを組み立てる
@@ -6517,6 +6544,8 @@ function runPdfRead(){
 function setOcrImage(dataUrl){
   ocrImageDataUrl = dataUrl || null;
   ocrPdfBuffer = null;
+  ocrPdfFileLabel = "";
+  if (!ocrImageDataUrl) ocrTargetId = null;
   ocrPdfPositionDrafts = null;
   ocrPreprocessedUrl = null;
   ocrPreprocessedFor = null;
@@ -6547,28 +6576,50 @@ function setOcrImage(dataUrl){
   }
   updateCropUi();
   document.getElementById("ocrRunBtn").disabled = !ocrImageDataUrl;
+  renderOcrTarget();
 }
 
 // 添付画像を OCR の読み取り対象にセットし、読み取りセクションへ移動する
 function useAttachmentImageForOcr(im){
   if (!im || !im.dataUrl) return;
-  const sel = document.getElementById("ocrSavedImage");
-  if (sel) sel.value = im.id;
+  ocrTargetId = im.id;
   setOcrImage(im.dataUrl);
+  renderImages(); // 添付欄側の「選択中」表示を最新化する
   const sec = document.getElementById("ocrSection");
   if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// 保存済みの今月の画像を OCR の選択肢に反映する
-function renderOcrSources(){
-  const sel = document.getElementById("ocrSavedImage");
-  if (!sel) return;
-  const current = sel.value;
-  const list = getMonthImageFiles();
-  sel.innerHTML = '<option value="">選んでください</option>' + list.map(function(im, i){
-    return '<option value="' + im.id + '">' + (i + 1) + "枚目の画像</option>";
-  }).join("");
-  if (list.some(function(im){ return im.id === current; })) sel.value = current;
+// 添付PDFを OCR の読み取り対象にセットし、読み取りセクションへ移動する
+function useAttachmentPdfForOcr(im){
+  if (!im || !im.dataUrl) return;
+  dataUrlToArrayBuffer(im.dataUrl).then(function(buffer){
+    setOcrPdf(buffer, im.name || "PDFファイル");
+    ocrTargetId = im.id; // setOcrPdf で null に戻されるので、添付から選んだ場合はここで入れ直す
+    renderOcrTarget();
+    renderImages(); // 添付欄側の「選択中」表示を最新化する
+    const sec = document.getElementById("ocrSection");
+    if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+  }).catch(function(){
+    alert("PDFを読み込めませんでした");
+  });
+}
+
+// 読み取り対象の表示（どの添付が選ばれているか）を最新化する
+function renderOcrTarget(){
+  const info = document.getElementById("ocrTargetInfo");
+  if (!info) return;
+  if (ocrPdfBuffer){
+    info.textContent = "読み取り対象：" + (ocrPdfFileLabel ? "PDFファイル「" + ocrPdfFileLabel + "」" : "PDFファイル");
+  } else if (ocrImageDataUrl){
+    const list = getMonthImageFiles();
+    let idx = -1;
+    for (let i = 0; i < list.length; i++){
+      if (list[i].dataUrl === ocrImageDataUrl){ idx = i; break; }
+    }
+    info.textContent = "読み取り対象：" + (idx >= 0 ? "今月の画像（" + (idx + 1) + "枚目）" : "選ばれた画像");
+  } else {
+    info.textContent = "読み取り対象はまだ選ばれていません。上の「シフト表の画像・PDF・リンク」の欄で、画像やPDFの「読み取る」ボタンを押してください。";
+  }
 }
 
 // 切り取り範囲が設定されているかどうか
@@ -7082,7 +7133,8 @@ document.getElementById("ocrClearDrafts").addEventListener("click", function(){
   document.getElementById("ocrRegisterStatus").textContent = "";
 });
 
-// OCR セクションの操作
+// OCR セクションの操作（手元のPDFファイルを、保存せずに直接読み取りに使う場合）
+// 画像は添付欄（シフト表の画像・PDF・リンク）に追加して、各項目の「読み取る」ボタンで選ぶ
 const ocrFileInput = document.getElementById("ocrFileInput");
 document.getElementById("ocrFileBtn").addEventListener("click", function(){
   ocrFileInput.click();
@@ -7090,28 +7142,14 @@ document.getElementById("ocrFileBtn").addEventListener("click", function(){
 ocrFileInput.addEventListener("change", function(){
   const f = ocrFileInput.files && ocrFileInput.files[0];
   if (f){
-    const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name || "");
-    if (isPdf){
-      readFileAsArrayBuffer(f).then(function(buffer){
-        document.getElementById("ocrSavedImage").value = "";
-        setOcrPdf(buffer, f.name);
-      }).catch(function(){
-        alert("PDFを読み込めませんでした");
-      });
-    } else {
-      readFileAsDataURL(f).then(function(dataUrl){
-        document.getElementById("ocrSavedImage").value = "";
-        setOcrImage(dataUrl);
-      }).catch(function(){
-        alert("画像を読み込めませんでした");
-      });
-    }
+    readFileAsArrayBuffer(f).then(function(buffer){
+      setOcrPdf(buffer, f.name);
+      renderImages(); // 添付欄側の「選択中」表示を外す（対象は添付ではないため）
+    }).catch(function(){
+      alert("PDFを読み込めませんでした");
+    });
   }
   ocrFileInput.value = "";
-});
-document.getElementById("ocrSavedImage").addEventListener("change", function(e){
-  const im = getMonthImages().find(function(x){ return x.id === e.target.value; });
-  setOcrImage(im ? im.dataUrl : null);
 });
 document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
 // ---- 切り取り（トリミング）の操作 ----
@@ -7609,11 +7647,11 @@ document.getElementById("noteList").addEventListener("click", function(e){
 const HELP_TEXTS = {
   ocr: {
     title: "写真から読み取り",
-    body: "シフト表のファイルや写真から文字を読み取って、シフトの下書きを作る機能です。\n【推奨】いちばん正確なのは、文字データの入ったPDFファイルからの読み取りです。シフト表をPDFでもらえる場合は、写真を撮らずにPDFファイルを選んでください。文字をそのまま取り出せるので、誤読がほとんどありません。\n写真からの読み取りは補助的な位置づけです。文字を推測して読むため、どうしても誤読が混ざります。長い表は「帯に分けて読み取る」、色付きのマスは前処理「強め」、きれいな印刷の表は前処理「弱め」が向いています。\n読み取りは実験中なので、間違いが混ざることがあります。下書きの内容をよく確認してから登録してください。\n画像は外部に送信されず、このブラウザの中だけで処理されます。"
+    body: "シフト表のファイルや写真から文字を読み取って、シフトの下書きを作る機能です。\n【推奨】いちばん正確なのは、文字データの入ったPDFファイルからの読み取りです。シフト表をPDFでもらえる場合は、写真を撮らずにPDFを読み取ってください。文字をそのまま取り出せるので、誤読がほとんどありません。\n読み取りに使う画像とPDFは、上の「シフト表の画像・PDF・リンク」の欄に追加して、各項目の「読み取る」ボタンで選びます。手元のPDFファイルは、この欄のボタンから、保存せずに直接選ぶこともできます。\n写真からの読み取りは補助的な位置づけです。文字を推測して読むため、どうしても誤読が混ざります。長い表は「帯に分けて読み取る」、色付きのマスは前処理「強め」、きれいな印刷の表は前処理「弱め」が向いています。\n読み取りは実験中なので、間違いが混ざることがあります。下書きの内容をよく確認してから登録してください。\n画像は外部に送信されず、このブラウザの中だけで処理されます。"
   },
   attach: {
     title: "シフト表の画像・PDF・リンク",
-    body: "表示中の月に、シフト表の画像（最大3枚）・PDF（最大3件）・リンクを付けておけます。\n画像は自動で縮小・圧縮して保存されます。PDFはそのままの形で保存するので、大きなファイル（目安：2MB超）はブラウザの保存容量の都合で保存できないことがあります。\n画像の「この画像で読み取る」ボタンを押すと、その画像が読み取り（写真から読み取り）の対象にセットされ、読み取りの欄へ移動します。\nリンクは、シフト表のページなどのURLです。表示名は任意で、タップすると新しいタブで開きます。複数登録できます。\n画像・PDF・リンクはすべてバックアップに含まれます。"
+    body: "表示中の月に、シフト表の画像（最大3枚）・PDF（最大3件）・リンクを付けておけます。画像・ファイル・リンクの追加と表示は、すべてこの欄で行います。\n画像は自動で縮小・圧縮して保存されます。PDFはそのままの形で保存するので、大きなファイル（目安：2MB超）はブラウザの保存容量の都合で保存できないことがあります。\n読み取りに使うときは、画像の「この画像で読み取る」ボタン、PDFの「このPDFで読み取る」ボタンを押してください。その項目が読み取り（写真から読み取り）の対象にセットされ、読み取りの欄へ移動します。選ばれた項目には「選択中」と表示されます。文字データの入ったPDFは、写真よりずっと正確に読み取れます。\nリンクは、シフト表のページなどのURLです。表示名は任意で、タップすると新しいタブで開きます。複数登録できます。\n画像・PDF・リンクはすべてバックアップに含まれます。"
   },
   preprocess: {
     title: "画像の前処理",
@@ -7789,7 +7827,7 @@ importFileInput.addEventListener("change", function(){
     saveOtherIncome();
     myNamesInput.value = settings.myNames || "";
     setOcrImage(null);
-    renderOcrSources();
+    renderOcrTarget();
     renderDrafts();
     unlockRegisterButton();
     applyTimeInputMode();
