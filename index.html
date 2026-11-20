@@ -914,6 +914,9 @@
         <input type="number" id="wfMonthlySalary" min="0" step="1" value="0" inputmode="numeric">
         <p class="note">シフトは出勤記録として登録でき、収入まとめにはこの月額をそのまま計上します（その月にシフトが1件以上ある月だけ計上します）。</p>
       </div>
+      <label for="wfDeductionRate">天引き率（%）</label>
+      <input type="number" id="wfDeductionRate" min="0" max="100" step="0.1" inputmode="decimal" placeholder="例：10（未設定なら空欄）">
+      <p class="note">所得税などで何%引かれるかの目安です。設定すると収入まとめに天引き額と「手取りの目安」が表示されます（あくまで概算で、実際の源泉徴収とは異なる場合があります）。</p>
       <div id="wfWageHistoryWrap">
         <label>期間別時給</label>
         <div id="wfWageHistoryList"></div>
@@ -968,10 +971,18 @@
           <input type="text" id="wfClosingDay" list="wfClosingList" placeholder="例：月末">
         </div>
         <div>
-          <label for="wfPayDay">給料日</label>
-          <input type="text" id="wfPayDay" list="wfPayDayList" placeholder="例：翌月25日">
+          <label for="wfPayDayType">給料日の種類</label>
+          <select id="wfPayDayType">
+            <option value="date">日付で指定</option>
+            <option value="lastday">勤務最終日（最終日が終わったら支給）</option>
+          </select>
         </div>
       </div>
+      <div id="wfPayDayWrap">
+        <label for="wfPayDay">給料日</label>
+        <input type="text" id="wfPayDay" list="wfPayDayList" placeholder="例：翌月25日">
+      </div>
+      <p class="note hidden" id="wfPayDayLastNote">最終の勤務日が終わったら、その場・その日に支給される形です（巫女バイトなど）。</p>
       <datalist id="wfClosingList">
         <option value="月末"></option>
         <option value="5日"></option>
@@ -1264,6 +1275,19 @@ function monthlySalaryOf(wp){
   return n > 0 ? n : 0;
 }
 
+// 天引き率（%）。未設定・不正な場合は 0。0〜100 の範囲にそろえ、小数第2位まで保持する
+function deductionRateOf(wp){
+  const n = Number(wp && wp.deductionRate);
+  if (!isFinite(n) || n <= 0) return 0;
+  return Math.min(100, Math.round(n * 100) / 100);
+}
+
+// 天引き額（円）。対象金額（給料＋交通費）に天引き率を掛けた概算（四捨五入）。あくまで目安
+function deductionAmount(gross, rate){
+  if (!(rate > 0) || !(gross > 0)) return 0;
+  return Math.round(gross * rate / 100);
+}
+
 // 研修期間の終了日（"YYYY-MM-DD"）を求める。
 // 終了日の設定があればそれを、無ければ「開始日から◯日間」（開始日を含む）から求める。
 // どちらも無ければ null（終了日なし＝開始日からずっと研修扱い）。
@@ -1372,11 +1396,15 @@ function normalizeWorkplace(w){
   w.payType = payTypeOf(w);
   w.dailyWage = dailyWageOf(w);
   w.monthlySalary = monthlySalaryOf(w);
+  w.deductionRate = deductionRateOf(w);
   w.wageHistory = normalizeWageHistory(w.wageHistory);
   w.genre = typeof w.genre === "string" ? w.genre : "";
   w.place = typeof w.place === "string" ? w.place : "";
   w.closingDay = typeof w.closingDay === "string" ? w.closingDay : "";
   w.payDay = typeof w.payDay === "string" ? w.payDay : "";
+  // 給料日の種類： "date"＝日付で指定（payDay文字列を使う）、"lastday"＝勤務最終日（最終日が終わったら支給）。
+  // 既存データ（payDayType無し）は "date" として扱い、payDay文字列はそのまま保持する。
+  w.payDayType = (w.payDayType === "lastday") ? "lastday" : "date";
   w.trainingStart = isValidDateStr(w.trainingStart) ? w.trainingStart : "";
   w.trainingEnd = isValidDateStr(w.trainingEnd) ? w.trainingEnd : "";
   const td = Math.floor(Number(w.trainingDays) || 0);
@@ -1393,14 +1421,26 @@ function normalizeWorkplace(w){
 // バイト先一覧に出す給与の短い説明
 function paySummaryText(w){
   const t = payTypeOf(w);
-  if (t === "daily") return "日給 " + fmtYen(dailyWageOf(w));
-  if (t === "monthly") return "月給 " + fmtYen(monthlySalaryOf(w));
-  let s = "時給 " + fmtYen(w.wage) + "・深夜割増 " + esc(w.premium) + "%";
-  if (Array.isArray(w.wageHistory) && w.wageHistory.length > 0) s += "・期間別時給あり";
-  if (w.trainingWage !== null && w.trainingWage !== undefined && isValidDateStr(w.trainingStart)){
-    s += "・研修時給 " + fmtYen(w.trainingWage);
+  let s;
+  if (t === "daily") s = "日給 " + fmtYen(dailyWageOf(w));
+  else if (t === "monthly") s = "月給 " + fmtYen(monthlySalaryOf(w));
+  else {
+    s = "時給 " + fmtYen(w.wage) + "・深夜割増 " + esc(w.premium) + "%";
+    if (Array.isArray(w.wageHistory) && w.wageHistory.length > 0) s += "・期間別時給あり";
+    if (w.trainingWage !== null && w.trainingWage !== undefined && isValidDateStr(w.trainingStart)){
+      s += "・研修時給 " + fmtYen(w.trainingWage);
+    }
   }
+  const dr = deductionRateOf(w);
+  if (dr > 0) s += "・天引き " + dr + "%";
   return s;
+}
+
+// 給料日の表示ラベル（勤務最終日の場合は「勤務最終日」、日付指定の場合は入力された文字列。未設定なら空文字）
+function payDayLabel(w){
+  if (!w) return "";
+  if (w.payDayType === "lastday") return "勤務最終日";
+  return typeof w.payDay === "string" ? w.payDay : "";
 }
 
 // バイト先一覧に出す、ジャンル・場所・締日・給料日の短い説明（未設定なら空文字）
@@ -1409,7 +1449,8 @@ function workplaceMetaText(w){
   if (w.genre) parts.push(esc(w.genre));
   if (w.place) parts.push(esc(w.place));
   if (w.closingDay) parts.push("締日 " + esc(w.closingDay));
-  if (w.payDay) parts.push("給料日 " + esc(w.payDay));
+  const pd = payDayLabel(w);
+  if (pd) parts.push("給料日 " + esc(pd));
   return parts.join("・");
 }
 
@@ -1859,10 +1900,14 @@ function summarizeMonth(year, month){
     }
   });
   let totalTransport = 0;
+  let totalDeduction = 0;
   const perWorkplace = Object.keys(per).map(function(id){
     const wp = findWp(id);
     const transport = monthTransportFor(id, per[id].list);
     totalTransport += transport;
+    const rate = wp ? deductionRateOf(wp) : 0;
+    const deduction = deductionAmount(per[id].pay + transport, rate);
+    totalDeduction += deduction;
     return {
       id: id,
       name: wp ? wp.name : "（削除済みのバイト先）",
@@ -1870,13 +1915,16 @@ function summarizeMonth(year, month){
       pay: per[id].pay, min: per[id].min, count: per[id].count,
       payType: wp ? payTypeOf(wp) : "hourly",
       transport: transport,
-      transportLabel: wp ? transportModeLabel(wp) : "交通費"
+      transportLabel: wp ? transportModeLabel(wp) : "交通費",
+      deductionRate: rate,
+      deduction: deduction,
+      net: per[id].pay + transport - deduction
     };
   }).sort(function(a, b){
     if (b.pay !== a.pay) return b.pay - a.pay;
     return a.name < b.name ? -1 : 1;
   });
-  return { totalPay: totalPay, totalMin: totalMin, count: count, totalTransport: totalTransport, perWorkplace: perWorkplace };
+  return { totalPay: totalPay, totalMin: totalMin, count: count, totalTransport: totalTransport, totalDeduction: totalDeduction, totalNet: totalPay + totalTransport - totalDeduction, perWorkplace: perWorkplace };
 }
 
 // 受け取り確認の状態を正規化する（{ "YYYY-MM": { workplaceId: true } } の形以外は捨てる）
@@ -2133,13 +2181,15 @@ function buildIncomeSummaryHtml(summary, prevSummary, year, month){
   const oi = otherIncomeForMonth(mk);
   // 内訳（給料・交通費・その他収入・総合計）。交通費かその他収入があるときだけ出す
   let breakdownHtml = "";
-  if (summary.totalTransport > 0 || oi.total > 0){
+  if (summary.totalTransport > 0 || oi.total > 0 || summary.totalDeduction > 0){
     const grand = summary.totalPay + summary.totalTransport + oi.total;
     breakdownHtml = '<div class="income-breakdown">' +
       '<div class="bd-row"><span>給料（見込み）</span><span>' + fmtYen(summary.totalPay) + "</span></div>" +
       (summary.totalTransport > 0 ? '<div class="bd-row"><span>交通費</span><span>' + fmtYen(summary.totalTransport) + "</span></div>" : "") +
       (oi.total > 0 ? '<div class="bd-row"><span>その他収入</span><span>' + fmtYen(oi.total) + "</span></div>" : "") +
       '<div class="bd-row bd-total"><span>総合計</span><span>' + fmtYen(grand) + "</span></div>" +
+      (summary.totalDeduction > 0 ? '<div class="bd-row"><span>天引き（目安）</span><span>−' + fmtYen(summary.totalDeduction) + "</span></div>" +
+        '<div class="bd-row bd-total"><span>手取りの目安</span><span>' + fmtYen(grand - summary.totalDeduction) + "</span></div>" : "") +
     "</div>";
   }
   let html = '<div class="income-big">' + fmtYen(summary.totalPay) + "</div>" +
@@ -2163,6 +2213,8 @@ function buildIncomeSummaryHtml(summary, prevSummary, year, month){
         (w.payType === "monthly" ? '<div class="income-wp-sub">月給（時間数によらず固定・シフトは出勤記録）</div>' : "") +
         (w.payType === "daily" ? '<div class="income-wp-sub">日給（1シフトごとの金額）</div>' : "") +
         (w.transport > 0 ? '<div class="income-wp-sub">' + esc(w.transportLabel) + " " + fmtYen(w.transport) + "</div>" : "") +
+        (w.deductionRate > 0 ? '<div class="income-wp-sub">天引き（' + w.deductionRate + '%）−' + fmtYen(w.deduction) + "</div>" +
+          '<div class="income-wp-sub">手取りの目安 ' + fmtYen(w.net) + "</div>" : "") +
         '<label class="received-check"><input type="checkbox" data-received-wp="' + esc(w.id) + '"' + (received ? " checked" : "") + "> もらえた</label>" +
         actualPayRowHtml(mk, w) +
       "</div>" +
@@ -2172,6 +2224,9 @@ function buildIncomeSummaryHtml(summary, prevSummary, year, month){
     "</div>";
   }).join("");
   html += "</div>";
+  if (summary.totalDeduction > 0){
+    html += '<p class="note">手取りの目安は、給料＋交通費から天引き率分を引いた概算です。実際の源泉徴収とは異なる場合があります。</p>';
+  }
   return html;
 }
 
@@ -3436,6 +3491,15 @@ function updatePayTypeFields(){
 }
 document.getElementById("wfPayType").addEventListener("change", updatePayTypeFields);
 
+// 給料日の種類に応じて、給料日（日付）の入力欄と説明の表示を切り替える。
+// 「勤務最終日」を選んでも日付の入力内容は消さずに保持する（種類を戻せばそのまま使える）。
+function updatePayDayFields(){
+  const t = document.getElementById("wfPayDayType").value;
+  document.getElementById("wfPayDayWrap").classList.toggle("hidden", t === "lastday");
+  document.getElementById("wfPayDayLastNote").classList.toggle("hidden", t !== "lastday");
+}
+document.getElementById("wfPayDayType").addEventListener("change", updatePayDayFields);
+
 // 期間別時給の入力行を1つ追加する
 function addWageHistoryRow(from, wage){
   const list = document.getElementById("wfWageHistoryList");
@@ -3487,12 +3551,15 @@ document.getElementById("toggleWpForm").addEventListener("click", function(){
   document.getElementById("wfPayType").value = "hourly";
   document.getElementById("wfDailyWage").value = 0;
   document.getElementById("wfMonthlySalary").value = 0;
+  document.getElementById("wfDeductionRate").value = "";
   document.getElementById("wfWageHistoryList").innerHTML = "";
   document.getElementById("wfTrainingWage").value = "";
   document.getElementById("wfTrainingDays").value = "";
   document.getElementById("wfTrainingStart").value = "";
   document.getElementById("wfTrainingEnd").value = "";
   updatePayTypeFields();
+  document.getElementById("wfPayDayType").value = "date";
+  updatePayDayFields();
   document.getElementById("wfColor").value = "#2563eb";
   document.getElementById("wfTransportMode").value = "daily";
   document.getElementById("wfTransportDaily").value = 0;
@@ -3526,6 +3593,7 @@ wpForm.addEventListener("submit", function(e){
     payType: document.getElementById("wfPayType").value,
     dailyWage: Math.max(0, Math.floor(Number(document.getElementById("wfDailyWage").value) || 0)),
     monthlySalary: Math.max(0, Math.floor(Number(document.getElementById("wfMonthlySalary").value) || 0)),
+    deductionRate: deductionRateOf({ deductionRate: document.getElementById("wfDeductionRate").value }),
     wageHistory: readWageHistoryFields(),
     trainingWage: trainingWage,
     trainingStart: document.getElementById("wfTrainingStart").value || "",
@@ -3535,6 +3603,7 @@ wpForm.addEventListener("submit", function(e){
     place: document.getElementById("wfPlace").value.trim(),
     closingDay: document.getElementById("wfClosingDay").value.trim(),
     payDay: document.getElementById("wfPayDay").value.trim(),
+    payDayType: document.getElementById("wfPayDayType").value,
     color: document.getElementById("wfColor").value || "#2563eb",
     transportMode: document.getElementById("wfTransportMode").value,
     transportDaily: Math.max(0, Math.floor(Number(document.getElementById("wfTransportDaily").value) || 0)),
@@ -3576,6 +3645,7 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     document.getElementById("wfPayType").value = payTypeOf(w);
     document.getElementById("wfDailyWage").value = dailyWageOf(w);
     document.getElementById("wfMonthlySalary").value = monthlySalaryOf(w);
+    document.getElementById("wfDeductionRate").value = deductionRateOf(w) > 0 ? deductionRateOf(w) : "";
     document.getElementById("wfWageHistoryList").innerHTML = "";
     normalizeWageHistory(w.wageHistory).forEach(function(h){ addWageHistoryRow(h.from, h.wage); });
     document.getElementById("wfTrainingWage").value = (w.trainingWage === null || w.trainingWage === undefined) ? "" : w.trainingWage;
@@ -3586,6 +3656,8 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     document.getElementById("wfPlace").value = w.place || "";
     document.getElementById("wfClosingDay").value = w.closingDay || "";
     document.getElementById("wfPayDay").value = w.payDay || "";
+    document.getElementById("wfPayDayType").value = (w.payDayType === "lastday") ? "lastday" : "date";
+    updatePayDayFields();
     updatePayTypeFields();
     document.getElementById("wfColor").value = w.color || "#2563eb";
     document.getElementById("wfTransportMode").value = transportModeOf(w);
@@ -6081,11 +6153,11 @@ const HELP_TEXTS = {
   },
   income: {
     title: "収入まとめ・もらえたチェック",
-    body: "表示中の月の収入を、バイト先ごとにまとめたものです。先月の収入との差も分かります。\n金額はシフトから計算した「見込み」です。実際に給料が振り込まれたら、バイト先ごとの「もらえた」にチェックを入れてください。\nチェックを入れると、「受け取り済み」と「まだ受け取っていない」の金額が分かれて表示されます。チェックは金額の計算には影響しません。\n「実際の金額」に給与明細の金額を入れると、計算との差が分かります。差の基準は、給料見込みに交通費を加えた金額です（明細は交通費込みのことが多いため）。実際の金額を入れると「もらえた」も自動でチェックされます。\n月給のバイト先は、シフトの時間数によらず、設定した月額がそのまま計上されます（シフトは出勤記録で、その月に1件以上ある月だけ計上します）。日給のバイト先は、1シフトごとの日給額で計算されます。\n交通費とその他収入がある月は、内訳と総合計（給料＋交通費＋その他収入）も表示されます。なお、「受け取り済み／まだ受け取っていない」の金額は給料見込みだけが対象です。"
+    body: "表示中の月の収入を、バイト先ごとにまとめたものです。先月の収入との差も分かります。\n金額はシフトから計算した「見込み」です。実際に給料が振り込まれたら、バイト先ごとの「もらえた」にチェックを入れてください。\nチェックを入れると、「受け取り済み」と「まだ受け取っていない」の金額が分かれて表示されます。チェックは金額の計算には影響しません。\n「実際の金額」に給与明細の金額を入れると、計算との差が分かります。差の基準は、給料見込みに交通費を加えた金額です（明細は交通費込みのことが多いため）。実際の金額を入れると「もらえた」も自動でチェックされます。\n月給のバイト先は、シフトの時間数によらず、設定した月額がそのまま計上されます（シフトは出勤記録で、その月に1件以上ある月だけ計上します）。日給のバイト先は、1シフトごとの日給額で計算されます。\n交通費とその他収入がある月は、内訳と総合計（給料＋交通費＋その他収入）も表示されます。なお、「受け取り済み／まだ受け取っていない」の金額は給料見込みだけが対象です。\nバイト先に天引き率を設定している場合は、天引き額と「手取りの目安」（給料＋交通費から天引き分を引いた額）も表示されます。手取りの目安は概算で、実際の源泉徴収とは異なる場合があります。"
   },
   paytype: {
     title: "給与形態・期間別時給・研修時給",
-    body: "バイト先ごとに、給与形態を時給・日給・月給から選べます。\n時給：働いた時間で計算します（深夜割増あり）。\n日給：1シフト＝日給額で計算します。時間の長さや深夜帯は関係ありません。\n月給：シフトは出勤記録として登録し、収入まとめには設定した月額をそのまま計上します（その月にシフトが1件以上ある月だけ計上します）。\n期間別時給：開始日ごとに時給を設定でき、その日以降はその時給で計算します。開始日より前の日は、基本の時給です。\n研修時給：研修期間（開始日と、終了日または日数）を設定すると、期間内のシフトは研修時給で計算します。終了日も日数も空の場合は、開始日からずっと研修扱いになります。\n時給の優先順位は、研修時給 ＞ 期間別時給 ＞ 基本の時給です。"
+    body: "バイト先ごとに、給与形態を時給・日給・月給から選べます。\n時給：働いた時間で計算します（深夜割増あり）。\n日給：1シフト＝日給額で計算します。時間の長さや深夜帯は関係ありません。\n月給：シフトは出勤記録として登録し、収入まとめには設定した月額をそのまま計上します（その月にシフトが1件以上ある月だけ計上します）。\n期間別時給：開始日ごとに時給を設定でき、その日以降はその時給で計算します。開始日より前の日は、基本の時給です。\n研修時給：研修期間（開始日と、終了日または日数）を設定すると、期間内のシフトは研修時給で計算します。終了日も日数も空の場合は、開始日からずっと研修扱いになります。\n時給の優先順位は、研修時給 ＞ 期間別時給 ＞ 基本の時給です。\n天引き率：所得税などで何%引かれるかの目安です。設定すると、収入まとめに天引き額と手取りの目安が表示されます（あくまで概算で、実際の源泉徴収とは異なる場合があります）。"
   },
   transport: {
     title: "交通費",
