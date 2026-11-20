@@ -22,6 +22,7 @@
     --danger-bg:#fef2f2;
     --danger-line:#fecaca;
     --dial-tick:#9ca3af;
+    --dial-end:#ea580c;
   }
   /* スキン（見た目のテーマ）：CSS変数を切り替える。標準は :root の青基調 */
   html[data-skin="pink"]{
@@ -38,6 +39,12 @@
     --ink:#f3f4f6;--muted:#9ca3af;--line:#374151;
     --bg:#1f2937;--page-bg:#111827;--surface:#111827;--fill:#374151;
     --danger:#f87171;--danger-bg:#450a0a;--danger-line:#7f1d1d;
+    --dial-end:#fb923c;
+  }
+  html[data-skin="cute"]{
+    --blue:#ec4899;--blue-dark:#be185d;--blue-light:#fdf2f8;--page-bg:#fff8f1;
+    --bg:#fffdfa;--surface:#fffdfa;--fill:#fdf2f8;--line:#f9d5e5;
+    --dial-end:#f59e0b;
   }
   *{box-sizing:border-box;}
   body{
@@ -128,13 +135,26 @@
     touch-action:none;cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
   .time-dial svg:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:50%;}
-  .time-dial .dial-time{font-variant-numeric:tabular-nums;fill:var(--ink);}
   /* ダイヤルの色はスキンに追随させる（SVGの属性よりCSSが優先される） */
   .time-dial .dial-track{stroke:var(--line);}
-  .time-dial .dial-arc{stroke:var(--blue);}
-  .time-dial .dial-knob{fill:var(--blue);}
   .time-dial line{stroke:var(--dial-tick);}
   .time-dial text{fill:var(--muted);}
+  /* 単一ダイヤル（開始・終了の2つまみ） */
+  .time-dial-range{max-width:300px;margin-left:auto;margin-right:auto;}
+  .time-dial-range svg{max-width:280px;}
+  .time-dial .dial-seg{fill:none;stroke-width:20;}
+  .time-dial .dial-seg-0{stroke:var(--blue);}
+  .time-dial .dial-seg-1{stroke:#f59e0b;}
+  .time-dial .dial-seg-2{stroke:#10b981;}
+  .time-dial .dial-seg-3{stroke:#ec4899;}
+  .time-dial .dial-knob-start{fill:var(--blue);}
+  .time-dial .dial-knob-end{fill:var(--dial-end);}
+  .time-dial .knob-label{fill:#ffffff;font-weight:700;}
+  .time-dial .dial-knob-g{cursor:pointer;}
+  .time-dial .dial-knob-g:focus{outline:none;}
+  .time-dial .dial-knob-g:focus-visible circle{stroke:var(--blue-dark);stroke-width:5;}
+  .time-dial .dial-range-line{fill:var(--ink);font-variant-numeric:tabular-nums;}
+  .time-dial .dial-range-total{fill:var(--blue-dark);font-variant-numeric:tabular-nums;}
   input[type="color"]{padding:4px;height:44px;}
   .form-actions{display:flex;gap:8px;margin-top:14px;}
   .form-actions .primary{flex:1;}
@@ -182,7 +202,10 @@
   .crop-rect{
     position:absolute;border:2px solid var(--blue);
     background:rgba(37,99,235,.15);box-sizing:border-box;cursor:move;
+    touch-action:none;
   }
+  /* 切り取りのドラッグ中はページ全体のスクロールを止める */
+  body.crop-dragging{overflow:hidden;}
   .crop-handle{
     position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;
     background:#fff;border:2px solid var(--blue);border-radius:50%;
@@ -228,6 +251,7 @@
     border:2px solid var(--danger);background:var(--danger-bg);
   }
   .draft-missing-note{color:var(--danger);font-weight:600;font-size:12px;margin:6px 0 0;}
+  .draft-estimated-note{color:var(--blue-dark);font-weight:600;font-size:12px;margin:6px 0 0;}
   .register-status{font-weight:600;}
   .cat-badge{
     display:inline-block;font-size:11px;font-weight:700;line-height:1;
@@ -267,6 +291,8 @@
   [data-time-mode="slider"] .time-dial{display:none;}
   [data-time-mode="dial"] .tm-type,
   [data-time-mode="dial"] .time-slider-row{display:none;}
+  /* ダイヤル表示のときは、開始・終了の欄（行ごと）を隠して単一ダイヤルだけを出す */
+  [data-time-mode="dial"] .time-fields-row{display:none;}
   /* カレンダー表示 */
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
   .cal-dow{text-align:center;font-size:12px;font-weight:700;color:var(--muted);padding:4px 0;}
@@ -286,6 +312,84 @@
   .cal-dot{width:8px;height:8px;margin-right:0;}
   .cal-count{font-size:10px;color:var(--muted);line-height:1;}
   .cal-detail-title{font-size:15px;margin:14px 0 8px;}
+  /* 月の合計の固定表示（一覧をスクロールしても上部に残る） */
+  .sticky-total{
+    position:sticky;top:8px;z-index:20;
+    display:flex;justify-content:space-between;gap:8px;
+    background:var(--blue-light);border:1px solid var(--line);border-radius:10px;
+    padding:8px 12px;margin-bottom:10px;
+    font-size:14px;font-weight:700;color:var(--blue-dark);
+  }
+  /* 日付メモ */
+  .cal-memo-mark{font-size:10px;font-weight:700;color:var(--blue-dark);line-height:1;}
+  .day-memo-box{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;}
+  .day-memo-box textarea{margin-top:4px;}
+  .day-memo-actions{display:flex;align-items:center;gap:10px;margin-top:8px;}
+  .day-memo-save{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700;}
+  .day-memo-view{
+    border:1px dashed var(--line);border-radius:10px;padding:8px 12px;margin-bottom:8px;
+    background:var(--blue-light);font-size:13px;line-height:1.6;
+  }
+  .day-memo-tag{font-weight:700;color:var(--blue-dark);margin-right:6px;white-space:nowrap;}
+  /* メモ帳 */
+  .note-item{
+    border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;margin-bottom:8px;background:var(--surface);
+  }
+  .note-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .note-title{font-weight:700;font-size:15px;}
+  .note-date{color:var(--muted);font-size:12px;white-space:nowrap;}
+  .note-body{font-size:14px;margin-top:4px;line-height:1.6;}
+  /* キュートスキン：大きめの角丸と柔らかい影 */
+  html[data-skin="cute"] .card{border-radius:22px;box-shadow:0 6px 18px rgba(236,72,153,.13);}
+  html[data-skin="cute"] .shift-item,
+  html[data-skin="cute"] .wp-item,
+  html[data-skin="cute"] .note-item,
+  html[data-skin="cute"] .draft-row,
+  html[data-skin="cute"] .day-memo-view{border-radius:16px;}
+  html[data-skin="cute"] button{border-radius:999px;}
+  html[data-skin="cute"] .seg-control{border-radius:999px;}
+  html[data-skin="cute"] .seg-control button{border-radius:0;}
+  html[data-skin="cute"] input,
+  html[data-skin="cute"] select,
+  html[data-skin="cute"] textarea{border-radius:14px;}
+  html[data-skin="cute"] .cal-cell{border-radius:14px;}
+  html[data-skin="cute"] .sticky-total{border-radius:999px;}
+  /* キュートスキン：スライダーのつまみをハートにする（当たり判定・操作は通常のつまみと同じ） */
+  html[data-skin="cute"] input[type="range"]{-webkit-appearance:none;appearance:none;background:transparent;}
+  html[data-skin="cute"] input[type="range"]::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:var(--blue-light);}
+  html[data-skin="cute"] input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:26px;height:26px;margin-top:-9px;
+    border:none;background-color:transparent;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ec4899' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:center;background-size:contain;
+  }
+  html[data-skin="cute"] input[type="range"]::-moz-range-track{height:8px;border-radius:999px;background:var(--blue-light);}
+  html[data-skin="cute"] input[type="range"]::-moz-range-thumb{
+    width:24px;height:24px;border:none;background-color:transparent;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ec4899' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:center;background-size:contain;
+  }
+  /* キュートスキン：ダイヤルのつまみをハートにする（丸つまみと切り替え） */
+  .time-dial .dial-knob-heart{display:none;}
+  html[data-skin="cute"] .time-dial .dial-knob-heart{display:block;}
+  html[data-skin="cute"] .time-dial .dial-knob-circle{display:none;}
+  .time-dial .dial-knob-g:focus-visible .dial-knob-heart{stroke:var(--blue-dark);}
+  /* キュートスキン：ダイヤルの区切り（12時間ごと）に付く小さなハート */
+  .time-dial .dial-seg-heart{display:none;}
+  html[data-skin="cute"] .time-dial .dial-seg-heart{display:block;}
+  .time-dial .dial-seg-heart-1{fill:#f59e0b;}
+  .time-dial .dial-seg-heart-2{fill:#10b981;}
+  .time-dial .dial-seg-heart-3{fill:#ec4899;}
+  /* キュートスキン：カレンダーの色ドットをハートにする（色はバイト先の色のまま、形だけ変える） */
+  html[data-skin="cute"] .cal-dot{
+    width:11px;height:11px;border-radius:0;
+    -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+    mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
+    -webkit-mask-size:contain;mask-size:contain;
+    -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+    -webkit-mask-position:center;mask-position:center;
+  }
 </style>
 </head>
 <body>
@@ -300,6 +404,7 @@
     <div class="month-nav">
       <button id="prevMonth" aria-label="前月">◀</button>
       <div class="month-label" id="monthLabel"></div>
+      <button id="thisMonthBtn" class="small">今月</button>
       <button id="nextMonth" aria-label="翌月">▶</button>
     </div>
     <div class="total-pay" id="totalPay">¥0</div>
@@ -387,7 +492,7 @@
         <button class="primary" id="ocrCropRunBtn" disabled>この範囲で読み取る</button>
         <button id="ocrCropResetBtn" disabled>切り取りをリセット</button>
       </div>
-      <p class="note">切り取らずに全体を読み取る場合は、そのまま下の「読み取る」を押してください。</p>
+      <p class="note">切り取りを設定した状態で「読み取る」を押すと、切り取った範囲だけを読み取ります。全体を読み取りたいときは「切り取りをリセット」してから「読み取る」を押してください。</p>
     </div>
     <label class="ocr-label" for="ocrPreprocessLevel">画像の前処理（写真の読み取り時のみ）</label>
     <select id="ocrPreprocessLevel" class="ocr-select">
@@ -410,13 +515,18 @@
       <p class="note">内容を確認し、間違いを直してから登録してください。「まとめて登録」では、入力が揃っている行だけが登録され、未入力の行は登録されずに残ります。足りない欄は赤い枠で表示されます。</p>
       <div id="ocrDrafts"></div>
       <button class="primary" id="ocrRegisterAll">まとめて登録</button>
+      <div style="text-align:right;margin-top:8px;">
+        <button id="ocrClearDrafts" class="small danger">下書きをすべて削除</button>
+      </div>
     </div>
     <p class="note register-status" id="ocrRegisterStatus"></p>
+    <button id="ocrUndoRegister" class="small hidden">直前の登録を取り消す</button>
   </section>
 
   <!-- シフト一覧 -->
   <section class="card">
     <h2>シフト一覧</h2>
+    <div id="stickyTotal" class="sticky-total"></div>
     <div class="seg-control" role="group" aria-label="一覧の表示方法" style="margin-top:0;">
       <button type="button" data-view-mode-btn="list" class="active">リスト</button>
       <button type="button" data-view-mode-btn="calendar">カレンダー</button>
@@ -468,7 +578,7 @@
         <button type="button" data-time-mode-btn="slider">スライダー</button>
         <button type="button" data-time-mode-btn="dial">ダイヤル</button>
       </div>
-      <div class="row2">
+      <div class="row2 time-fields-row">
         <div>
           <label for="sfStart">開始時刻</label>
           <input type="time" id="sfStart" class="tm-type" required>
@@ -476,7 +586,6 @@
             <input type="range" id="sfStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
             <span class="time-slider-val" id="sfStartSliderVal">--:--</span>
           </div>
-          <div class="time-dial" id="sfStartDial"></div>
         </div>
         <div>
           <label for="sfEnd">終了時刻</label>
@@ -485,10 +594,11 @@
             <input type="range" id="sfEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
             <span class="time-slider-val" id="sfEndSliderVal">--:--</span>
           </div>
-          <div class="time-dial" id="sfEndDial"></div>
         </div>
       </div>
-      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻の入力方法は上の切り替えで選べます（打ち込み／スライダー（15分刻み）／ダイヤル（リングをなぞると時刻が変わります））。選んだ方法は次回も引き継がれます。</p>
+      <input type="hidden" id="sfEndOffset" value="0">
+      <div class="time-dial time-dial-range" id="sfRangeDial"></div>
+      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻の入力方法は上の切り替えで選べます（打ち込み／スライダー（15分刻み）／ダイヤル（1つのリングで開始と終了を合わせます。終了のつまみを1周を超えて回すと、24時間以上の勤務も入力できます））。選んだ方法は次回も引き継がれます。</p>
       <label for="sfCategory">区分</label>
       <select id="sfCategory">
         <option value="">未設定</option>
@@ -533,7 +643,7 @@
         <button type="button" data-time-mode-btn="slider">スライダー</button>
         <button type="button" data-time-mode-btn="dial">ダイヤル</button>
       </div>
-      <div class="row2">
+      <div class="row2 time-fields-row">
         <div>
           <label for="tplStart">開始時刻</label>
           <input type="time" id="tplStart" class="tm-type">
@@ -541,7 +651,6 @@
             <input type="range" id="tplStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
             <span class="time-slider-val" id="tplStartSliderVal">--:--</span>
           </div>
-          <div class="time-dial" id="tplStartDial"></div>
         </div>
         <div>
           <label for="tplEnd">終了時刻</label>
@@ -550,9 +659,10 @@
             <input type="range" id="tplEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
             <span class="time-slider-val" id="tplEndSliderVal">--:--</span>
           </div>
-          <div class="time-dial" id="tplEndDial"></div>
         </div>
       </div>
+      <input type="hidden" id="tplEndOffset" value="0">
+      <div class="time-dial time-dial-range" id="tplRangeDial"></div>
       <label for="tplBreak">休憩時間（分）</label>
       <input type="number" id="tplBreak" min="0" step="5" value="0" inputmode="numeric">
       <label>曜日</label>
@@ -597,6 +707,24 @@
     </div>
   </section>
 
+  <!-- メモ帳 -->
+  <section class="card">
+    <h2>メモ帳</h2>
+    <div id="noteList"></div>
+    <button class="primary" id="toggleNoteForm">＋ メモを追加</button>
+    <form id="noteForm" class="hidden">
+      <label for="nfTitle">タイトル</label>
+      <input type="text" id="nfTitle" placeholder="例：来月の目標">
+      <label for="nfBody">本文</label>
+      <textarea id="nfBody" rows="5" placeholder="自由に書けます"></textarea>
+      <div class="form-actions">
+        <button type="submit" class="primary" id="nfSubmit">保存する</button>
+        <button type="button" id="nfCancel">キャンセル</button>
+      </div>
+    </form>
+    <p class="note">メモはこのブラウザに保存されます。日付ごとのメモは、カレンダー表示で日を選ぶと書けます。どちらもバックアップ（自分の設定の「データを書き出し」）に含まれます。</p>
+  </section>
+
   <!-- 自分の設定 -->
   <section class="card">
     <h2>自分の設定</h2>
@@ -611,6 +739,7 @@
       <option value="purple">紫</option>
       <option value="green">緑</option>
       <option value="dark">ダーク</option>
+      <option value="cute">キュート</option>
     </select>
     <p class="note">アプリ全体の色合いを変えます。選んだスキンは保存され、次回も同じスキンで開きます。バックアップ（自分の設定）にも含まれます。区分バッジやバイト先の色は、スキンによらずそのまま表示されます。</p>
 
@@ -620,7 +749,7 @@
       <button id="importDataBtn">データを読み込み（JSON）</button>
     </div>
     <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
-    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターンをすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。</p>
+    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターン・日付メモ・メモ帳をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。</p>
     <p class="note">データはこのブラウザの中に保存されます。LINEなどのアプリ内ブラウザで開くと、データが消えやすくなります。Safariで開いて「ホーム画面に追加」しておくと、データが残りやすくなります。別のブラウザで開くと、別のデータになります。大事なデータは、ときどき書き出してバックアップしてください。</p>
     <p class="note register-status" id="backupStatus"></p>
   </section>
@@ -718,10 +847,14 @@ function isNightMin(clockMin){
 }
 
 // 給与計算
-// startMin/endMin: 分。endMin <= startMin の場合は翌日までとみなす。
+// startMin/endMin: 分（0〜1439）。endDayOffset は終了が何日後か（0〜2、省略時は0）。
+// 終了の絶対分 = endMin + endDayOffset*1440。それでも開始以下なら翌日までとみなす
+// （従来データ＝endDayOffsetなし・終了<=開始は翌日扱い、という互換ルール）。
+// 深夜帯（22:00〜翌5:00）の判定は絶対分を 1440 で割った余りで行うため、
+// 日を跨いだ分（2日目以降の深夜帯）も正しく数えられる。
 // 休憩は深夜帯以外の時間から先に差し引く。金額は円未満切り捨て。
-function computePay(startMin, endMin, breakMin, wage, premiumPct){
-  let end = endMin;
+function computePay(startMin, endMin, breakMin, wage, premiumPct, endDayOffset){
+  let end = endMin + (Number(endDayOffset) || 0) * 1440;
   if (end <= startMin) end += 1440;
   const total = end - startMin;
   let night = 0;
@@ -775,6 +908,45 @@ function timeValueToAngle(min){
   if (!isFinite(m)) m = 0;
   m = Math.max(0, Math.min(1425, m));
   return (m / 1440) * 360;
+}
+
+// 開始・終了（分と日オフセット）から、終了の絶対分を求める純粋関数
+// 絶対分 = 終了 + endDayOffset*1440。それでも開始以下なら +1440 する
+// （従来データ＝endDayOffsetなしで終了<=開始なら翌日扱い、という互換ルール）
+function endAbsMinutes(startMin, endMin, endDayOffset){
+  let end = endMin + (Number(endDayOffset) || 0) * 1440;
+  if (end <= startMin) end += 1440;
+  return end;
+}
+
+// 勤務の弧を12時間ごとの区間に分ける純粋関数
+// 戻り値：[{startMin, durationMin}]（startMin は0時からの絶対分で、1440を超えることがある）
+// 例：18時間勤務 → 12時間 + 6時間 の2区間になり、色を変えて重ね描きすると「12＋6」と読める
+function rangeArcSegments(startMin, endAbs){
+  const out = [];
+  if (startMin === null || startMin === undefined || endAbs === null || endAbs === undefined) return out;
+  let cur = startMin;
+  while (cur < endAbs){
+    const dur = Math.min(720, endAbs - cur);
+    out.push({ startMin: cur, durationMin: dur });
+    cur += dur;
+  }
+  return out;
+}
+
+// 終了の絶対分を「開始の15分後〜開始+48時間未満（最大47時間45分）」に収める純粋関数
+function clampEndAbs(startMin, endAbs){
+  return Math.max(startMin + 15, Math.min(startMin + 2865, endAbs));
+}
+
+// リングをタップしたときに開始・終了どちらのつまみを動かすかを決める純粋関数
+// タップ位置（時計分）に円周上で近い方を選ぶ。同距離なら "end"
+function pickDialKnob(targetClockMin, startClockMin, endClockMin){
+  function circDist(a, b){
+    const d = Math.abs(a - b) % 1440;
+    return Math.min(d, 1440 - d);
+  }
+  return circDist(targetClockMin, startClockMin) < circDist(targetClockMin, endClockMin) ? "start" : "end";
 }
 
 // ダイヤル中心からの相対座標 (dx, dy) を角度（真上=0度、時計回り、0〜360未満）に変換する
@@ -948,6 +1120,7 @@ function normalizeTemplates(list){
       category: String(t.category || ""),
       start: String(t.start),
       end: String(t.end),
+      endDayOffset: Math.max(0, Math.min(2, Number(t.endDayOffset) || 0)),
       breakMin: Number(t.breakMin) || 0,
       weekdays: wds
     });
@@ -964,6 +1137,7 @@ function buildShiftsFromTemplate(template, dates){
       workplaceId: template.workplaceId,
       start: template.start,
       end: template.end,
+      endDayOffset: Number(template.endDayOffset) || 0,
       breakMin: Number(template.breakMin) || 0,
       category: template.category || "",
       memo: ""
@@ -978,6 +1152,84 @@ function expandTemplateDates(template, fromStr, toStr){
 }
 // === BULK/TEMPLATE LOGIC END ===
 
+// === MEMO LOGIC START ===
+// 日付メモ：{ "YYYY-MM-DD": "メモ本文" } の形。正しい日付キーと文字列だけを残し、空のメモは持たない
+function normalizeDayMemos(obj){
+  const out = {};
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return out;
+  Object.keys(obj).forEach(function(k){
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+    const v = obj[k];
+    if (typeof v !== "string") return;
+    if (v.trim() === "") return;
+    out[k] = v;
+  });
+  return out;
+}
+function getDayMemo(dayMemos, dateStr){
+  if (!dayMemos || typeof dayMemos !== "object") return "";
+  const v = dayMemos[dateStr];
+  return typeof v === "string" ? v : "";
+}
+// 日付メモを設定した新しいオブジェクトを返す。空（空白のみ）の場合はその日付のメモを削除する
+function setDayMemo(dayMemos, dateStr, text){
+  const out = {};
+  if (dayMemos && typeof dayMemos === "object"){
+    Object.keys(dayMemos).forEach(function(k){ out[k] = dayMemos[k]; });
+  }
+  const v = String(text == null ? "" : text);
+  if (v.trim() === "") delete out[dateStr];
+  else out[dateStr] = v;
+  return out;
+}
+// メモ帳：{ id, title, body, updatedAt } の配列。updatedAt の新しい順に並べる
+function sortNotes(notes){
+  return notes.slice().sort(function(a, b){
+    return (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0);
+  });
+}
+function normalizeNotes(arr){
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  arr.forEach(function(n){
+    if (!n || typeof n !== "object") return;
+    if (n.id == null || String(n.id) === "") return;
+    out.push({
+      id: String(n.id),
+      title: typeof n.title === "string" ? n.title : "",
+      body: typeof n.body === "string" ? n.body : "",
+      updatedAt: Number(n.updatedAt) || 0
+    });
+  });
+  return sortNotes(out);
+}
+// メモを1件追加または更新した新しい配列を返す（同じ id があれば差し替える）
+function upsertNote(notes, note){
+  const base = normalizeNotes(notes);
+  const item = {
+    id: String(note.id),
+    title: typeof note.title === "string" ? note.title : "",
+    body: typeof note.body === "string" ? note.body : "",
+    updatedAt: Number(note.updatedAt) || 0
+  };
+  const idx = base.findIndex(function(n){ return n.id === item.id; });
+  if (idx >= 0) base[idx] = item;
+  else base.push(item);
+  return sortNotes(base);
+}
+function deleteNoteById(notes, id){
+  return normalizeNotes(notes).filter(function(n){ return n.id !== String(id); });
+}
+// メモの更新日時表示（例：2026/11/20 20:17）
+function noteUpdatedLabel(ts){
+  const t = Number(ts) || 0;
+  if (t <= 0) return "";
+  const d = new Date(t);
+  return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate() + " " +
+    String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+// === MEMO LOGIC END ===
+
 // ---------- データ管理（localStorage） ----------
 const LS_WP = "shiftPayApp.workplaces";
 const LS_SH = "shiftPayApp.shifts";
@@ -985,6 +1237,8 @@ const LS_IMG = "shiftPayApp.images";
 const LS_SET = "shiftPayApp.settings";
 const LS_DRAFTS = "shiftPayApp.ocrDrafts";
 const LS_TPL = "shiftPayApp.templates";
+const LS_DAYMEMO = "shiftPayApp.dayMemos";
+const LS_NOTES = "shiftPayApp.notes";
 const MAX_IMAGES_PER_MONTH = 3;
 const MAX_IMAGE_WIDTH = 1200;
 
@@ -1008,6 +1262,19 @@ workplaces.forEach(function(w){ ensurePresets(w); });
 let monthImages = loadJSON(LS_IMG, {}); // { "YYYY-MM": [ {id, dataUrl}, ... ] }
 let settings = loadJSON(LS_SET, { myNames: "" }); // { myNames: "" }
 let templates = normalizeTemplates(loadJSON(LS_TPL, [])); // いつものパターン
+let dayMemos = normalizeDayMemos(loadJSON(LS_DAYMEMO, {})); // 日付メモ { "YYYY-MM-DD": "本文" }
+let notes = normalizeNotes(loadJSON(LS_NOTES, [])); // メモ帳 [{ id, title, body, updatedAt }]
+
+function saveDayMemos(){
+  try {
+    localStorage.setItem(LS_DAYMEMO, JSON.stringify(dayMemos));
+  } catch (e) { /* 保存できなくても動作は続ける */ }
+}
+function saveNotes(){
+  try {
+    localStorage.setItem(LS_NOTES, JSON.stringify(notes));
+  } catch (e) { /* 保存できなくても動作は続ける */ }
+}
 
 function saveTemplates(){
   try {
@@ -1069,10 +1336,15 @@ function fmtDateLabel(dateStr){
   const d = new Date(dateStr + "T00:00:00");
   return (d.getMonth() + 1) + "月" + d.getDate() + "日（" + WEEKDAYS[d.getDay()] + "）";
 }
+// 終了時刻の表示（終了の日オフセットがある場合は「翌」「翌々」を付ける）
+function endTimeLabel(end, endDayOffset){
+  const off = Number(endDayOffset) || 0;
+  return (off >= 2 ? "翌々" : off === 1 ? "翌" : "") + end;
+}
 function shiftResult(shift){
   const wp = findWp(shift.workplaceId);
   if (!wp) return { pay: 0, workedMin: 0, nightMin: 0 };
-  return computePay(timeToMin(shift.start), timeToMin(shift.end), Number(shift.breakMin) || 0, Number(wp.wage) || 0, Number(wp.premium) || 0);
+  return computePay(timeToMin(shift.start), timeToMin(shift.end), Number(shift.breakMin) || 0, Number(wp.wage) || 0, Number(wp.premium) || 0, Number(shift.endDayOffset) || 0);
 }
 function esc(s){
   return String(s == null ? "" : s)
@@ -1228,6 +1500,11 @@ function render(){
   });
   document.getElementById("totalPay").textContent = fmtYen(totalPay);
   document.getElementById("totalHours").textContent = "労働時間 合計 " + fmtDuration(totalMin);
+  const stickyEl = document.getElementById("stickyTotal");
+  if (stickyEl){
+    stickyEl.innerHTML = "<span>" + viewYear + "年" + (viewMonth + 1) + "月</span>" +
+      "<span>合計 " + fmtYen(totalPay) + "・" + fmtDuration(totalMin) + "</span>";
+  }
 
   const subEl = document.getElementById("subtotals");
   const subWrap = document.getElementById("subtotalsWrap");
@@ -1300,6 +1577,9 @@ function render(){
 
   // テンプレート一覧を最新化する
   renderTemplates();
+
+  // メモ帳を最新化する
+  renderNotes();
 }
 
 // ---------- 月切替 ----------
@@ -1311,6 +1591,12 @@ document.getElementById("prevMonth").addEventListener("click", function(){
 document.getElementById("nextMonth").addEventListener("click", function(){
   viewMonth++;
   if (viewMonth > 11){ viewMonth = 0; viewYear++; }
+  render();
+});
+document.getElementById("thisMonthBtn").addEventListener("click", function(){
+  const now = new Date();
+  viewYear = now.getFullYear();
+  viewMonth = now.getMonth();
   render();
 });
 
@@ -1326,12 +1612,32 @@ function shiftItemHtml(s){
   return '<div class="shift-item">' +
     '<div class="shift-top"><span class="shift-date"><span class="dot" style="background:' + esc(color) + '"></span>' +
     fmtDateLabel(s.date) + '</span><span class="shift-pay">' + fmtYen(r.pay) + "</span></div>" +
-    '<div class="shift-detail">' + categoryBadge(s) + " " + esc(wpName) + " " + esc(s.start) + "〜" + esc(s.end) +
+    '<div class="shift-detail">' + categoryBadge(s) + " " + esc(wpName) + " " + esc(s.start) + "〜" + esc(endTimeLabel(s.end, s.endDayOffset)) +
     "（実働 " + fmtDuration(r.workedMin) + nightNote + "）</div>" + memo +
     '<div class="shift-actions">' +
     '<button class="small" data-edit-shift="' + s.id + '">編集</button>' +
     '<button class="small" data-dup-shift="' + s.id + '">複製</button>' +
     '<button class="small danger" data-del-shift="' + s.id + '">削除</button>' +
+    "</div></div>";
+}
+
+// 日付メモの表示HTML（リスト表示用）。メモがなければ空文字
+function dayMemoViewHtml(dateStr){
+  const memo = getDayMemo(dayMemos, dateStr);
+  if (!memo) return "";
+  return '<div class="day-memo-view"><span class="day-memo-tag">メモ</span>' +
+    esc(memo).replace(/\n/g, "<br>") + "</div>";
+}
+
+// 日付メモの編集HTML（カレンダーの日別詳細用）。シフトがない日にも書ける
+function dayMemoEditorHtml(dateStr){
+  const memo = getDayMemo(dayMemos, dateStr);
+  return '<div class="day-memo-box">' +
+    '<label class="field-label" for="dayMemoText">この日のメモ</label>' +
+    '<textarea id="dayMemoText" rows="3" placeholder="この日のメモを書けます（シフトがない日にも書けます）">' + esc(memo) + "</textarea>" +
+    '<div class="day-memo-actions">' +
+    '<button type="button" class="small day-memo-save" data-save-day-memo="' + dateStr + '">メモを保存</button>' +
+    '<span class="note" data-day-memo-status></span>' +
     "</div></div>";
 }
 
@@ -1368,7 +1674,17 @@ function renderShiftListArea(monthShifts){
     if (monthShifts.length === 0){
       listEl.innerHTML = '<div class="empty">この月のシフトはまだありません</div>';
     } else {
-      listEl.innerHTML = monthShifts.map(shiftItemHtml).join("");
+      // 日付メモがある日は、その日のシフト行の直前にメモを表示する
+      let html = "";
+      let lastDate = null;
+      monthShifts.forEach(function(s){
+        if (s.date !== lastDate){
+          lastDate = s.date;
+          html += dayMemoViewHtml(s.date);
+        }
+        html += shiftItemHtml(s);
+      });
+      listEl.innerHTML = html;
     }
   }
 }
@@ -1400,11 +1716,13 @@ function renderCalendar(monthShifts){
       return '<span class="dot cal-dot" style="background:' + esc(wp ? wp.color : "#9ca3af") + '"></span>';
     }).join("");
     const count = dayShifts.length >= 2 ? '<span class="cal-count">' + dayShifts.length + "件</span>" : "";
+    const hasMemo = getDayMemo(dayMemos, ds) !== "";
+    const memoMark = hasMemo ? '<span class="cal-memo-mark" title="メモあり">✎</span>' : "";
     html += '<button type="button" class="cal-cell' +
       (ds === today ? " cal-today" : "") +
       (ds === selectedCalDate ? " cal-selected" : "") +
-      '" data-cal-date="' + ds + '" aria-label="' + fmtDateLabel(ds) + '">' +
-      '<span class="cal-daynum">' + d + '</span><span class="cal-marks">' + dots + "</span>" + count + "</button>";
+      '" data-cal-date="' + ds + '" aria-label="' + fmtDateLabel(ds) + (hasMemo ? "（メモあり）" : "") + '">' +
+      '<span class="cal-daynum">' + d + '</span><span class="cal-marks">' + dots + memoMark + "</span>" + count + "</button>";
   }
   html += "</div>";
   calEl.innerHTML = html;
@@ -1413,7 +1731,8 @@ function renderCalendar(monthShifts){
   if (selectedCalDate && selectedCalDate.indexOf(prefix) === 0){
     const dayShifts = byDate[selectedCalDate] || [];
     detEl.innerHTML = '<h3 class="cal-detail-title">' + fmtDateLabel(selectedCalDate) + "</h3>" +
-      (dayShifts.length > 0 ? dayShifts.map(shiftItemHtml).join("") : '<div class="empty">この日のシフトはありません</div>');
+      (dayShifts.length > 0 ? dayShifts.map(shiftItemHtml).join("") : '<div class="empty">この日のシフトはありません</div>') +
+      dayMemoEditorHtml(selectedCalDate);
     detEl.classList.remove("hidden");
   } else {
     detEl.innerHTML = "";
@@ -1501,6 +1820,14 @@ document.getElementById("toggleShiftForm").addEventListener("click", function(){
   editingShiftId = null;
   shiftForm.reset();
   resetBulkForm();
+  // 前回登録したバイト先・区分を初期値にする
+  if (settings.lastWorkplaceId && findWp(settings.lastWorkplaceId)){
+    document.getElementById("sfWorkplace").value = settings.lastWorkplaceId;
+  }
+  if (settings.lastCategory){
+    document.getElementById("sfCategory").value = settings.lastCategory;
+  }
+  document.getElementById("sfEndOffset").value = "0";
   syncAllTimeSliders();
   document.getElementById("sfBulkArea").classList.remove("hidden");
   document.getElementById("sfBreak").value = 0;
@@ -1521,6 +1848,7 @@ shiftForm.addEventListener("submit", function(e){
     workplaceId: document.getElementById("sfWorkplace").value,
     start: document.getElementById("sfStart").value,
     end: document.getElementById("sfEnd").value,
+    endDayOffset: Number(document.getElementById("sfEndOffset").value) || 0,
     breakMin: Number(document.getElementById("sfBreak").value) || 0,
     category: document.getElementById("sfCategory").value,
     memo: document.getElementById("sfMemo").value.trim()
@@ -1563,6 +1891,10 @@ shiftForm.addEventListener("submit", function(e){
   }
   editingShiftId = null;
   saveAll();
+  // 前回の選択（バイト先・区分）を覚えて、次回の初期値にする
+  settings.lastWorkplaceId = data.workplaceId;
+  settings.lastCategory = data.category || "";
+  saveSettings();
   shiftForm.classList.add("hidden");
   // 保存したシフトの月へ移動
   viewYear = Number(savedDate.slice(0, 4));
@@ -1609,9 +1941,12 @@ bindTimeSlider("sfEnd", "sfEndSlider", "sfEndSliderVal");
 bindTimeSlider("tplStart", "tplStartSlider", "tplStartSliderVal");
 bindTimeSlider("tplEnd", "tplEndSlider", "tplEndSliderVal");
 
-// ---------- 時刻ダイヤル（リング型） ----------
-// 時計のような円形ダイヤル。1周=24時間、15分刻み（96ステップ）。
-// リング上をタップ／ドラッグすると、角度に応じた時刻が時刻欄に入る。
+// ---------- 時刻ダイヤル（リング型・開始と終了の2つまみ） ----------
+// 1つのリングに開始つまみと終了つまみを載せた単一ダイヤル。1周=24時間、15分刻み（96ステップ）。
+// 開始から時計回りに終了までの弧が勤務時間で、12時間ごとに色を変えて重ね描きする
+// （例：18時間なら最初の12時間と次の6時間で色が違い、「12＋6＝18時間」と読める）。
+// 終了つまみをドラッグして1周を超えると24時間超の勤務（最大48時間未満）も入力でき、
+// 終了の日オフセット（endDayOffset）としてフォームの隠し項目に保持する。
 // 時刻欄・直線スライダー・ダイヤルは相互に連動し、プログラム側で時刻が
 // 変わったときは syncAllTimeSliders() 経由でダイヤルも追随する。
 const DIAL_CENTER = 100;
@@ -1620,15 +1955,23 @@ function dialPolar(angleDeg, r){
   const rad = angleDeg * Math.PI / 180;
   return { x: DIAL_CENTER + r * Math.sin(rad), y: DIAL_CENTER - r * Math.cos(rad) };
 }
-function dialArcD(angleDeg){
-  if (!(angleDeg > 0)) return "";
-  const end = dialPolar(angleDeg, DIAL_R);
-  const large = angleDeg > 180 ? 1 : 0;
-  return "M " + DIAL_CENTER + " " + (DIAL_CENTER - DIAL_R) +
+// 開始角度から時計回りに sweepDeg だけ進む弧のパス（勤務区間1つ分）
+function rangeArcD(startAngle, sweepDeg){
+  if (!(sweepDeg > 0)) return "";
+  const s = dialPolar(startAngle, DIAL_R);
+  if (sweepDeg >= 360){
+    const mid = dialPolar(startAngle + 180, DIAL_R);
+    return "M " + s.x.toFixed(2) + " " + s.y.toFixed(2) +
+      " A " + DIAL_R + " " + DIAL_R + " 0 1 1 " + mid.x.toFixed(2) + " " + mid.y.toFixed(2) +
+      " A " + DIAL_R + " " + DIAL_R + " 0 1 1 " + s.x.toFixed(2) + " " + s.y.toFixed(2);
+  }
+  const e = dialPolar(startAngle + sweepDeg, DIAL_R);
+  const large = sweepDeg > 180 ? 1 : 0;
+  return "M " + s.x.toFixed(2) + " " + s.y.toFixed(2) +
     " A " + DIAL_R + " " + DIAL_R + " 0 " + large + " 1 " +
-    end.x.toFixed(2) + " " + end.y.toFixed(2);
+    e.x.toFixed(2) + " " + e.y.toFixed(2);
 }
-function buildDialSvg(label){
+function buildRangeDialSvg(){
   let ticks = "";
   for (let h = 0; h < 24; h++){
     const major = h % 6 === 0;
@@ -1644,88 +1987,232 @@ function buildDialSvg(label){
     labels += '<text x="' + p.x.toFixed(1) + '" y="' + p.y.toFixed(1) +
       '" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#6b7280">' + h + "</text>";
   });
-  return '<svg viewBox="0 0 200 200" role="slider" tabindex="0" aria-label="' + label + '"' +
-    ' aria-valuemin="0" aria-valuemax="1425" aria-valuestep="15">' +
+  let segs = "";
+  for (let i = 0; i < 4; i++){
+    segs += '<path class="dial-seg dial-seg-' + i + '" d=""/>';
+  }
+  // 12時間ごとの区切りに付く小さなハート（キュートスキンのときだけCSSで表示する）
+  const HEART_D = "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
+  let segHearts = "";
+  for (let i = 1; i < 4; i++){
+    segHearts += '<path class="dial-seg-heart dial-seg-heart-' + i + '" data-seg-heart="' + i + '" d="' + HEART_D + '" style="display:none"/>';
+  }
+  return '<svg viewBox="0 0 200 200" role="group" aria-label="開始と終了のダイヤル入力">' +
     '<circle class="dial-track" cx="100" cy="100" r="' + DIAL_R + '" fill="none" stroke="#e5e7eb" stroke-width="20"/>' +
-    '<path class="dial-arc" fill="none" stroke="#2563eb" stroke-width="20" stroke-linecap="round" d=""/>' +
-    ticks + labels +
-    '<circle class="dial-knob" r="13" fill="#2563eb" stroke="#ffffff" stroke-width="3" cx="100" cy="18"/>' +
-    '<text class="dial-time" x="100" y="103" text-anchor="middle" dominant-baseline="central"' +
-    ' font-size="34" font-weight="700" fill="#1f2937">--:--</text>' +
+    segs + ticks + labels + segHearts +
+    '<text class="dial-range-line dial-range-start" x="100" y="84" text-anchor="middle" dominant-baseline="central" font-size="13">開始 --:--</text>' +
+    '<text class="dial-range-line dial-range-end" x="100" y="102" text-anchor="middle" dominant-baseline="central" font-size="13">終了 --:--</text>' +
+    '<text class="dial-range-total" x="100" y="126" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700">--</text>' +
+    '<g class="dial-knob-g" data-knob="start" tabindex="0" role="slider" aria-label="開始時刻をダイヤルで入力" aria-valuemin="0" aria-valuemax="1425" aria-valuestep="15">' +
+    '<circle class="dial-knob-circle dial-knob-start" r="14" stroke="#ffffff" stroke-width="3"/>' +
+    '<path class="dial-knob-heart dial-knob-start" d="' + HEART_D + '" transform="scale(1.3) translate(-12 -12)" stroke="#ffffff" stroke-width="1.5"/>' +
+    '<text class="knob-label" text-anchor="middle" dominant-baseline="central" font-size="10">始</text></g>' +
+    '<g class="dial-knob-g" data-knob="end" tabindex="0" role="slider" aria-label="終了時刻をダイヤルで入力" aria-valuemin="0" aria-valuemax="1425" aria-valuestep="15">' +
+    '<circle class="dial-knob-circle dial-knob-end" r="14" stroke="#ffffff" stroke-width="3"/>' +
+    '<path class="dial-knob-heart dial-knob-end" d="' + HEART_D + '" transform="scale(1.3) translate(-12 -12)" stroke="#ffffff" stroke-width="1.5"/>' +
+    '<text class="knob-label" text-anchor="middle" dominant-baseline="central" font-size="10">終</text></g>' +
     "</svg>";
 }
-function bindTimeDial(timeId, dialId, label){
-  const timeEl = document.getElementById(timeId);
-  const host = document.getElementById(dialId);
-  if (!timeEl || !host) return;
-  host.innerHTML = buildDialSvg(label);
+function bindRangeDial(startId, endId, offsetId, hostId){
+  const startEl = document.getElementById(startId);
+  const endEl = document.getElementById(endId);
+  const offsetEl = document.getElementById(offsetId);
+  const host = document.getElementById(hostId);
+  if (!startEl || !endEl || !host) return;
+  host.innerHTML = buildRangeDialSvg();
   const svg = host.querySelector("svg");
-  const arc = host.querySelector(".dial-arc");
-  const knob = host.querySelector(".dial-knob");
-  const centerText = host.querySelector(".dial-time");
-  function syncDial(){
-    const v = timeToSliderValue(timeEl.value);
-    if (v === null){
-      arc.setAttribute("d", "");
-      const p0 = dialPolar(0, DIAL_R);
-      knob.setAttribute("cx", p0.x.toFixed(2));
-      knob.setAttribute("cy", p0.y.toFixed(2));
-      centerText.textContent = "--:--";
-      svg.removeAttribute("aria-valuenow");
-      svg.setAttribute("aria-valuetext", "未入力");
-      return;
-    }
-    const angle = timeValueToAngle(v);
-    arc.setAttribute("d", dialArcD(angle));
-    const p = dialPolar(angle, DIAL_R);
-    knob.setAttribute("cx", p.x.toFixed(2));
-    knob.setAttribute("cy", p.y.toFixed(2));
-    centerText.textContent = timeEl.value;
-    svg.setAttribute("aria-valuenow", String(v));
-    svg.setAttribute("aria-valuetext", timeEl.value);
+  const segPaths = host.querySelectorAll(".dial-seg");
+  const startG = host.querySelector('[data-knob="start"]');
+  const endG = host.querySelector('[data-knob="end"]');
+  const startText = host.querySelector(".dial-range-start");
+  const endText = host.querySelector(".dial-range-end");
+  const totalText = host.querySelector(".dial-range-total");
+
+  // フォームの現在値（開始・終了・日オフセット）を読む
+  function readState(){
+    const s = timeToSliderValue(startEl.value);
+    const e = timeToSliderValue(endEl.value);
+    const off = offsetEl ? (Number(offsetEl.value) || 0) : 0;
+    return {
+      startMin: s,
+      endMin: e,
+      offset: off,
+      endAbs: (s === null || e === null) ? null : endAbsMinutes(s, e, off)
+    };
   }
-  let dragging = false;
-  function setFromPointer(e){
+  function placeKnob(g, clockMin){
+    const p = dialPolar(clockMin === null ? 0 : (clockMin / 1440) * 360, DIAL_R);
+    g.setAttribute("transform", "translate(" + p.x.toFixed(2) + " " + p.y.toFixed(2) + ")");
+  }
+  function setKnobAria(g, clockMin, dayMark){
+    if (clockMin === null){
+      g.removeAttribute("aria-valuenow");
+      g.setAttribute("aria-valuetext", "未入力");
+    } else {
+      g.setAttribute("aria-valuenow", String(clockMin));
+      g.setAttribute("aria-valuetext", sliderValueToTime(clockMin) + (dayMark || ""));
+    }
+  }
+  function syncDial(){
+    const st = readState();
+    placeKnob(startG, st.startMin);
+    placeKnob(endG, st.endAbs === null ? null : st.endAbs % 1440);
+    const segs = st.endAbs === null ? [] : rangeArcSegments(st.startMin, st.endAbs);
+    segPaths.forEach(function(p, i){
+      if (i < segs.length){
+        const seg = segs[i];
+        let sweep = (seg.durationMin / 1440) * 360;
+        if (i < segs.length - 1) sweep = Math.min(360, sweep + 0.3); // 区間の継ぎ目の隙間防止
+        p.setAttribute("d", rangeArcD((seg.startMin / 1440) * 360, sweep));
+      } else {
+        p.setAttribute("d", "");
+      }
+    });
+    // 区切り（12時間ごと）のハートの位置を合わせる（表示はキュートスキンのときだけCSSで出す）
+    host.querySelectorAll("[data-seg-heart]").forEach(function(hEl){
+      const i = Number(hEl.getAttribute("data-seg-heart"));
+      if (i < segs.length){
+        const bp = dialPolar((segs[i].startMin / 1440) * 360, DIAL_R);
+        hEl.setAttribute("transform", "translate(" + bp.x.toFixed(2) + " " + bp.y.toFixed(2) + ") scale(0.55) translate(-12 -12)");
+        hEl.style.display = "";
+      } else {
+        hEl.style.display = "none";
+      }
+    });
+    const dayMark = st.endAbs === null ? "" : (st.endAbs >= 2880 ? " 翌々日" : (st.endAbs >= 1440 ? " 翌日" : ""));
+    if (st.startMin === null || st.endAbs === null){
+      startText.textContent = "開始 " + (startEl.value || "--:--");
+      endText.textContent = "終了 " + (endEl.value || "--:--");
+      totalText.textContent = "--";
+    } else {
+      startText.textContent = "開始 " + startEl.value;
+      endText.textContent = "終了 " + sliderValueToTime(st.endAbs % 1440) + dayMark;
+      totalText.textContent = fmtDuration(st.endAbs - st.startMin);
+    }
+    setKnobAria(startG, st.startMin, "");
+    setKnobAria(endG, st.endAbs === null ? null : st.endAbs % 1440, dayMark);
+  }
+  // 開始（分）と終了の絶対分をフォームに書き戻す（終了は時計分＋日オフセットに分解）
+  function writeState(startMin, endAbs){
+    startEl.value = sliderValueToTime(startMin);
+    const endClock = ((endAbs % 1440) + 1440) % 1440;
+    endEl.value = sliderValueToTime(endClock);
+    if (offsetEl) offsetEl.value = String(Math.floor(endAbs / 1440));
+    syncAllTimeSliders();
+  }
+
+  // ---- ポインタ操作 ----
+  // 終了つまみは角度の変化量を積み上げることで「何周目か」を数え、1周を超える回転を扱う
+  let drag = null; // {knob, lastAngle, absFloat}
+  function pointerPos(e){
     const rect = svg.getBoundingClientRect();
-    if (!rect.width) return;
+    if (!rect.width) return null;
     const dx = e.clientX - (rect.left + rect.width / 2);
     const dy = e.clientY - (rect.top + rect.height / 2);
     // 中心付近は角度が不安定なので無視する
-    if (Math.sqrt(dx * dx + dy * dy) < rect.width * 0.12) return;
-    const min = angleToTimeValue(dialPointToAngle(dx, dy));
-    timeEl.value = sliderValueToTime(min);
-    syncAllTimeSliders();
+    if (Math.sqrt(dx * dx + dy * dy) < rect.width * 0.12) return null;
+    const angle = dialPointToAngle(dx, dy);
+    return { angle: angle, clockMin: angleToTimeValue(angle) };
   }
   svg.addEventListener("pointerdown", function(e){
-    dragging = true;
+    const pa = pointerPos(e);
+    if (!pa) return;
+    const st = readState();
+    const startMin = st.startMin === null ? 0 : st.startMin;
+    let knob;
+    const knobEl = e.target && e.target.closest ? e.target.closest("[data-knob]") : null;
+    if (knobEl) knob = knobEl.getAttribute("data-knob");
+    else if (st.startMin === null) knob = "start";
+    else if (st.endAbs === null) knob = "end";
+    else knob = pickDialKnob(pa.clockMin, st.startMin, st.endAbs % 1440);
     try { svg.setPointerCapture(e.pointerId); } catch (err) {}
     e.preventDefault();
-    setFromPointer(e);
+    if (knob === "start"){
+      drag = { knob: "start" };
+      if (st.endAbs === null){
+        startEl.value = sliderValueToTime(pa.clockMin);
+        syncAllTimeSliders();
+      } else {
+        writeState(pa.clockMin, clampEndAbs(pa.clockMin, pa.clockMin + (st.endAbs - st.startMin)));
+      }
+    } else if (st.startMin === null){
+      // 開始が未入力のうちは、終了の時計分だけを入れる（日オフセットは付けない）
+      drag = null;
+      endEl.value = sliderValueToTime(pa.clockMin);
+      if (offsetEl) offsetEl.value = "0";
+      syncAllTimeSliders();
+    } else {
+      // 終了：タップ位置の時計分について、現在の終了に最も近い周回を初期値にする
+      let best = null;
+      for (let k = 0; k <= 2; k++){
+        const cand = pa.clockMin + k * 1440;
+        if (cand <= startMin || cand >= startMin + 2880) continue;
+        if (st.endAbs === null || best === null || Math.abs(cand - st.endAbs) < Math.abs(best - st.endAbs)) best = cand;
+      }
+      if (best === null) best = clampEndAbs(startMin, pa.clockMin <= startMin ? pa.clockMin + 1440 : pa.clockMin);
+      drag = { knob: "end", lastAngle: pa.angle, absFloat: best };
+      writeState(startMin, clampEndAbs(startMin, Math.round(best / 15) * 15));
+    }
   });
   svg.addEventListener("pointermove", function(e){
-    if (dragging) setFromPointer(e);
+    if (!drag) return;
+    const pa = pointerPos(e);
+    if (!pa) return;
+    const st = readState();
+    const startMin = st.startMin === null ? 0 : st.startMin;
+    if (drag.knob === "start"){
+      if (st.endAbs === null){
+        startEl.value = sliderValueToTime(pa.clockMin);
+        syncAllTimeSliders();
+      } else {
+        writeState(pa.clockMin, clampEndAbs(pa.clockMin, pa.clockMin + (st.endAbs - st.startMin)));
+      }
+      return;
+    }
+    // 終了：角度の差分（0度を跨ぐときは ±360 で補正）を絶対分に積み上げる
+    let delta = pa.angle - drag.lastAngle;
+    if (delta < -180) delta += 360;
+    else if (delta > 180) delta -= 360;
+    drag.lastAngle = pa.angle;
+    drag.absFloat = clampEndAbs(startMin, drag.absFloat + delta * 4); // 1度 = 4分
+    writeState(startMin, clampEndAbs(startMin, Math.round(drag.absFloat / 15) * 15));
   });
-  function endDrag(){ dragging = false; }
+  function endDrag(){ drag = null; }
   svg.addEventListener("pointerup", endDrag);
   svg.addEventListener("pointercancel", endDrag);
-  svg.addEventListener("keydown", function(e){
-    let delta = 0;
-    if (e.key === "ArrowRight" || e.key === "ArrowUp") delta = 15;
-    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") delta = -15;
-    else return;
-    e.preventDefault();
-    const cur = timeToSliderValue(timeEl.value);
-    const next = ((cur === null ? 0 : cur) + delta + 1440) % 1440;
-    timeEl.value = sliderValueToTime(next);
-    syncAllTimeSliders();
-  });
+
+  // ---- キーボード操作（各つまみをフォーカスして矢印キーで ±15分） ----
+  function onKnobKey(which){
+    return function(e){
+      let delta = 0;
+      if (e.key === "ArrowRight" || e.key === "ArrowUp") delta = 15;
+      else if (e.key === "ArrowLeft" || e.key === "ArrowDown") delta = -15;
+      else return;
+      e.preventDefault();
+      const st = readState();
+      const startMin = st.startMin === null ? 0 : st.startMin;
+      if (which === "start"){
+        const ns = Math.max(0, Math.min(1425, startMin + delta));
+        if (st.endAbs === null){
+          startEl.value = sliderValueToTime(ns);
+          syncAllTimeSliders();
+        } else {
+          writeState(ns, clampEndAbs(ns, ns + (st.endAbs - st.startMin)));
+        }
+      } else {
+        const base = st.endAbs === null ? endAbsMinutes(startMin, (startMin + 60) % 1440, 0) : st.endAbs;
+        writeState(startMin, clampEndAbs(startMin, base + delta));
+      }
+    };
+  }
+  startG.addEventListener("keydown", onKnobKey("start"));
+  endG.addEventListener("keydown", onKnobKey("end"));
+
   syncDial();
   timeSliderSyncs.push(syncDial);
 }
-bindTimeDial("sfStart", "sfStartDial", "開始時刻をダイヤルで入力");
-bindTimeDial("sfEnd", "sfEndDial", "終了時刻をダイヤルで入力");
-bindTimeDial("tplStart", "tplStartDial", "開始時刻をダイヤルで入力");
-bindTimeDial("tplEnd", "tplEndDial", "終了時刻をダイヤルで入力");
+bindRangeDial("sfStart", "sfEnd", "sfEndOffset", "sfRangeDial");
+bindRangeDial("tplStart", "tplEnd", "tplEndOffset", "tplRangeDial");
 
 // ---------- 時刻入力方法の切り替え（打ち込み／スライダー／ダイヤル） ----------
 // 選んだ方式だけを表示する。値は時刻欄が保持するので、切り替えても入力内容はそのまま残り、
@@ -1763,6 +2250,7 @@ function applyCategoryPreset(){
   if (!p) return;
   document.getElementById("sfStart").value = p.start;
   document.getElementById("sfEnd").value = p.end;
+  document.getElementById("sfEndOffset").value = "0"; // プリセットは当日〜翌日の範囲なので日オフセットは付けない
   syncAllTimeSliders();
 }
 document.getElementById("sfCategory").addEventListener("change", applyCategoryPreset);
@@ -1854,6 +2342,7 @@ function handleShiftItemClick(e){
     document.getElementById("sfWorkplace").value = s.workplaceId;
     document.getElementById("sfStart").value = s.start;
     document.getElementById("sfEnd").value = s.end;
+    document.getElementById("sfEndOffset").value = String(Number(s.endDayOffset) || 0);
     document.getElementById("sfBreak").value = s.breakMin || 0;
     document.getElementById("sfCategory").value = s.category || "";
     document.getElementById("sfMemo").value = s.memo || "";
@@ -1874,6 +2363,7 @@ function handleShiftItemClick(e){
     document.getElementById("sfWorkplace").value = s.workplaceId;
     document.getElementById("sfStart").value = s.start;
     document.getElementById("sfEnd").value = s.end;
+    document.getElementById("sfEndOffset").value = String(Number(s.endDayOffset) || 0);
     document.getElementById("sfBreak").value = s.breakMin || 0;
     document.getElementById("sfCategory").value = s.category || "";
     document.getElementById("sfMemo").value = s.memo || "";
@@ -2058,7 +2548,7 @@ function renderTemplates(){
         const wpName = wp ? wp.name : "（削除済みのバイト先）";
         const cat = t.category ? t.category + "・" : "";
         return '<div class="wp-item"><div><span class="wp-name">' + esc(t.name) + '</span>' +
-          '<div class="wp-detail">' + esc(wpName) + "・" + esc(cat) + esc(t.start) + "〜" + esc(t.end) +
+          '<div class="wp-detail">' + esc(wpName) + "・" + esc(cat) + esc(t.start) + "〜" + esc(endTimeLabel(t.end, t.endDayOffset)) +
           "・休憩 " + (Number(t.breakMin) || 0) + "分・" + esc(tplWeekdayLabel(t)) + "</div></div>" +
           '<div class="wp-actions">' +
           '<button class="small" data-tpl-apply="' + t.id + '">適用</button>' +
@@ -2095,6 +2585,7 @@ tplForm.addEventListener("submit", function(e){
     category: document.getElementById("tplCategory").value,
     start: document.getElementById("tplStart").value,
     end: document.getElementById("tplEnd").value,
+    endDayOffset: Number(document.getElementById("tplEndOffset").value) || 0,
     breakMin: Number(document.getElementById("tplBreak").value) || 0,
     weekdays: readWeekdayChecks("tplWeekdays")
   };
@@ -2128,6 +2619,7 @@ function applyTplCategoryPreset(){
   if (!p) return;
   document.getElementById("tplStart").value = p.start;
   document.getElementById("tplEnd").value = p.end;
+  document.getElementById("tplEndOffset").value = "0"; // プリセットは当日〜翌日の範囲なので日オフセットは付けない
   syncAllTimeSliders();
 }
 document.getElementById("tplCategory").addEventListener("change", applyTplCategoryPreset);
@@ -2213,7 +2705,7 @@ document.getElementById("tplList").addEventListener("click", function(e){
     const wp = findWp(t.workplaceId);
     document.getElementById("tplApplyName").textContent =
       "パターン「" + t.name + "」：" + (wp ? wp.name : "（削除済みのバイト先）") +
-      "・" + t.start + "〜" + t.end + "・" + tplWeekdayLabel(t);
+      "・" + t.start + "〜" + endTimeLabel(t.end, t.endDayOffset) + "・" + tplWeekdayLabel(t);
     setTplApplyMonth(viewYear, viewMonth);
     document.getElementById("tplApplyArea").classList.remove("hidden");
     document.getElementById("tplApplyArea").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2228,6 +2720,7 @@ document.getElementById("tplList").addEventListener("click", function(e){
     document.getElementById("tplCategory").value = t.category || "";
     document.getElementById("tplStart").value = t.start;
     document.getElementById("tplEnd").value = t.end;
+    document.getElementById("tplEndOffset").value = String(Number(t.endDayOffset) || 0);
     syncAllTimeSliders();
     document.getElementById("tplBreak").value = t.breakMin || 0;
     document.querySelectorAll("#tplWeekdays input[type=checkbox]").forEach(function(b){
@@ -2279,7 +2772,7 @@ function normalizeDrafts(list){
   return list.filter(function(d){
     return d && typeof d.date === "string" && d.date.length > 0;
   }).map(function(d){
-    return {
+    const out = {
       date: d.date,
       workplaceId: d.workplaceId || "",
       start: d.start || "",
@@ -2287,6 +2780,8 @@ function normalizeDrafts(list){
       breakMin: Number(d.breakMin) || 0,
       category: d.category || ""
     };
+    if (d.estimated) out.estimated = true; // 最頻ペアで推定補正した行の目印
+    return out;
   });
 }
 
@@ -2590,6 +3085,18 @@ function legacyExtractTimePatterns(normalized, daysInMonth){
   return drafts;
 }
 
+// 日付文字列（"YYYY-MM-DD"）から、実際のカレンダーの曜日漢字（"日"〜"土"）を返す
+// OCRで読んだ曜日文字は誤読しやすいため、曜日は常に日付から計算して使う（不正な日付は ""）
+const WEEKDAY_KANJI = ["日", "月", "火", "水", "木", "金", "土"];
+function weekdayKanjiForDate(dateStr){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ""));
+  if (!m) return "";
+  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return "";
+  return WEEKDAY_KANJI[dt.getDay()];
+}
+
 // カレンダー形式のテキストから「日＋漢字1文字（早・日・遅・夜・深）」を抽出する
 // 日付と漢字の対応が取れた場合だけ、その区分のプリセット時刻で下書きを作る
 function extractKanjiDrafts(text){
@@ -2620,13 +3127,15 @@ function extractKanjiDrafts(text){
     const line = rawLine.trim();
     if (!line) return;
     // 同じ行にある「日＋漢字」の組を探す
-    const re = /(\d{1,2})\s*日?\s*[（(]?[月火水木金土日]?[）)]?\s*([早日遅夜深])/g;
+    const re = /(\d{1,2})\s*日?\s*[（(]?([月火水木金土日])?[）)]?\s*([早日遅夜深])/g;
     let m;
     let matched = false;
     while ((m = re.exec(line)) !== null){
       // 「◯日」だけの一致は日付の表記であって日勤の略ではないので除く
-      if (m[2] === "日" && /^\d{1,2}日$/.test(m[0])) continue;
-      pushDraft(Number(m[1]), m[2]);
+      if (m[3] === "日" && /^\d{1,2}日$/.test(m[0])) continue;
+      // 曜日文字（m[2]）が読めていても信用しない。曜日は日付から一意に決まるため、
+      // 実際のカレンダーと食い違っていても日付の方を採用する（曜日表示は weekdayKanjiForDate で計算する）
+      pushDraft(Number(m[1]), m[3]);
       matched = true;
     }
     if (matched) return;
@@ -2646,6 +3155,71 @@ function extractKanjiDrafts(text){
   });
   drafts.sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
   return drafts;
+}
+
+// 時刻（"HH:MM"）の数字列表現を返す（"17:00"→"1700"、"07:00"→"700"）。不正な形式は null
+function timeDigitSeq(timeStr){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(timeStr || ""));
+  if (!m) return null;
+  return String(Number(m[1])) + m[2];
+}
+
+// rowTime が modeTime の「先頭の桁落ち」かどうか（例：最頻 17:00 に対して 7:00 と読まれた）
+// 数字列で、最頻側が1桁長く、残りの桁が一致する場合だけ true（分まで一致することを含む）
+function isDigitDropVariant(rowTime, modeTime){
+  const r = timeDigitSeq(rowTime);
+  const mo = timeDigitSeq(modeTime);
+  if (r === null || mo === null || r === mo) return false;
+  return mo.length === r.length + 1 && mo.slice(1) === r;
+}
+
+// 下書き群の中で最も多い開始・終了ペアを返す（開始・終了が両方そろった行だけが対象）
+// 最多が2件未満、または同数1位が複数ある場合は根拠が弱いので null
+function mostFrequentTimePair(drafts){
+  const counts = {};
+  (drafts || []).forEach(function(d){
+    if (!d.start || !d.end) return;
+    const key = d.start + "|" + d.end;
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  let best = null;
+  let tie = false;
+  Object.keys(counts).forEach(function(k){
+    if (!best || counts[k] > best.count){
+      best = { key: k, count: counts[k] };
+      tie = false;
+    } else if (counts[k] === best.count){
+      tie = true;
+    }
+  });
+  if (!best || tie || best.count < 2) return null;
+  const parts = best.key.split("|");
+  return { start: parts[0], end: parts[1], count: best.count };
+}
+
+// 最頻ペアによる時刻の推定補正
+// 片方が最頻と一致し、もう片方が最頻の「桁落ち」である行（例：終了が 7:00 と読まれたが最頻は 17:00）だけを
+// 最頻ペアに合わせて直し、estimated=true の目印を付ける。大きく違う行は補正しない。
+// 元の配列は変更せず、新しい配列を返す
+function applyFrequentPairCorrection(drafts){
+  const list = (drafts || []).slice();
+  const mode = mostFrequentTimePair(list);
+  if (!mode) return list;
+  return list.map(function(d){
+    if (!d.start || !d.end) return d;
+    if (d.start === mode.start && d.end === mode.end) return d;
+    const startDrop = isDigitDropVariant(d.start, mode.start);
+    const endDrop = isDigitDropVariant(d.end, mode.end);
+    if (!startDrop && !endDrop) return d;
+    const startOk = d.start === mode.start || startDrop;
+    const endOk = d.end === mode.end || endDrop;
+    if (!startOk || !endOk) return d;
+    const copy = Object.assign({}, d);
+    copy.start = mode.start;
+    copy.end = mode.end;
+    copy.estimated = true;
+    return copy;
+  });
 }
 
 // 認識テキストからシフトの下書き候補を生成する
@@ -2674,7 +3248,8 @@ function buildDraftsFromText(text){
     if (a.date !== b.date) return a.date < b.date ? -1 : 1;
     return a.start < b.start ? -1 : (a.start > b.start ? 1 : 0);
   });
-  return { drafts: drafts, discarded: timeResult.discarded };
+  // 最頻の開始・終了ペアで、桁落ちしたらしい行を推定補正する（目印付き）
+  return { drafts: applyFrequentPairCorrection(drafts), discarded: timeResult.discarded };
 }
 // === OCR TEXT LOGIC END ===
 
@@ -2940,6 +3515,15 @@ function preprocessPixelsInPlace(data, w, h, mode){
 // 前処理後の拡大上限（幅px）。小さい画像は最大でこの幅まで拡大する
 const OCR_PREPROCESS_MAX_WIDTH = 2400;
 
+// OCR前の拡大倍率を決める純粋関数
+// 幅2400px未満の画像は 2400px を上限に最大3倍まで拡大する
+// （幅1200px未満の小さい画像は、割り算の性質上つねに2倍以上になる）
+function ocrScaleForWidth(srcW){
+  const w = Number(srcW) || 0;
+  if (w <= 0 || w >= OCR_PREPROCESS_MAX_WIDTH) return 1;
+  return Math.min(OCR_PREPROCESS_MAX_WIDTH / w, 3);
+}
+
 // 画像を読み取り用に前処理した dataURL を返す
 // （幅が小さい場合は最大2400px・最大3倍まで拡大 → グレースケール化 →
 //   コントラスト強調 → level に応じて適応的二値化。PDFの読み取りには使わない）
@@ -2951,10 +3535,7 @@ function preprocessImageForOcr(dataUrl, level){
       try {
         const srcW = img.naturalWidth || img.width;
         const srcH = img.naturalHeight || img.height;
-        let scale = 1;
-        if (srcW > 0 && srcW < OCR_PREPROCESS_MAX_WIDTH){
-          scale = Math.min(OCR_PREPROCESS_MAX_WIDTH / srcW, 3);
-        }
+        const scale = ocrScaleForWidth(srcW);
         const w = Math.max(1, Math.round(srcW * scale));
         const h = Math.max(1, Math.round(srcH * scale));
         const canvas = document.createElement("canvas");
@@ -2973,6 +3554,39 @@ function preprocessImageForOcr(dataUrl, level){
       }
     };
     img.onerror = function(){ reject(new Error("画像を読み込めませんでした")); };
+    img.src = dataUrl;
+  });
+}
+
+// 前処理なしで読み取る場合でも、小さい画像は拡大してからOCRに渡す
+// （小さい文字の認識を助けるため。拡大が不要・失敗した場合は元の画像をそのまま返す）
+function upscaleImageForOcr(dataUrl){
+  return new Promise(function(resolve){
+    const img = new Image();
+    img.onload = function(){
+      try {
+        const srcW = img.naturalWidth || img.width;
+        const srcH = img.naturalHeight || img.height;
+        const scale = ocrScaleForWidth(srcW);
+        if (!(scale > 1) || !(srcW > 0) || !(srcH > 0)){
+          resolve(dataUrl);
+          return;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(srcW * scale);
+        canvas.height = Math.round(srcH * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.imageSmoothingEnabled = true;
+        if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (e){
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = function(){ resolve(dataUrl); };
     img.src = dataUrl;
   });
 }
@@ -3507,8 +4121,33 @@ function renderOcrSources(){
   if (list.some(function(im){ return im.id === current; })) sel.value = current;
 }
 
+// 切り取り範囲が設定されているかどうか
+function hasCropSelection(){
+  if (!ocrImageDataUrl) return false;
+  return ocrCropMode === "double" ? !!(ocrCropSel && ocrCropSelB) : !!ocrCropSel;
+}
+
+// 切り取り後の画像（1か所、または2か所を横に連結）の dataURL を返す
+// 切り取りが未設定なら null、範囲が小さすぎる場合は Error("crop-too-small") で reject する
+function buildCroppedSourceUrl(){
+  if (!hasCropSelection()) return Promise.resolve(null);
+  const cropImg = document.getElementById("ocrCropImg");
+  const natW = cropImg ? cropImg.naturalWidth : 0;
+  const natH = cropImg ? cropImg.naturalHeight : 0;
+  if (ocrCropMode === "double"){
+    const natA = cropFracToNatural(ocrCropSel, natW, natH);
+    const natB = cropFracToNatural(ocrCropSelB, natW, natH);
+    if (!natA || !natB) return Promise.reject(new Error("crop-too-small"));
+    return concatTwoCropsToDataUrl(ocrImageDataUrl, natA, natB);
+  }
+  const nat = cropFracToNatural(ocrCropSel, natW, natH);
+  if (!nat) return Promise.reject(new Error("crop-too-small"));
+  return cropImageToDataUrl(ocrImageDataUrl, nat);
+}
+
 // Tesseract.js で画像からテキストを読み取る（jpn+eng）
-// 「読み取る」ボタン用：PDFならPDF読み取り、写真なら全体を読み取る
+// 「読み取る」ボタン用：PDFならPDF読み取り、写真なら（切り取りが設定されていれば
+// 切り取り後の画像だけを、なければ全体を）読み取る
 function runOcr(){
   if (ocrPdfBuffer){
     runPdfRead();
@@ -3516,6 +4155,23 @@ function runOcr(){
   }
   if (!ocrImageDataUrl){
     alert("先に画像を選んでください");
+    return;
+  }
+  if (hasCropSelection()){
+    // 切り取りが設定されている場合は、元の画像全体ではなく切り取り後の画像だけを読み取る
+    const statusEl = document.getElementById("ocrStatus");
+    statusEl.textContent = "切り取り中…";
+    buildCroppedSourceUrl().then(function(url){
+      statusEl.textContent = "";
+      runOcrForSource(url || ocrImageDataUrl);
+    }).catch(function(err){
+      statusEl.textContent = "";
+      if (err && err.message === "crop-too-small"){
+        alert("切り取り範囲が小さすぎます。もう少し大きく範囲を選ぶか、切り取りをリセットしてください");
+      } else {
+        alert("切り取りに失敗しました");
+      }
+    });
     return;
   }
   runOcrForSource(ocrImageDataUrl);
@@ -3552,7 +4208,8 @@ function runOcrForSource(sourceUrl){
     });
   } else {
     showPreprocessedPreview(null);
-    imagePromise = Promise.resolve(sourceUrl);
+    // 前処理なしでも、小さい画像は拡大してから読み取る
+    imagePromise = upscaleImageForOcr(sourceUrl);
   }
   let worker = null;
   imagePromise.then(function(targetUrl){
@@ -3644,9 +4301,10 @@ function renderDrafts(){
       const label = c === "" ? "未設定" : c;
       return '<option value="' + c + '"' + (c === (d.category || "") ? " selected" : "") + ">" + label + "</option>";
     }).join("");
+    const wdKanji = weekdayKanjiForDate(d.date);
     return '<div class="draft-row">' +
       '<div class="row2">' +
-      '<div><label>日付</label><input type="date" data-df="date" value="' + esc(d.date) + '"></div>' +
+      '<div><label data-draft-weekday>日付' + (wdKanji ? "（" + wdKanji + "）" : "") + '</label><input type="date" data-df="date" value="' + esc(d.date) + '"></div>' +
       '<div><label>バイト先</label><select data-df="workplaceId">' + wpOptions + "</select></div>" +
       "</div>" +
       '<div class="row2">' +
@@ -3657,6 +4315,7 @@ function renderDrafts(){
       '<div><label>区分</label><select data-df="category">' + catOptions + "</select></div>" +
       '<div><label>休憩（分）</label><input type="number" data-df="breakMin" min="0" step="5" value="' + (d.breakMin || 0) + '"></div>' +
       "</div>" +
+      (d.estimated ? '<p class="draft-estimated-note">時刻を推定で補正しました（表で最も多い開始・終了の組に合わせています）。違っていたら直してください</p>' : "") +
       '<p class="draft-missing-note hidden">未入力の項目があります（赤い枠の欄を入力してください）</p>' +
       '<div class="draft-actions"><button class="small danger" data-del-draft="' + i + '">この行を削除</button></div>' +
       "</div>";
@@ -3690,6 +4349,8 @@ function markMissingDraftFields(){
 // 「まとめて登録」ボタンの連打防止ロック
 // 登録が完了したらボタンを無効化したままにし、下書きの内容が変わる（編集・削除・作り直し）まで再登録できないようにする
 let registerBtnLocked = false;
+// 直前に「まとめて登録」したシフトのid（登録の取り消し用。ページを開いている間だけ有効）
+let lastRegisteredIds = [];
 function lockRegisterButton(){
   registerBtnLocked = true;
   const btn = document.getElementById("ocrRegisterAll");
@@ -3721,6 +4382,7 @@ function registerAllDrafts(){
   });
   let added = 0;
   let skipped = 0;
+  const addedIds = [];
   ready.forEach(function(d){
     // 同じ日付・バイト先・開始・終了のシフトが既にあれば二重登録しない
     // （今回登録する分も shifts に入っていくので、下書き同士の重複もここで弾ける）
@@ -3733,8 +4395,10 @@ function registerAllDrafts(){
       skipped++;
       return;
     }
+    const nid = newId();
+    addedIds.push(nid);
     shifts.push({
-      id: newId(),
+      id: nid,
       date: d.date,
       workplaceId: d.workplaceId,
       start: d.start,
@@ -3775,7 +4439,37 @@ function registerAllDrafts(){
   } else if (btn){
     btn.disabled = false;
   }
+  // 登録した分は「直前の登録を取り消す」でまとめて消せるようにする
+  if (added > 0){
+    lastRegisteredIds = addedIds;
+    const undoBtn = document.getElementById("ocrUndoRegister");
+    if (undoBtn) undoBtn.classList.remove("hidden");
+  }
 }
+
+// 直前の「まとめて登録」を取り消す（登録したシフトをまとめて削除する）
+document.getElementById("ocrUndoRegister").addEventListener("click", function(){
+  if (lastRegisteredIds.length === 0) return;
+  const ids = lastRegisteredIds;
+  shifts = shifts.filter(function(s){ return ids.indexOf(s.id) < 0; });
+  lastRegisteredIds = [];
+  document.getElementById("ocrUndoRegister").classList.add("hidden");
+  saveAll();
+  render();
+  const statusEl = document.getElementById("ocrRegisterStatus");
+  if (statusEl) statusEl.textContent = "直前の登録を取り消しました（" + ids.length + "件を削除）。";
+});
+
+// 下書きをすべて削除する（登録済みのシフトは消えない）
+document.getElementById("ocrClearDrafts").addEventListener("click", function(){
+  if (ocrDrafts.length === 0) return;
+  if (!confirm("下書きをすべて削除しますか？（登録済みのシフトは消えません）")) return;
+  ocrDrafts = [];
+  saveDrafts();
+  renderDrafts();
+  unlockRegisterButton();
+  document.getElementById("ocrRegisterStatus").textContent = "";
+});
 
 // OCR セクションの操作
 const ocrFileInput = document.getElementById("ocrFileInput");
@@ -3886,7 +4580,13 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
     if (wrap.setPointerCapture) {
       try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
     }
+    // ドラッグ中はページのスクロールを止める（枠・ハンドルの touch-action:none と併用）
+    document.body.classList.add("crop-dragging");
   });
+  // ドラッグ中のタッチ移動では画面がスクロールしないようにする（iOS Safari対策）
+  document.addEventListener("touchmove", function(e){
+    if (drag) e.preventDefault();
+  }, { passive: false });
   wrap.addEventListener("pointermove", function(e){
     if (!drag) return;
     const p = posInWrap(e);
@@ -3906,6 +4606,7 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
     if (!drag) return;
     const slot = drag.slot;
     drag = null;
+    document.body.classList.remove("crop-dragging");
     // 小さすぎる選択はタップとみなして解除する
     const cur = selPx(slot);
     if (cur && (cur.w < 10 || cur.h < 10)){
@@ -3924,39 +4625,20 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
   });
   document.getElementById("ocrCropRunBtn").addEventListener("click", function(){
     if (!ocrImageDataUrl) return;
-    const cropImg = document.getElementById("ocrCropImg");
+    if (!hasCropSelection()) return;
+    // 「読み取る」ボタンと同じ経路（切り取り後の画像だけを読み取る）に統一する
     const statusEl = document.getElementById("ocrStatus");
-    if (ocrCropMode === "double"){
-      if (!ocrCropSel || !ocrCropSelB) return;
-      const natA = cropFracToNatural(ocrCropSel, cropImg.naturalWidth, cropImg.naturalHeight);
-      const natB = cropFracToNatural(ocrCropSelB, cropImg.naturalWidth, cropImg.naturalHeight);
-      if (!natA || !natB){
-        alert("切り取り範囲が小さすぎます。もう少し大きく範囲を選んでください");
-        return;
-      }
-      statusEl.textContent = "切り取り中…";
-      concatTwoCropsToDataUrl(ocrImageDataUrl, natA, natB).then(function(url){
-        statusEl.textContent = "";
-        runOcrForSource(url);
-      }).catch(function(){
-        statusEl.textContent = "";
-        alert("切り取りに失敗しました");
-      });
-      return;
-    }
-    if (!ocrCropSel) return;
-    const nat = cropFracToNatural(ocrCropSel, cropImg.naturalWidth, cropImg.naturalHeight);
-    if (!nat){
-      alert("切り取り範囲が小さすぎます。もう少し大きく範囲を選んでください");
-      return;
-    }
     statusEl.textContent = "切り取り中…";
-    cropImageToDataUrl(ocrImageDataUrl, nat).then(function(url){
+    buildCroppedSourceUrl().then(function(url){
       statusEl.textContent = "";
-      runOcrForSource(url);
-    }).catch(function(){
+      if (url) runOcrForSource(url);
+    }).catch(function(err){
       statusEl.textContent = "";
-      alert("切り取りに失敗しました");
+      if (err && err.message === "crop-too-small"){
+        alert("切り取り範囲が小さすぎます。もう少し大きく範囲を選んでください");
+      } else {
+        alert("切り取りに失敗しました");
+      }
     });
   });
   // 2か所モードのスロット切り替えボタン
@@ -4004,23 +4686,27 @@ document.getElementById("ocrBuildDrafts").addEventListener("click", function(){
     return;
   }
   const noteEl = document.getElementById("ocrDraftNote");
+  let builtNote = "";
   if (ocrPdfPositionDrafts && ocrPdfPositionDrafts.length > 0){
     // 時間割形式のPDFは、テキストではなく列の位置から作った下書きを使う
-    ocrDrafts = ocrPdfPositionDrafts.map(function(d){
+    ocrDrafts = applyFrequentPairCorrection(ocrPdfPositionDrafts.map(function(d){
       const copy = Object.assign({}, d);
       if (!copy.workplaceId) copy.workplaceId = workplaces[0].id;
       return copy;
-    });
-    if (noteEl) noteEl.textContent = "表の列の位置から下書きを作りました。";
+    }));
+    builtNote = "表の列の位置から下書きを作りました。";
   } else {
     const built = buildDraftsFromText(document.getElementById("ocrText").value);
     ocrDrafts = built.drafts;
-    if (noteEl){
-      noteEl.textContent = built.discarded > 0
-        ? "下書きにできなかった断片が" + built.discarded + "件ありました（時刻の範囲として読み取れなかったものは、下書きにしていません）。"
-        : "";
+    if (built.discarded > 0){
+      builtNote = "下書きにできなかった断片が" + built.discarded + "件ありました（時刻の範囲として読み取れなかったものは、下書きにしていません）。";
     }
   }
+  const correctedCount = ocrDrafts.filter(function(d){ return d.estimated; }).length;
+  if (correctedCount > 0){
+    builtNote += (builtNote ? " " : "") + correctedCount + "件の行は、時刻を推定で補正しました（行に目印が付いています）。";
+  }
+  if (noteEl) noteEl.textContent = builtNote;
   document.getElementById("ocrRegisterStatus").textContent = "";
   saveDrafts();
   unlockRegisterButton();
@@ -4052,6 +4738,19 @@ document.getElementById("ocrRegisterAll").addEventListener("click", registerAllD
 // 下書き行でバイト先や区分を変えたら、そのバイト先のプリセット時刻を反映する
 document.getElementById("ocrDrafts").addEventListener("change", function(e){
   const field = e.target.getAttribute("data-df");
+  if (field === "start" || field === "end"){
+    // 時刻を手で直したら、推定補正の目印は外す
+    const rowEl = e.target.closest(".draft-row");
+    const rows = document.querySelectorAll("#ocrDrafts .draft-row");
+    const idx = Array.prototype.indexOf.call(rows, rowEl);
+    if (rowEl && idx >= 0 && ocrDrafts[idx] && ocrDrafts[idx].estimated){
+      ocrDrafts[idx].estimated = false;
+      const note = rowEl.querySelector(".draft-estimated-note");
+      if (note) note.remove();
+      saveDrafts();
+    }
+    return;
+  }
   if (field !== "category" && field !== "workplaceId") return;
   const row = e.target.closest(".draft-row");
   if (!row) return;
@@ -4073,9 +4772,20 @@ function refreshDraftHighlights(){
 document.getElementById("ocrDrafts").addEventListener("input", refreshDraftHighlights);
 document.getElementById("ocrDrafts").addEventListener("change", refreshDraftHighlights);
 
+// 下書きの日付が変わったら、曜日表示を実際のカレンダーから計算し直す
+document.getElementById("ocrDrafts").addEventListener("input", function(e){
+  if (e.target.getAttribute("data-df") !== "date") return;
+  const row = e.target.closest(".draft-row");
+  const label = row ? row.querySelector("[data-draft-weekday]") : null;
+  if (label){
+    const k = weekdayKanjiForDate(e.target.value);
+    label.textContent = "日付" + (k ? "（" + k + "）" : "");
+  }
+});
+
 // ---------- スキン（見た目のテーマ） ----------
 // CSS変数を html[data-skin] で切り替える。選択は settings に保存し、バックアップにも含まれる
-const SKINS = ["standard", "pink", "purple", "green", "dark"];
+const SKINS = ["standard", "pink", "purple", "green", "dark", "cute"];
 function getSkin(){
   const s = settings && settings.skin;
   return SKINS.indexOf(s) >= 0 ? s : "standard";
@@ -4106,6 +4816,99 @@ myNamesInput.addEventListener("change", function(){
   saveSettings();
 });
 
+// ---------- 日付メモ ----------
+document.getElementById("calDayDetail").addEventListener("click", function(e){
+  const saveBtn = e.target.closest("[data-save-day-memo]");
+  if (!saveBtn) return;
+  const dateStr = saveBtn.getAttribute("data-save-day-memo");
+  const ta = document.getElementById("dayMemoText");
+  if (!ta) return;
+  dayMemos = setDayMemo(dayMemos, dateStr, ta.value);
+  saveDayMemos();
+  render(); // カレンダーのメモ印とリスト表示を最新化する
+  const detEl = document.getElementById("calDayDetail");
+  const statusEl = detEl ? detEl.querySelector("[data-day-memo-status]") : null;
+  if (statusEl) statusEl.textContent = "保存しました";
+});
+
+// ---------- メモ帳 ----------
+let editingNoteId = null;
+const noteForm = document.getElementById("noteForm");
+
+function renderNotes(){
+  const el = document.getElementById("noteList");
+  if (!el) return;
+  if (notes.length === 0){
+    el.innerHTML = '<div class="empty">メモはまだありません。下のボタンから追加できます</div>';
+    return;
+  }
+  el.innerHTML = notes.map(function(n){
+    const body = n.body ? '<div class="note-body">' + esc(n.body).replace(/\n/g, "<br>") + "</div>" : "";
+    return '<div class="note-item">' +
+      '<div class="note-top"><span class="note-title">' + esc(n.title || "（無題）") + '</span>' +
+      '<span class="note-date">' + esc(noteUpdatedLabel(n.updatedAt)) + "</span></div>" + body +
+      '<div class="shift-actions">' +
+      '<button class="small" data-edit-note="' + esc(n.id) + '">編集</button>' +
+      '<button class="small danger" data-del-note="' + esc(n.id) + '">削除</button>' +
+      "</div></div>";
+  }).join("");
+}
+
+function openNoteForm(note){
+  editingNoteId = note ? note.id : null;
+  document.getElementById("nfTitle").value = note ? note.title : "";
+  document.getElementById("nfBody").value = note ? note.body : "";
+  document.getElementById("nfSubmit").textContent = note ? "更新する" : "保存する";
+  noteForm.classList.remove("hidden");
+}
+function closeNoteForm(){
+  editingNoteId = null;
+  noteForm.classList.add("hidden");
+}
+
+document.getElementById("toggleNoteForm").addEventListener("click", function(){
+  openNoteForm(null);
+  document.getElementById("nfTitle").focus();
+});
+document.getElementById("nfCancel").addEventListener("click", closeNoteForm);
+noteForm.addEventListener("submit", function(e){
+  e.preventDefault();
+  const title = document.getElementById("nfTitle").value.trim();
+  const body = document.getElementById("nfBody").value;
+  if (!title && !body.trim()){
+    alert("タイトルか本文を入力してください");
+    return;
+  }
+  notes = upsertNote(notes, {
+    id: editingNoteId || newId(),
+    title: title,
+    body: body,
+    updatedAt: Date.now()
+  });
+  saveNotes();
+  closeNoteForm();
+  renderNotes();
+});
+document.getElementById("noteList").addEventListener("click", function(e){
+  const editBtn = e.target.closest("[data-edit-note]");
+  const delBtn = e.target.closest("[data-del-note]");
+  if (editBtn){
+    const n = notes.find(function(x){ return x.id === editBtn.getAttribute("data-edit-note"); });
+    if (!n) return;
+    openNoteForm(n);
+    noteForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (delBtn){
+    const id = delBtn.getAttribute("data-del-note");
+    if (confirm("このメモを削除しますか？")){
+      notes = deleteNoteById(notes, id);
+      saveNotes();
+      if (editingNoteId === id) closeNoteForm();
+      renderNotes();
+    }
+  }
+});
+
 // ---- データのバックアップ（書き出し／読み込み） ----
 function buildBackupData(){
   return {
@@ -4117,7 +4920,9 @@ function buildBackupData(){
     settings: settings,
     images: monthImages,
     ocrDrafts: ocrDrafts,
-    templates: templates
+    templates: templates,
+    dayMemos: dayMemos,
+    notes: notes
   };
 }
 document.getElementById("exportDataBtn").addEventListener("click", function(){
@@ -4157,7 +4962,7 @@ importFileInput.addEventListener("change", function(){
       statusEl.textContent = "読み込めませんでした。このアプリのバックアップファイル（JSON）を選んでください。";
       return;
     }
-    if (!window.confirm("現在のデータ（バイト先・シフト・画像・設定・下書き・パターン）を、読み込んだ内容で置き換えます。よろしいですか？")){
+    if (!window.confirm("現在のデータ（バイト先・シフト・画像・設定・下書き・パターン・日付メモ・メモ帳）を、読み込んだ内容で置き換えます。よろしいですか？")){
       statusEl.textContent = "読み込みをやめました。現在のデータはそのままです。";
       return;
     }
@@ -4168,11 +4973,15 @@ importFileInput.addEventListener("change", function(){
     monthImages = (data.images && typeof data.images === "object" && !Array.isArray(data.images)) ? data.images : {};
     ocrDrafts = normalizeDrafts(data.ocrDrafts || []);
     templates = normalizeTemplates(data.templates || []);
+    dayMemos = normalizeDayMemos((data.dayMemos && typeof data.dayMemos === "object" && !Array.isArray(data.dayMemos)) ? data.dayMemos : {});
+    notes = normalizeNotes(Array.isArray(data.notes) ? data.notes : []);
     saveAll();
     saveSettings();
     saveImages();
     saveDrafts();
     saveTemplates();
+    saveDayMemos();
+    saveNotes();
     myNamesInput.value = settings.myNames || "";
     setOcrImage(null);
     renderOcrSources();
