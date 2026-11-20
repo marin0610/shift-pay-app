@@ -16,12 +16,34 @@
     --line:#e5e7eb;
     --bg:#ffffff;
     --danger:#dc2626;
+    --page-bg:#f8fafc;
+    --surface:#ffffff;
+    --fill:#f3f4f6;
+    --danger-bg:#fef2f2;
+    --danger-line:#fecaca;
+    --dial-tick:#9ca3af;
+  }
+  /* スキン（見た目のテーマ）：CSS変数を切り替える。標準は :root の青基調 */
+  html[data-skin="pink"]{
+    --blue:#db2777;--blue-dark:#be185d;--blue-light:#fdf2f8;--page-bg:#fff5f8;
+  }
+  html[data-skin="purple"]{
+    --blue:#7c3aed;--blue-dark:#6d28d9;--blue-light:#f5f3ff;--page-bg:#faf8ff;
+  }
+  html[data-skin="green"]{
+    --blue:#15803d;--blue-dark:#166534;--blue-light:#f0fdf4;--page-bg:#f6fdf8;
+  }
+  html[data-skin="dark"]{
+    --blue-dark:#93c5fd;--blue-light:#1e3a5f;
+    --ink:#f3f4f6;--muted:#9ca3af;--line:#374151;
+    --bg:#1f2937;--page-bg:#111827;--surface:#111827;--fill:#374151;
+    --danger:#f87171;--danger-bg:#450a0a;--danger-line:#7f1d1d;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
-    background:#f8fafc;
+    background:var(--page-bg);
     color:var(--ink);
     -webkit-text-size-adjust:100%;
   }
@@ -68,7 +90,7 @@
   h2{font-size:16px;margin:0 0 12px;}
   .shift-item{
     border:1px solid var(--line);border-radius:10px;
-    padding:10px 12px;margin-bottom:8px;background:#fff;
+    padding:10px 12px;margin-bottom:8px;background:var(--surface);
   }
   .shift-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
   .shift-date{font-weight:700;font-size:15px;}
@@ -78,16 +100,16 @@
   .shift-actions{margin-top:8px;display:flex;gap:8px;}
   button{
     font-family:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
-    background:#fff;color:var(--ink);font-size:14px;padding:8px 12px;min-height:40px;
+    background:var(--surface);color:var(--ink);font-size:14px;padding:8px 12px;min-height:40px;
   }
   button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700;width:100%;font-size:16px;padding:12px;}
   button.small{min-height:34px;padding:4px 10px;font-size:13px;}
-  button.danger{color:var(--danger);border-color:#fecaca;}
+  button.danger{color:var(--danger);border-color:var(--danger-line);}
   .empty{color:var(--muted);text-align:center;padding:16px 0;font-size:14px;}
   form label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px;}
   form input,form select{
     width:100%;font-size:16px;padding:10px;border:1px solid var(--line);
-    border-radius:8px;background:#fff;color:var(--ink);min-height:44px;
+    border-radius:8px;background:var(--surface);color:var(--ink);min-height:44px;
   }
   .row2{display:flex;gap:10px;}
   .row2 > div{flex:1;}
@@ -106,13 +128,19 @@
     touch-action:none;cursor:pointer;-webkit-tap-highlight-color:transparent;
   }
   .time-dial svg:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:50%;}
-  .time-dial .dial-time{font-variant-numeric:tabular-nums;}
+  .time-dial .dial-time{font-variant-numeric:tabular-nums;fill:var(--ink);}
+  /* ダイヤルの色はスキンに追随させる（SVGの属性よりCSSが優先される） */
+  .time-dial .dial-track{stroke:var(--line);}
+  .time-dial .dial-arc{stroke:var(--blue);}
+  .time-dial .dial-knob{fill:var(--blue);}
+  .time-dial line{stroke:var(--dial-tick);}
+  .time-dial text{fill:var(--muted);}
   input[type="color"]{padding:4px;height:44px;}
   .form-actions{display:flex;gap:8px;margin-top:14px;}
   .form-actions .primary{flex:1;}
   .wp-item{
     display:flex;justify-content:space-between;align-items:center;
-    border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--surface);
   }
   .wp-name{font-weight:700;}
   .wp-detail{color:var(--muted);font-size:13px;}
@@ -123,21 +151,21 @@
   .image-thumb{position:relative;width:calc(33.333% - 7px);max-width:160px;}
   .image-thumb img{
     width:100%;aspect-ratio:1;object-fit:cover;display:block;
-    border:1px solid var(--line);border-radius:10px;cursor:pointer;background:#f3f4f6;
+    border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--fill);
   }
   .image-thumb .del-image{
     position:absolute;top:4px;right:4px;min-height:28px;padding:2px 8px;
-    font-size:12px;background:rgba(255,255,255,.95);color:var(--danger);border-color:#fecaca;
+    font-size:12px;background:rgba(255,255,255,.95);color:var(--danger);border-color:var(--danger-line);
   }
   .image-count{font-size:13px;color:var(--muted);margin-left:8px;}
   .ocr-label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px;}
   .ocr-select{
     width:100%;font-size:16px;padding:10px;border:1px solid var(--line);
-    border-radius:8px;background:#fff;color:var(--ink);min-height:44px;
+    border-radius:8px;background:var(--surface);color:var(--ink);min-height:44px;
   }
   .ocr-preview{
     width:100%;max-height:240px;object-fit:contain;display:block;
-    border:1px solid var(--line);border-radius:10px;margin:10px 0;background:#f3f4f6;
+    border:1px solid var(--line);border-radius:10px;margin:10px 0;background:var(--fill);
   }
   .ocr-preview.hidden{display:none;}
   .ocr-check{
@@ -146,7 +174,7 @@
   }
   .ocr-check input{width:20px;height:20px;flex:none;}
   .crop-wrap{
-    position:relative;width:100%;margin:10px 0;background:#f3f4f6;
+    position:relative;width:100%;margin:10px 0;background:var(--fill);
     border:1px solid var(--line);border-radius:10px;overflow:hidden;
     touch-action:none;user-select:none;-webkit-user-select:none;
   }
@@ -182,22 +210,22 @@
   .wd-checks input{width:18px;height:18px;flex:none;min-height:0;padding:0;}
   textarea{
     width:100%;font-size:14px;padding:10px;border:1px solid var(--line);
-    border-radius:8px;background:#fff;color:var(--ink);font-family:inherit;line-height:1.5;
+    border-radius:8px;background:var(--surface);color:var(--ink);font-family:inherit;line-height:1.5;
   }
   .warn-note{color:var(--danger);font-weight:600;}
   .ocr-draft-title{font-size:15px;margin:16px 0 4px;}
   .draft-row{
     border:1px solid var(--line);border-radius:10px;
-    padding:10px 12px;margin-bottom:10px;background:#fff;
+    padding:10px 12px;margin-bottom:10px;background:var(--surface);
   }
   .draft-row label{display:block;font-size:12px;color:var(--muted);margin:6px 0 3px;}
   .draft-row input,.draft-row select{
     width:100%;font-size:15px;padding:8px;border:1px solid var(--line);
-    border-radius:8px;background:#fff;color:var(--ink);min-height:40px;
+    border-radius:8px;background:var(--surface);color:var(--ink);min-height:40px;
   }
   .draft-actions{margin-top:8px;text-align:right;}
   .draft-row input.field-missing,.draft-row select.field-missing{
-    border:2px solid var(--danger);background:#fef2f2;
+    border:2px solid var(--danger);background:var(--danger-bg);
   }
   .draft-missing-note{color:var(--danger);font-weight:600;font-size:12px;margin:6px 0 0;}
   .register-status{font-weight:600;}
@@ -213,7 +241,7 @@
   .field-label{display:block;font-size:13px;color:var(--muted);margin:0 0 4px;}
   .text-input{
     width:100%;font-size:16px;padding:10px;border:1px solid var(--line);
-    border-radius:8px;background:#fff;color:var(--ink);min-height:44px;
+    border-radius:8px;background:var(--surface);color:var(--ink);min-height:44px;
   }
   .lightbox{
     position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:50;
@@ -221,6 +249,43 @@
   }
   .lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;}
   .lightbox.hidden{display:none;}
+  /* 切り替えタブ（セグメントコントロール） */
+  .seg-control{
+    display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:10px 0;
+  }
+  .seg-control button{
+    flex:1;border:none;border-radius:0;background:var(--surface);color:var(--muted);
+    font-size:13px;font-weight:600;min-height:38px;padding:6px 4px;
+  }
+  .seg-control button + button{border-left:1px solid var(--line);}
+  .seg-control button.active{background:var(--blue);color:#fff;}
+  .seg-label{font-size:13px;color:var(--muted);margin:10px 0 0;}
+  /* 時刻入力方法の表示切り替え（フォームの data-time-mode で制御し、選んだ方式だけ出す） */
+  [data-time-mode="type"] .time-slider-row,
+  [data-time-mode="type"] .time-dial{display:none;}
+  [data-time-mode="slider"] .tm-type,
+  [data-time-mode="slider"] .time-dial{display:none;}
+  [data-time-mode="dial"] .tm-type,
+  [data-time-mode="dial"] .time-slider-row{display:none;}
+  /* カレンダー表示 */
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-dow{text-align:center;font-size:12px;font-weight:700;color:var(--muted);padding:4px 0;}
+  .cal-dow.sun{color:var(--danger);}
+  .cal-dow.sat{color:var(--blue-dark);}
+  .cal-cell{
+    min-height:52px;padding:4px 2px;border:1px solid var(--line);border-radius:8px;
+    background:var(--surface);display:flex;flex-direction:column;align-items:center;gap:2px;
+    font-size:13px;color:var(--ink);cursor:pointer;
+  }
+  .cal-cell.cal-empty{border:none;background:transparent;min-height:0;cursor:default;}
+  .cal-daynum{font-weight:700;line-height:1.2;}
+  .cal-cell.cal-today{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue);}
+  .cal-cell.cal-today .cal-daynum{color:var(--blue-dark);}
+  .cal-cell.cal-selected{background:var(--blue-light);border-color:var(--blue);}
+  .cal-marks{display:flex;gap:2px;min-height:10px;align-items:center;}
+  .cal-dot{width:8px;height:8px;margin-right:0;}
+  .cal-count{font-size:10px;color:var(--muted);line-height:1;}
+  .cal-detail-title{font-size:15px;margin:14px 0 8px;}
 </style>
 </head>
 <body>
@@ -352,7 +417,13 @@
   <!-- シフト一覧 -->
   <section class="card">
     <h2>シフト一覧</h2>
+    <div class="seg-control" role="group" aria-label="一覧の表示方法" style="margin-top:0;">
+      <button type="button" data-view-mode-btn="list" class="active">リスト</button>
+      <button type="button" data-view-mode-btn="calendar">カレンダー</button>
+    </div>
     <div id="shiftList"></div>
+    <div id="shiftCalendar" class="hidden"></div>
+    <div id="calDayDetail" class="hidden"></div>
     <button class="primary" id="toggleShiftForm">＋ シフトを追加</button>
 
     <form id="shiftForm" class="hidden">
@@ -391,10 +462,16 @@
       </div>
       <label for="sfWorkplace">バイト先</label>
       <select id="sfWorkplace"></select>
+      <p class="seg-label">時刻の入力方法</p>
+      <div class="seg-control" role="group" aria-label="時刻の入力方法" style="margin-top:4px;">
+        <button type="button" data-time-mode-btn="type" class="active">打ち込み</button>
+        <button type="button" data-time-mode-btn="slider">スライダー</button>
+        <button type="button" data-time-mode-btn="dial">ダイヤル</button>
+      </div>
       <div class="row2">
         <div>
           <label for="sfStart">開始時刻</label>
-          <input type="time" id="sfStart" required>
+          <input type="time" id="sfStart" class="tm-type" required>
           <div class="time-slider-row">
             <input type="range" id="sfStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
             <span class="time-slider-val" id="sfStartSliderVal">--:--</span>
@@ -403,7 +480,7 @@
         </div>
         <div>
           <label for="sfEnd">終了時刻</label>
-          <input type="time" id="sfEnd" required>
+          <input type="time" id="sfEnd" class="tm-type" required>
           <div class="time-slider-row">
             <input type="range" id="sfEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
             <span class="time-slider-val" id="sfEndSliderVal">--:--</span>
@@ -411,7 +488,7 @@
           <div class="time-dial" id="sfEndDial"></div>
         </div>
       </div>
-      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻はスライダー（15分刻み）や時計型ダイヤル（リングをなぞると時刻が変わります）でも入力できます。</p>
+      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻の入力方法は上の切り替えで選べます（打ち込み／スライダー（15分刻み）／ダイヤル（リングをなぞると時刻が変わります））。選んだ方法は次回も引き継がれます。</p>
       <label for="sfCategory">区分</label>
       <select id="sfCategory">
         <option value="">未設定</option>
@@ -450,10 +527,16 @@
         <option value="遅番">遅番</option>
         <option value="夜勤">夜勤</option>
       </select>
+      <p class="seg-label">時刻の入力方法</p>
+      <div class="seg-control" role="group" aria-label="時刻の入力方法" style="margin-top:4px;">
+        <button type="button" data-time-mode-btn="type" class="active">打ち込み</button>
+        <button type="button" data-time-mode-btn="slider">スライダー</button>
+        <button type="button" data-time-mode-btn="dial">ダイヤル</button>
+      </div>
       <div class="row2">
         <div>
           <label for="tplStart">開始時刻</label>
-          <input type="time" id="tplStart">
+          <input type="time" id="tplStart" class="tm-type">
           <div class="time-slider-row">
             <input type="range" id="tplStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
             <span class="time-slider-val" id="tplStartSliderVal">--:--</span>
@@ -462,7 +545,7 @@
         </div>
         <div>
           <label for="tplEnd">終了時刻</label>
-          <input type="time" id="tplEnd">
+          <input type="time" id="tplEnd" class="tm-type">
           <div class="time-slider-row">
             <input type="range" id="tplEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
             <span class="time-slider-val" id="tplEndSliderVal">--:--</span>
@@ -520,6 +603,16 @@
     <label class="field-label" for="myNamesInput">自分の名前</label>
     <input type="text" id="myNamesInput" class="text-input" placeholder="例：山田太郎、やまだ">
     <p class="note">カンマ（、）区切りで複数の表記を登録できます。シフト表を読み取るとき、登録した名前の列（または行）に属するシフトだけを抽出対象にします。未登録の場合は全体が対象です。</p>
+
+    <label class="field-label" for="skinSelect" style="margin-top:16px;">スキン（見た目のテーマ）</label>
+    <select id="skinSelect" class="text-input">
+      <option value="standard">標準（青）</option>
+      <option value="pink">ピンク</option>
+      <option value="purple">紫</option>
+      <option value="green">緑</option>
+      <option value="dark">ダーク</option>
+    </select>
+    <p class="note">アプリ全体の色合いを変えます。選んだスキンは保存され、次回も同じスキンで開きます。バックアップ（自分の設定）にも含まれます。区分バッジやバイト先の色は、スキンによらずそのまま表示されます。</p>
 
     <label class="field-label" style="margin-top:16px;">データのバックアップ</label>
     <div class="crop-btns" style="margin-top:0;">
@@ -1169,30 +1262,8 @@ function render(){
     }).join("");
   }
 
-  // シフト一覧
-  const listEl = document.getElementById("shiftList");
-  if (monthShifts.length === 0){
-    listEl.innerHTML = '<div class="empty">この月のシフトはまだありません</div>';
-  } else {
-    listEl.innerHTML = monthShifts.map(function(s){
-      const wp = findWp(s.workplaceId);
-      const r = shiftResult(s);
-      const color = wp ? wp.color : "#9ca3af";
-      const wpName = wp ? wp.name : "（削除済みのバイト先）";
-      const nightNote = r.nightMin > 0 ? "・深夜 " + fmtDuration(r.nightMin) : "";
-      const memo = s.memo ? '<div class="shift-memo">' + esc(s.memo) + "</div>" : "";
-      return '<div class="shift-item">' +
-        '<div class="shift-top"><span class="shift-date"><span class="dot" style="background:' + esc(color) + '"></span>' +
-        fmtDateLabel(s.date) + '</span><span class="shift-pay">' + fmtYen(r.pay) + "</span></div>" +
-        '<div class="shift-detail">' + categoryBadge(s) + " " + esc(wpName) + " " + esc(s.start) + "〜" + esc(s.end) +
-        "（実働 " + fmtDuration(r.workedMin) + nightNote + "）</div>" + memo +
-        '<div class="shift-actions">' +
-        '<button class="small" data-edit-shift="' + s.id + '">編集</button>' +
-        '<button class="small" data-dup-shift="' + s.id + '">複製</button>' +
-        '<button class="small danger" data-del-shift="' + s.id + '">削除</button>' +
-        "</div></div>";
-    }).join("");
-  }
+  // シフト一覧（リスト／カレンダー表示）
+  renderShiftListArea(monthShifts);
 
   // バイト先一覧
   const wpEl = document.getElementById("workplaceList");
@@ -1240,6 +1311,123 @@ document.getElementById("prevMonth").addEventListener("click", function(){
 document.getElementById("nextMonth").addEventListener("click", function(){
   viewMonth++;
   if (viewMonth > 11){ viewMonth = 0; viewYear++; }
+  render();
+});
+
+// ---------- シフト一覧の表示方法（リスト／カレンダー） ----------
+// シフト1件分の行HTML（リスト表示とカレンダーの日別詳細で共用）
+function shiftItemHtml(s){
+  const wp = findWp(s.workplaceId);
+  const r = shiftResult(s);
+  const color = wp ? wp.color : "#9ca3af";
+  const wpName = wp ? wp.name : "（削除済みのバイト先）";
+  const nightNote = r.nightMin > 0 ? "・深夜 " + fmtDuration(r.nightMin) : "";
+  const memo = s.memo ? '<div class="shift-memo">' + esc(s.memo) + "</div>" : "";
+  return '<div class="shift-item">' +
+    '<div class="shift-top"><span class="shift-date"><span class="dot" style="background:' + esc(color) + '"></span>' +
+    fmtDateLabel(s.date) + '</span><span class="shift-pay">' + fmtYen(r.pay) + "</span></div>" +
+    '<div class="shift-detail">' + categoryBadge(s) + " " + esc(wpName) + " " + esc(s.start) + "〜" + esc(s.end) +
+    "（実働 " + fmtDuration(r.workedMin) + nightNote + "）</div>" + memo +
+    '<div class="shift-actions">' +
+    '<button class="small" data-edit-shift="' + s.id + '">編集</button>' +
+    '<button class="small" data-dup-shift="' + s.id + '">複製</button>' +
+    '<button class="small danger" data-del-shift="' + s.id + '">削除</button>' +
+    "</div></div>";
+}
+
+let selectedCalDate = null; // カレンダーで選択中の日付（"YYYY-MM-DD"）
+
+function getListViewMode(){
+  const m = settings && settings.listViewMode;
+  return m === "calendar" ? "calendar" : "list";
+}
+function setListViewMode(mode){
+  settings.listViewMode = mode === "calendar" ? "calendar" : "list";
+  saveSettings();
+  render();
+}
+
+// 表示方法に応じて、リスト／カレンダーのどちらかを描画する
+function renderShiftListArea(monthShifts){
+  const mode = getListViewMode();
+  const listEl = document.getElementById("shiftList");
+  const calEl = document.getElementById("shiftCalendar");
+  const detEl = document.getElementById("calDayDetail");
+  document.querySelectorAll("[data-view-mode-btn]").forEach(function(b){
+    b.classList.toggle("active", b.getAttribute("data-view-mode-btn") === mode);
+  });
+  if (mode === "calendar"){
+    listEl.classList.add("hidden");
+    calEl.classList.remove("hidden");
+    renderCalendar(monthShifts);
+  } else {
+    calEl.classList.add("hidden");
+    detEl.classList.add("hidden");
+    detEl.innerHTML = "";
+    listEl.classList.remove("hidden");
+    if (monthShifts.length === 0){
+      listEl.innerHTML = '<div class="empty">この月のシフトはまだありません</div>';
+    } else {
+      listEl.innerHTML = monthShifts.map(shiftItemHtml).join("");
+    }
+  }
+}
+
+// カレンダー（表示中の月の月グリッド・日曜始まり）を描画する
+// シフトのある日にはバイト先の色ドット（最大3つ）と件数を付け、今日を目立たせる
+// 日を選ぶと、その日のシフト詳細がカレンダーの下に出る
+function renderCalendar(monthShifts){
+  const calEl = document.getElementById("shiftCalendar");
+  const detEl = document.getElementById("calDayDetail");
+  const byDate = {};
+  monthShifts.forEach(function(s){
+    if (!byDate[s.date]) byDate[s.date] = [];
+    byDate[s.date].push(s);
+  });
+  const startDow = new Date(viewYear, viewMonth, 1).getDay(); // 1日の曜日（0=日曜）
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const today = formatDateStr(new Date());
+  let html = '<div class="cal-grid">';
+  WEEKDAYS.forEach(function(w, i){
+    html += '<div class="cal-dow' + (i === 0 ? " sun" : i === 6 ? " sat" : "") + '">' + w + "</div>";
+  });
+  for (let i = 0; i < startDow; i++) html += '<div class="cal-cell cal-empty"></div>';
+  for (let d = 1; d <= daysInMonth; d++){
+    const ds = viewYear + "-" + String(viewMonth + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    const dayShifts = byDate[ds] || [];
+    const dots = dayShifts.slice(0, 3).map(function(s){
+      const wp = findWp(s.workplaceId);
+      return '<span class="dot cal-dot" style="background:' + esc(wp ? wp.color : "#9ca3af") + '"></span>';
+    }).join("");
+    const count = dayShifts.length >= 2 ? '<span class="cal-count">' + dayShifts.length + "件</span>" : "";
+    html += '<button type="button" class="cal-cell' +
+      (ds === today ? " cal-today" : "") +
+      (ds === selectedCalDate ? " cal-selected" : "") +
+      '" data-cal-date="' + ds + '" aria-label="' + fmtDateLabel(ds) + '">' +
+      '<span class="cal-daynum">' + d + '</span><span class="cal-marks">' + dots + "</span>" + count + "</button>";
+  }
+  html += "</div>";
+  calEl.innerHTML = html;
+  // 選択中の日（表示中の月内）の詳細
+  const prefix = viewYear + "-" + String(viewMonth + 1).padStart(2, "0");
+  if (selectedCalDate && selectedCalDate.indexOf(prefix) === 0){
+    const dayShifts = byDate[selectedCalDate] || [];
+    detEl.innerHTML = '<h3 class="cal-detail-title">' + fmtDateLabel(selectedCalDate) + "</h3>" +
+      (dayShifts.length > 0 ? dayShifts.map(shiftItemHtml).join("") : '<div class="empty">この日のシフトはありません</div>');
+    detEl.classList.remove("hidden");
+  } else {
+    detEl.innerHTML = "";
+    detEl.classList.add("hidden");
+  }
+}
+
+document.querySelectorAll("[data-view-mode-btn]").forEach(function(b){
+  b.addEventListener("click", function(){ setListViewMode(b.getAttribute("data-view-mode-btn")); });
+});
+document.getElementById("shiftCalendar").addEventListener("click", function(e){
+  const cell = e.target.closest("[data-cal-date]");
+  if (!cell) return;
+  selectedCalDate = cell.getAttribute("data-cal-date");
   render();
 });
 
@@ -1458,7 +1646,7 @@ function buildDialSvg(label){
   });
   return '<svg viewBox="0 0 200 200" role="slider" tabindex="0" aria-label="' + label + '"' +
     ' aria-valuemin="0" aria-valuemax="1425" aria-valuestep="15">' +
-    '<circle cx="100" cy="100" r="' + DIAL_R + '" fill="none" stroke="#e5e7eb" stroke-width="20"/>' +
+    '<circle class="dial-track" cx="100" cy="100" r="' + DIAL_R + '" fill="none" stroke="#e5e7eb" stroke-width="20"/>' +
     '<path class="dial-arc" fill="none" stroke="#2563eb" stroke-width="20" stroke-linecap="round" d=""/>' +
     ticks + labels +
     '<circle class="dial-knob" r="13" fill="#2563eb" stroke="#ffffff" stroke-width="3" cx="100" cy="18"/>' +
@@ -1538,6 +1726,35 @@ bindTimeDial("sfStart", "sfStartDial", "開始時刻をダイヤルで入力");
 bindTimeDial("sfEnd", "sfEndDial", "終了時刻をダイヤルで入力");
 bindTimeDial("tplStart", "tplStartDial", "開始時刻をダイヤルで入力");
 bindTimeDial("tplEnd", "tplEndDial", "終了時刻をダイヤルで入力");
+
+// ---------- 時刻入力方法の切り替え（打ち込み／スライダー／ダイヤル） ----------
+// 選んだ方式だけを表示する。値は時刻欄が保持するので、切り替えても入力内容はそのまま残り、
+// 3者の連動（プリセット自動入力・編集・複製・リセット時の追随）も維持される
+const TIME_INPUT_MODES = ["type", "slider", "dial"];
+function getTimeInputMode(){
+  const m = settings && settings.timeInputMode;
+  return TIME_INPUT_MODES.indexOf(m) >= 0 ? m : "type";
+}
+function applyTimeInputMode(){
+  const mode = getTimeInputMode();
+  ["shiftForm", "tplForm"].forEach(function(id){
+    const f = document.getElementById(id);
+    if (f) f.setAttribute("data-time-mode", mode);
+  });
+  document.querySelectorAll("[data-time-mode-btn]").forEach(function(b){
+    b.classList.toggle("active", b.getAttribute("data-time-mode-btn") === mode);
+  });
+}
+function setTimeInputMode(mode){
+  if (TIME_INPUT_MODES.indexOf(mode) < 0) return;
+  settings.timeInputMode = mode;
+  saveSettings();
+  applyTimeInputMode();
+}
+document.querySelectorAll("[data-time-mode-btn]").forEach(function(b){
+  b.addEventListener("click", function(){ setTimeInputMode(b.getAttribute("data-time-mode-btn")); });
+});
+applyTimeInputMode();
 
 // 区分を選ぶと、そのバイト先のプリセット時刻を開始・終了に自動入力する
 function applyCategoryPreset(){
@@ -1622,8 +1839,8 @@ document.getElementById("sfBulkToggle").addEventListener("change", function(e){
 });
 document.getElementById("sfBulkWeekdays").addEventListener("change", updateBulkCount);
 
-// シフトの編集・削除（イベント委譲）
-document.getElementById("shiftList").addEventListener("click", function(e){
+// シフトの編集・削除（イベント委譲。リスト表示とカレンダーの日別詳細で共用）
+function handleShiftItemClick(e){
   const editBtn = e.target.closest("[data-edit-shift]");
   const dupBtn = e.target.closest("[data-dup-shift]");
   const delBtn = e.target.closest("[data-del-shift]");
@@ -1674,7 +1891,9 @@ document.getElementById("shiftList").addEventListener("click", function(e){
       render();
     }
   }
-});
+}
+document.getElementById("shiftList").addEventListener("click", handleShiftItemClick);
+document.getElementById("calDayDetail").addEventListener("click", handleShiftItemClick);
 
 // ---------- バイト先フォーム ----------
 // 区分プリセットの入力欄と区分の対応
@@ -2103,12 +2322,89 @@ function hourTokenToTime(token){
   };
 }
 
+// コロンが落ちた数字列（"830"・"1700"）を "HH:MM" に変換する
+// 3桁＝時1桁＋分2桁（830→8:30、700→7:00）、4桁＝時2桁＋分2桁（1700→17:00）
+// 時0〜29・分0〜59の範囲でなければ時刻とはみなさない（nullを返す）
+function colonlessTokenToTime(token){
+  const t = String(token);
+  if (!/^\d{3,4}$/.test(t)) return null;
+  let h, m;
+  if (t.length === 3){
+    h = Number(t.slice(0, 1));
+    m = Number(t.slice(1, 3));
+  } else {
+    h = Number(t.slice(0, 2));
+    m = Number(t.slice(2, 4));
+  }
+  if (h < 0 || h > 29 || m < 0 || m > 59) return null;
+  return {
+    text: String(h % 24).padStart(2, "0") + ":" + String(m).padStart(2, "0"),
+    hour: h
+  };
+}
+
+// 1行から時刻の候補を出現順に取り出す
+// コロン・小数形式（"8:30"・"22.5"）と、コロン落ちの数字列（"830"・"1700"）の両方を対象にする
+// コロン落ちは誤爆防止のため、日付・金額らしい並び（スラッシュ・年月日・円・¥・千円区切りのカンマに隣接する数字）を除く
+// 戻り値：[{time:"HH:MM", raw, colonless, index}]（出現順）
+function findTimeCandidatesInLine(line){
+  const cands = [];
+  let m;
+  const reColon = /\d{1,2}[:.]\d{1,2}/g;
+  while ((m = reColon.exec(line)) !== null){
+    const t = hourTokenToTime(m[0]);
+    if (t) cands.push({ time: t.text, raw: m[0], colonless: false, index: m.index });
+  }
+  const reBare = /\d{3,4}/g;
+  while ((m = reBare.exec(line)) !== null){
+    const before = m.index > 0 ? line.charAt(m.index - 1) : "";
+    const after = line.charAt(m.index + m[0].length);
+    const after2 = line.charAt(m.index + m[0].length + 1);
+    if (/[\d\/,¥￥]/.test(before)) continue;          // 長い数字列・日付・金額の一部は除く
+    if (/[\d\/年月日円%]/.test(after)) continue;      // 年月日・金額・割合の数字は除く
+    if (after === "," && /\d/.test(after2)) continue;  // 千円単位の区切りの続きは除く
+    const t = colonlessTokenToTime(m[0]);
+    if (t) cands.push({ time: t.text, raw: m[0], colonless: true, index: m.index });
+  }
+  cands.sort(function(a, b){ return a.index - b.index; });
+  // コロン形式と重なるコロン落ち候補は捨てる（"123:45" の "123" など）
+  const spans = cands.filter(function(c){ return !c.colonless; })
+    .map(function(c){ return [c.index, c.index + c.raw.length]; });
+  return cands.filter(function(c){
+    if (!c.colonless) return true;
+    const s = c.index, e = c.index + c.raw.length;
+    return !spans.some(function(sp){ return s < sp[1] && sp[0] < e; });
+  });
+}
+
+// 1行から「区切りなしの時刻ペア」を取り出す
+// 時刻の範囲（- 区切り）で消費された部分を除いた残りから候補を集め、
+// 2つ並んだものを開始・終了のペアにする（例："830 1700"、"830 | 17:00"）
+// 戻り値：{pairs:[{start,end,startRaw,endRaw,raw}], leftover:ペアにできなかった候補の数}
+function findColonlessPairsInLine(line, ranges){
+  let masked = line;
+  (ranges || []).forEach(function(r){ masked = masked.replace(r.raw, " "); });
+  const cands = findTimeCandidatesInLine(masked);
+  const pairs = [];
+  for (let i = 0; i + 1 < cands.length; i += 2){
+    pairs.push({
+      start: cands[i].time,
+      end: cands[i + 1].time,
+      startRaw: cands[i].raw,
+      endRaw: cands[i + 1].raw,
+      raw: cands[i].raw + " " + cands[i + 1].raw
+    });
+  }
+  return { pairs: pairs, leftover: cands.length - pairs.length * 2 };
+}
+
 // 認識テキストから「日」と時間のパターンを抽出する
 // 対応例："17 11-22.5" → 17日 11:00〜22:30 / "18 11.5-23" → 18日 11:30〜23:00
 //         "24 17" → 24日 17:00〜（終了は空欄）
 // 日付は表示中の月と組み合わせる
-// テキスト内に時刻の範囲が1つでもある場合は「範囲モード」になり、
-// 範囲を開始・終了のペアでだけ拾い、単独の時刻の断片は下書きにせず件数だけ数える
+// テキスト内に時刻の範囲（- 区切り）か、区切りなしの時刻ペア（コロン落ち含む）が
+// 1つでもある場合は「ペアモード」になり、開始・終了のペアでだけ拾い、
+// 単独の時刻の断片は下書きにせず件数だけ数える
 // 戻り値：{drafts, discarded}
 function extractTimePatterns(text){
   const normalized = String(text || "")
@@ -2117,21 +2413,32 @@ function extractTimePatterns(text){
     .replace(/．/g, ".");
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const lines = normalized.split(/\r?\n/);
-  const hasRange = lines.some(function(l){ return findRangesInLine(l).length > 0; });
-  if (!hasRange){
-    // 範囲が無いテキストは従来方式（開始のみのパターンも下書きにする）
+  // 行ごとに、範囲（- 区切り）と区切りなしペアを先に拾っておく
+  const lineInfos = lines.map(function(l){
+    const ranges = findRangesInLine(l);
+    const cp = findColonlessPairsInLine(l, ranges);
+    return { ranges: ranges, pairs: cp.pairs, leftover: cp.leftover };
+  });
+  const hasPair = lineInfos.some(function(info){ return info.ranges.length > 0 || info.pairs.length > 0; });
+  if (!hasPair){
+    // ペアが無いテキストは従来方式（開始のみのパターンも下書きにする）
     return { drafts: legacyExtractTimePatterns(normalized, daysInMonth), discarded: 0 };
   }
   const drafts = [];
   let discarded = 0;
-  lines.forEach(function(rawLine){
+  lines.forEach(function(rawLine, li){
     const line = rawLine.trim();
     if (!line) return;
-    const ranges = findRangesInLine(line);
-    if (ranges.length > 0){
-      const fd = findDayStrict(line, ranges, daysInMonth);
+    const info = lineInfos[li];
+    const items = info.ranges.concat(info.pairs);
+    if (items.length > 0){
+      // 日付の特定では、範囲とペアの原文（数字列）を取り除いてから探す
+      const raws = [];
+      info.ranges.forEach(function(r){ raws.push({ raw: r.raw }); });
+      info.pairs.forEach(function(p){ raws.push({ raw: p.startRaw }); raws.push({ raw: p.endRaw }); });
+      const fd = findDayStrict(line, raws, daysInMonth);
       if (fd.day){
-        ranges.forEach(function(r){
+        items.forEach(function(r){
           drafts.push({
             date: viewYear + "-" + String(viewMonth + 1).padStart(2, "0") + "-" + String(fd.day).padStart(2, "0"),
             start: r.start,
@@ -2142,10 +2449,11 @@ function extractTimePatterns(text){
           });
         });
       } else {
-        // 日付と対応づけられない範囲は、間違った行を作らず破棄して数える
-        discarded += ranges.length;
+        // 日付と対応づけられない範囲・ペアは、間違った行を作らず破棄して数える
+        discarded += items.length;
       }
-    } else if (looksLikeFragment(line)){
+      if (info.leftover > 0) discarded += 1;
+    } else if (info.leftover > 0 || looksLikeFragment(line)){
       discarded += 1;
     }
   });
@@ -2258,8 +2566,12 @@ function legacyExtractTimePatterns(normalized, daysInMonth){
       // 開始のみのパターン：日を取り除いた残りから時刻を探す
       const rest2 = rest.replace(/(?:^|[^\d])(\d{1,2})(?:[^\d]|$)/, " ");
       const sm = rest2.match(/(\d{1,2}(?:[.:]\d{1,2})?)/);
-      if (!sm) return;
-      const s2 = hourTokenToTime(sm[1]);
+      let s2 = sm ? hourTokenToTime(sm[1]) : null;
+      if (!s2){
+        // コロン落ちの数字列（"830" など）も開始時刻として拾う
+        const cc = findTimeCandidatesInLine(rest2).filter(function(c){ return c.colonless; });
+        if (cc.length > 0) s2 = { text: cc[0].time };
+      }
       if (!s2) return;
       start = s2.text;
       end = "";
@@ -3375,18 +3687,52 @@ function markMissingDraftFields(){
   });
 }
 
+// 「まとめて登録」ボタンの連打防止ロック
+// 登録が完了したらボタンを無効化したままにし、下書きの内容が変わる（編集・削除・作り直し）まで再登録できないようにする
+let registerBtnLocked = false;
+function lockRegisterButton(){
+  registerBtnLocked = true;
+  const btn = document.getElementById("ocrRegisterAll");
+  if (btn) btn.disabled = true;
+}
+function unlockRegisterButton(){
+  registerBtnLocked = false;
+  const btn = document.getElementById("ocrRegisterAll");
+  if (btn) btn.disabled = false;
+}
+
 // 下書きをまとめてシフトとして登録する
 // 入力が揃っている行だけを登録し、未入力の行は下書きに残す（アラートで全体を止めない）
+// 既に同じシフト（同じ日付・バイト先・開始・終了）が登録済みの行は、二重登録を防ぐためスキップする
 function registerAllDrafts(){
+  if (registerBtnLocked) return; // 登録直後の連打防止
+  const btn = document.getElementById("ocrRegisterAll");
+  if (btn) btn.disabled = true; // 処理中の連打防止
   syncDraftsFromDom();
-  if (ocrDrafts.length === 0) return;
+  if (ocrDrafts.length === 0){
+    if (btn) btn.disabled = false;
+    return;
+  }
   const ready = [];
   const remaining = [];
   ocrDrafts.forEach(function(d){
     if (d.date && d.start && d.end && d.workplaceId) ready.push(d);
     else remaining.push(d);
   });
+  let added = 0;
+  let skipped = 0;
   ready.forEach(function(d){
+    // 同じ日付・バイト先・開始・終了のシフトが既にあれば二重登録しない
+    // （今回登録する分も shifts に入っていくので、下書き同士の重複もここで弾ける）
+    const exists = shifts.some(function(s){
+      return s.date === d.date &&
+        String(s.workplaceId) === String(d.workplaceId) &&
+        s.start === d.start && s.end === d.end;
+    });
+    if (exists){
+      skipped++;
+      return;
+    }
     shifts.push({
       id: newId(),
       date: d.date,
@@ -3397,10 +3743,12 @@ function registerAllDrafts(){
       category: d.category || "",
       memo: "写真から読み取り"
     });
+    added++;
   });
+  // 登録できた行と、既に同じシフトがあった行は下書きから取り除く（未入力の行だけ残す）
   ocrDrafts = remaining;
   saveDrafts();
-  if (ready.length > 0){
+  if (added > 0){
     saveAll();
     render();
   }
@@ -3408,13 +3756,24 @@ function registerAllDrafts(){
   // 結果は画面内に表示する
   const statusEl = document.getElementById("ocrRegisterStatus");
   if (statusEl){
-    if (ready.length > 0 && remaining.length > 0){
-      statusEl.textContent = ready.length + "件を登録しました。未入力の行が" + remaining.length + "件残っています。赤い枠の欄を入力してから、もう一度「まとめて登録」を押してください。";
-    } else if (ready.length > 0){
-      statusEl.textContent = ready.length + "件を登録しました。";
+    const skipMsg = skipped > 0 ? "同じシフトが既にあるため" + skipped + "件スキップしました。" : "";
+    if (added > 0 && remaining.length > 0){
+      statusEl.textContent = added + "件を登録しました。" + skipMsg + "未入力の行が" + remaining.length + "件残っています。赤い枠の欄を入力してから、もう一度「まとめて登録」を押してください。";
+    } else if (added > 0){
+      statusEl.textContent = added + "件を登録しました。" + skipMsg;
+    } else if (skipped > 0 && remaining.length > 0){
+      statusEl.textContent = skipMsg + "未入力の行が" + remaining.length + "件残っています。赤い枠の欄を入力してから、もう一度「まとめて登録」を押してください。";
+    } else if (skipped > 0){
+      statusEl.textContent = skipMsg;
     } else {
       statusEl.textContent = "登録できる行がありませんでした。未入力の行が" + remaining.length + "件あります。赤い枠の欄を入力してください。";
     }
+  }
+  // 登録・スキップがあった場合はボタンを無効化したままにする（下書きが変われば解除される）
+  if (added > 0 || skipped > 0){
+    lockRegisterButton();
+  } else if (btn){
+    btn.disabled = false;
   }
 }
 
@@ -3664,6 +4023,7 @@ document.getElementById("ocrBuildDrafts").addEventListener("click", function(){
   }
   document.getElementById("ocrRegisterStatus").textContent = "";
   saveDrafts();
+  unlockRegisterButton();
   if (ocrDrafts.length === 0){
     alert("時間の書かれた行が見つかりませんでした。テキストを確認してください");
     renderDrafts();
@@ -3683,6 +4043,7 @@ document.getElementById("ocrDrafts").addEventListener("click", function(e){
     ocrDrafts.splice(Number(delBtn.getAttribute("data-del-draft")), 1);
     saveDrafts();
     renderDrafts();
+    unlockRegisterButton();
     if (ocrDrafts.length === 0) document.getElementById("ocrRegisterStatus").textContent = "";
   }
 });
@@ -3703,12 +4064,39 @@ document.getElementById("ocrDrafts").addEventListener("change", function(e){
 });
 
 // 下書きを編集したら、未入力ハイライトをその場で更新する（再描画はしない）
+// 下書きの内容が変わったので、「まとめて登録」ボタンの連打防止ロックも解除する
 function refreshDraftHighlights(){
   syncDraftsFromDom();
   markMissingDraftFields();
+  unlockRegisterButton();
 }
 document.getElementById("ocrDrafts").addEventListener("input", refreshDraftHighlights);
 document.getElementById("ocrDrafts").addEventListener("change", refreshDraftHighlights);
+
+// ---------- スキン（見た目のテーマ） ----------
+// CSS変数を html[data-skin] で切り替える。選択は settings に保存し、バックアップにも含まれる
+const SKINS = ["standard", "pink", "purple", "green", "dark"];
+function getSkin(){
+  const s = settings && settings.skin;
+  return SKINS.indexOf(s) >= 0 ? s : "standard";
+}
+function applySkin(){
+  const skin = getSkin();
+  if (skin === "standard") document.documentElement.removeAttribute("data-skin");
+  else document.documentElement.setAttribute("data-skin", skin);
+  const sel = document.getElementById("skinSelect");
+  if (sel) sel.value = skin;
+}
+function setSkin(skin){
+  if (SKINS.indexOf(skin) < 0) return;
+  settings.skin = skin;
+  saveSettings();
+  applySkin();
+}
+document.getElementById("skinSelect").addEventListener("change", function(){
+  setSkin(this.value);
+});
+applySkin();
 
 // 自分の名前の初期表示と保存
 const myNamesInput = document.getElementById("myNamesInput");
@@ -3789,6 +4177,9 @@ importFileInput.addEventListener("change", function(){
     setOcrImage(null);
     renderOcrSources();
     renderDrafts();
+    unlockRegisterButton();
+    applyTimeInputMode();
+    applySkin();
     render();
     statusEl.textContent = "データを読み込みました（バイト先" + workplaces.length + "件・シフト" + shifts.length + "件）。";
   }).catch(function(){
