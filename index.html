@@ -91,6 +91,15 @@
   }
   .row2{display:flex;gap:10px;}
   .row2 > div{flex:1;}
+  .time-slider-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
+  .time-slider-row input[type="range"]{
+    flex:1;width:auto;min-height:36px;padding:0;border:none;background:transparent;
+    accent-color:var(--blue);cursor:pointer;
+  }
+  .time-slider-val{
+    font-size:14px;font-weight:700;color:var(--blue-dark);
+    min-width:46px;text-align:right;font-variant-numeric:tabular-nums;
+  }
   input[type="color"]{padding:4px;height:44px;}
   .form-actions{display:flex;gap:8px;margin-top:14px;}
   .form-actions .primary{flex:1;}
@@ -379,13 +388,21 @@
         <div>
           <label for="sfStart">開始時刻</label>
           <input type="time" id="sfStart" required>
+          <div class="time-slider-row">
+            <input type="range" id="sfStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
+            <span class="time-slider-val" id="sfStartSliderVal">--:--</span>
+          </div>
         </div>
         <div>
           <label for="sfEnd">終了時刻</label>
           <input type="time" id="sfEnd" required>
+          <div class="time-slider-row">
+            <input type="range" id="sfEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
+            <span class="time-slider-val" id="sfEndSliderVal">--:--</span>
+          </div>
         </div>
       </div>
-      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。</p>
+      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻はスライダー（15分刻み）でも入力できます。</p>
       <label for="sfCategory">区分</label>
       <select id="sfCategory">
         <option value="">未設定</option>
@@ -428,10 +445,18 @@
         <div>
           <label for="tplStart">開始時刻</label>
           <input type="time" id="tplStart">
+          <div class="time-slider-row">
+            <input type="range" id="tplStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
+            <span class="time-slider-val" id="tplStartSliderVal">--:--</span>
+          </div>
         </div>
         <div>
           <label for="tplEnd">終了時刻</label>
           <input type="time" id="tplEnd">
+          <div class="time-slider-row">
+            <input type="range" id="tplEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
+            <span class="time-slider-val" id="tplEndSliderVal">--:--</span>
+          </div>
         </div>
       </div>
       <label for="tplBreak">休憩時間（分）</label>
@@ -610,6 +635,23 @@ function computePay(startMin, endMin, breakMin, wage, premiumPct){
     nightMin: nightWorked,
     nonNightMin: nonNightWorked
   };
+}
+
+// 時刻 "HH:MM" をスライダー値（0〜1425分、15分刻みに丸める）に変換する。不正な値は null
+function timeToSliderValue(s){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || ""));
+  if (!m) return null;
+  const min = Number(m[1]) * 60 + Number(m[2]);
+  if (min < 0 || min > 1439) return null;
+  return Math.min(1425, Math.round(min / 15) * 15);
+}
+
+// スライダー値（分）を "HH:MM" に変換する（15分刻み、0〜1425の範囲に収める）
+function sliderValueToTime(v){
+  let min = Math.round(Number(v) / 15) * 15;
+  if (!isFinite(min)) min = 0;
+  min = Math.max(0, Math.min(1425, min));
+  return String(Math.floor(min / 60)).padStart(2, "0") + ":" + String(min % 60).padStart(2, "0");
 }
 // === PURE LOGIC END ===
 
@@ -1235,6 +1277,7 @@ document.getElementById("toggleShiftForm").addEventListener("click", function(){
   editingShiftId = null;
   shiftForm.reset();
   resetBulkForm();
+  syncAllTimeSliders();
   document.getElementById("sfBulkArea").classList.remove("hidden");
   document.getElementById("sfBreak").value = 0;
   const today = new Date();
@@ -1304,6 +1347,43 @@ shiftForm.addEventListener("submit", function(e){
   if (bulkCreated > 0) alert(bulkCreated + "件のシフトを登録しました");
 });
 
+// ---------- 時刻スライダー ----------
+// 時刻欄とスライダーを双方向に連動させる。スライダーは15分刻み（0:00〜23:45）で、
+// スライダーの横には現在の時刻を表示する。プログラム側で時刻欄の値を変えた場合は
+// syncAllTimeSliders() を呼んでスライダーを追随させる。
+const timeSliderSyncs = [];
+function bindTimeSlider(timeId, sliderId, valId){
+  const timeEl = document.getElementById(timeId);
+  const sliderEl = document.getElementById(sliderId);
+  const valEl = document.getElementById(valId);
+  if (!timeEl || !sliderEl) return;
+  function syncFromTime(){
+    const v = timeToSliderValue(timeEl.value);
+    if (v === null){
+      if (valEl) valEl.textContent = "--:--";
+      return;
+    }
+    sliderEl.value = String(v);
+    if (valEl) valEl.textContent = timeEl.value;
+  }
+  sliderEl.addEventListener("input", function(){
+    const t = sliderValueToTime(Number(sliderEl.value));
+    timeEl.value = t;
+    if (valEl) valEl.textContent = t;
+  });
+  timeEl.addEventListener("input", syncFromTime);
+  timeEl.addEventListener("change", syncFromTime);
+  syncFromTime();
+  timeSliderSyncs.push(syncFromTime);
+}
+function syncAllTimeSliders(){
+  timeSliderSyncs.forEach(function(f){ f(); });
+}
+bindTimeSlider("sfStart", "sfStartSlider", "sfStartSliderVal");
+bindTimeSlider("sfEnd", "sfEndSlider", "sfEndSliderVal");
+bindTimeSlider("tplStart", "tplStartSlider", "tplStartSliderVal");
+bindTimeSlider("tplEnd", "tplEndSlider", "tplEndSliderVal");
+
 // 区分を選ぶと、そのバイト先のプリセット時刻を開始・終了に自動入力する
 function applyCategoryPreset(){
   const wp = findWp(document.getElementById("sfWorkplace").value);
@@ -1311,6 +1391,7 @@ function applyCategoryPreset(){
   if (!p) return;
   document.getElementById("sfStart").value = p.start;
   document.getElementById("sfEnd").value = p.end;
+  syncAllTimeSliders();
 }
 document.getElementById("sfCategory").addEventListener("change", applyCategoryPreset);
 document.getElementById("sfWorkplace").addEventListener("change", function(){
@@ -1404,6 +1485,7 @@ document.getElementById("shiftList").addEventListener("click", function(e){
     document.getElementById("sfBreak").value = s.breakMin || 0;
     document.getElementById("sfCategory").value = s.category || "";
     document.getElementById("sfMemo").value = s.memo || "";
+    syncAllTimeSliders();
     document.getElementById("sfSubmit").textContent = "更新する";
     shiftForm.classList.remove("hidden");
     shiftForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1423,6 +1505,7 @@ document.getElementById("shiftList").addEventListener("click", function(e){
     document.getElementById("sfBreak").value = s.breakMin || 0;
     document.getElementById("sfCategory").value = s.category || "";
     document.getElementById("sfMemo").value = s.memo || "";
+    syncAllTimeSliders();
     document.getElementById("sfSubmit").textContent = "複製を保存";
     shiftForm.classList.remove("hidden");
     shiftForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1625,6 +1708,7 @@ const tplForm = document.getElementById("tplForm");
 function resetTplForm(){
   editingTplId = null;
   tplForm.reset();
+  syncAllTimeSliders();
   document.getElementById("tplBreak").value = 0;
   document.getElementById("tplSubmit").textContent = "パターンを保存";
   document.getElementById("tplCancelEdit").classList.add("hidden");
@@ -1670,6 +1754,7 @@ function applyTplCategoryPreset(){
   if (!p) return;
   document.getElementById("tplStart").value = p.start;
   document.getElementById("tplEnd").value = p.end;
+  syncAllTimeSliders();
 }
 document.getElementById("tplCategory").addEventListener("change", applyTplCategoryPreset);
 document.getElementById("tplWorkplace").addEventListener("change", function(){
@@ -1769,6 +1854,7 @@ document.getElementById("tplList").addEventListener("click", function(e){
     document.getElementById("tplCategory").value = t.category || "";
     document.getElementById("tplStart").value = t.start;
     document.getElementById("tplEnd").value = t.end;
+    syncAllTimeSliders();
     document.getElementById("tplBreak").value = t.breakMin || 0;
     document.querySelectorAll("#tplWeekdays input[type=checkbox]").forEach(function(b){
       b.checked = t.weekdays.indexOf(Number(b.value)) >= 0;
