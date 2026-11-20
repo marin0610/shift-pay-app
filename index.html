@@ -149,6 +149,21 @@
   .crop-handle[data-handle="sw"]{left:0;top:100%;}
   .crop-handle[data-handle="se"]{left:100%;top:100%;}
   .crop-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .crop-rect-b{border-color:#16a34a;background:rgba(22,163,74,.15);}
+  .crop-rect-b .crop-handle{border-color:#16a34a;}
+  .crop-rect.inactive{opacity:.45;}
+  .crop-tag{
+    position:absolute;top:2px;left:2px;font-size:11px;font-weight:700;color:#fff;
+    background:var(--blue);padding:1px 6px;border-radius:6px;pointer-events:none;white-space:nowrap;
+  }
+  .crop-rect-b .crop-tag{background:#16a34a;}
+  .slot-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700;}
+  .wd-checks{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0;}
+  .wd-checks label{
+    display:flex;align-items:center;gap:4px;font-size:14px;color:var(--ink);
+    padding:6px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;margin:0;
+  }
+  .wd-checks input{width:18px;height:18px;flex:none;min-height:0;padding:0;}
   textarea{
     width:100%;font-size:14px;padding:10px;border:1px solid var(--line);
     border-radius:8px;background:#fff;color:var(--ink);font-family:inherit;line-height:1.5;
@@ -217,6 +232,19 @@
       <h3>区分ごとの件数</h3>
       <div id="categoryCounts"></div>
     </div>
+    <div class="subtotals" id="weekCopyWrap">
+      <h3>週のコピー</h3>
+      <p class="note">ある週（月〜日）のシフトを、別の週にまとめてコピーできます。</p>
+      <label class="field-label" for="wcSrc">コピー元の週（週内の日付）</label>
+      <input type="date" id="wcSrc" class="text-input">
+      <label class="field-label" for="wcDst" style="margin-top:8px;">コピー先の週（週内の日付）</label>
+      <input type="date" id="wcDst" class="text-input">
+      <div class="crop-btns">
+        <button id="wcNextWeekBtn">コピー先を翌週にする</button>
+        <button id="wcRunBtn">週をコピー</button>
+      </div>
+      <p class="note" id="wcInfo"></p>
+    </div>
   </section>
 
   <!-- シフト表の画像 -->
@@ -247,9 +275,27 @@
     <div id="ocrCropArea" class="hidden">
       <label class="ocr-label">切り取り（任意・写真のみ）</label>
       <p class="note">画像の上をドラッグすると、読み取る範囲を選べます。自分の名前の列だけを切り取ると、文字が大きくなるため読み取りやすくなります。選んだ範囲は、四隅の丸をドラッグすると大きさを変えられ、中をドラッグすると移動できます。</p>
+      <div class="crop-mode">
+        <label class="ocr-check"><input type="radio" name="ocrCropMode" value="single" checked> 1か所だけ切り取る</label>
+        <label class="ocr-check"><input type="radio" name="ocrCropMode" value="double"> 2か所切り取る（日付の列＋自分の列）</label>
+      </div>
+      <p class="note hidden" id="ocrCropDoubleNote">日付の列と自分の名前の列を別々に切り取って、横につなげて読み取ります（1か所だけだと日付と対応づけられないため）。まず「① 日付の列」をドラッグで選び、次に「② 自分の列」を選んでください。2つとも選ぶと「この範囲で読み取る」が押せます。</p>
+      <div class="crop-btns hidden" id="ocrCropSlotBtns" style="margin:0 0 8px;">
+        <button id="ocrCropSlotABtn" class="slot-btn active">① 日付の列を選ぶ</button>
+        <button id="ocrCropSlotBBtn" class="slot-btn">② 自分の列を選ぶ</button>
+      </div>
+      <p class="note hidden" id="ocrCropSlotStatus"></p>
       <div class="crop-wrap" id="ocrCropWrap">
         <img id="ocrCropImg" alt="切り取り対象の画像">
         <div id="ocrCropRect" class="crop-rect hidden">
+          <span class="crop-tag hidden" id="ocrCropTagA">日付の列</span>
+          <div class="crop-handle" data-handle="nw"></div>
+          <div class="crop-handle" data-handle="ne"></div>
+          <div class="crop-handle" data-handle="sw"></div>
+          <div class="crop-handle" data-handle="se"></div>
+        </div>
+        <div id="ocrCropRectB" class="crop-rect crop-rect-b hidden">
+          <span class="crop-tag">自分の列</span>
           <div class="crop-handle" data-handle="nw"></div>
           <div class="crop-handle" data-handle="ne"></div>
           <div class="crop-handle" data-handle="sw"></div>
@@ -262,8 +308,13 @@
       </div>
       <p class="note">切り取らずに全体を読み取る場合は、そのまま下の「読み取る」を押してください。</p>
     </div>
-    <label class="ocr-check"><input type="checkbox" id="ocrPreprocess" checked> 画像の前処理を使う（写真の読み取り時のみ）</label>
-    <p class="note">前処理では、写真を拡大し、白黒化・コントラスト強調・二値化（文字を黒、背景を白に寄せる処理）を行います。色付きのマスが多いシフト表では、読み取りやすくなる場合があります。切り替えた場合は、もう一度「読み取る」を押してください。前処理後の画像は下に表示されます。</p>
+    <label class="ocr-label" for="ocrPreprocessLevel">画像の前処理（写真の読み取り時のみ）</label>
+    <select id="ocrPreprocessLevel" class="ocr-select">
+      <option value="none">なし</option>
+      <option value="weak">弱め（白黒化＋コントラストのみ）</option>
+      <option value="strong" selected>強め（適応的二値化・色付きのマス向け）</option>
+    </select>
+    <p class="note">前処理では、写真を拡大し、白黒化とコントラスト強調を行います。「強め」はさらに適応的二値化（場所ごとの明るさに合わせて文字と背景を分ける処理）を行い、色付きのマスの中の文字が消えにくくなります。切り替えた場合は、もう一度「読み取る」を押してください。前処理後の画像は下に表示されます。</p>
     <img id="ocrPreprocessedPreview" class="ocr-preview hidden" alt="前処理後の画像">
     <button class="primary" id="ocrRunBtn" disabled style="margin-top:10px;">読み取る</button>
     <p class="note" id="ocrStatus"></p>
@@ -291,6 +342,37 @@
     <form id="shiftForm" class="hidden">
       <label for="sfDate">日付</label>
       <input type="date" id="sfDate" required>
+      <div id="sfBulkArea">
+        <label class="ocr-check"><input type="checkbox" id="sfBulkToggle"> 複数の日にまとめて登録する（期間＋曜日）</label>
+        <div id="sfBulkPanel" class="hidden">
+          <div class="row2">
+            <div>
+              <label for="sfBulkFrom">期間の開始日</label>
+              <input type="date" id="sfBulkFrom">
+            </div>
+            <div>
+              <label for="sfBulkTo">期間の終了日</label>
+              <input type="date" id="sfBulkTo">
+            </div>
+          </div>
+          <label>曜日</label>
+          <div class="wd-checks" id="sfBulkWeekdays">
+            <label><input type="checkbox" value="1">月</label>
+            <label><input type="checkbox" value="2">火</label>
+            <label><input type="checkbox" value="3">水</label>
+            <label><input type="checkbox" value="4">木</label>
+            <label><input type="checkbox" value="5">金</label>
+            <label><input type="checkbox" value="6">土</label>
+            <label><input type="checkbox" value="0">日</label>
+          </div>
+          <div class="crop-btns" style="margin-top:6px;">
+            <button type="button" class="small" data-wd-shortcut="weekday" data-wd-target="sfBulkWeekdays">平日（月〜金）</button>
+            <button type="button" class="small" data-wd-shortcut="all" data-wd-target="sfBulkWeekdays">全て</button>
+            <button type="button" class="small" data-wd-shortcut="clear" data-wd-target="sfBulkWeekdays">クリア</button>
+          </div>
+          <p class="note" id="sfBulkCount"></p>
+        </div>
+      </div>
       <label for="sfWorkplace">バイト先</label>
       <select id="sfWorkplace"></select>
       <div class="row2">
@@ -324,6 +406,78 @@
     </form>
   </section>
 
+  <!-- いつものパターン（テンプレート） -->
+  <section class="card">
+    <h2>いつものパターン</h2>
+    <p class="note" style="margin-top:0;">バイト先・区分・時間・曜日を名前付きのパターンとして保存しておくと、期間を指定して一括でシフトを作れます（例：「MOOCA 平日・遅番」）。シフトが固定の人向けの機能です。</p>
+    <div id="tplList"></div>
+    <form id="tplForm">
+      <label for="tplName">パターンの名前</label>
+      <input type="text" id="tplName" placeholder="例：MOOCA 平日・遅番">
+      <label for="tplWorkplace">バイト先</label>
+      <select id="tplWorkplace"></select>
+      <label for="tplCategory">区分</label>
+      <select id="tplCategory">
+        <option value="">未設定</option>
+        <option value="早番">早番</option>
+        <option value="日勤">日勤</option>
+        <option value="遅番">遅番</option>
+        <option value="夜勤">夜勤</option>
+      </select>
+      <div class="row2">
+        <div>
+          <label for="tplStart">開始時刻</label>
+          <input type="time" id="tplStart">
+        </div>
+        <div>
+          <label for="tplEnd">終了時刻</label>
+          <input type="time" id="tplEnd">
+        </div>
+      </div>
+      <label for="tplBreak">休憩時間（分）</label>
+      <input type="number" id="tplBreak" min="0" step="5" value="0" inputmode="numeric">
+      <label>曜日</label>
+      <div class="wd-checks" id="tplWeekdays">
+        <label><input type="checkbox" value="1">月</label>
+        <label><input type="checkbox" value="2">火</label>
+        <label><input type="checkbox" value="3">水</label>
+        <label><input type="checkbox" value="4">木</label>
+        <label><input type="checkbox" value="5">金</label>
+        <label><input type="checkbox" value="6">土</label>
+        <label><input type="checkbox" value="0">日</label>
+      </div>
+      <div class="crop-btns" style="margin-top:6px;">
+        <button type="button" class="small" data-wd-shortcut="weekday" data-wd-target="tplWeekdays">平日（月〜金）</button>
+        <button type="button" class="small" data-wd-shortcut="all" data-wd-target="tplWeekdays">全て</button>
+        <button type="button" class="small" data-wd-shortcut="clear" data-wd-target="tplWeekdays">クリア</button>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="primary" id="tplSubmit">パターンを保存</button>
+        <button type="button" id="tplCancelEdit" class="hidden">編集をやめる</button>
+      </div>
+    </form>
+    <div id="tplApplyArea" class="hidden">
+      <h3 class="ocr-draft-title">パターンを適用する</h3>
+      <p class="note" id="tplApplyName"></p>
+      <div class="row2">
+        <div>
+          <label class="field-label" for="tplFrom">期間の開始日</label>
+          <input type="date" id="tplFrom" class="text-input">
+        </div>
+        <div>
+          <label class="field-label" for="tplTo">期間の終了日</label>
+          <input type="date" id="tplTo" class="text-input">
+        </div>
+      </div>
+      <div class="crop-btns">
+        <button id="tplViewMonthBtn">表示中の月</button>
+        <button id="tplNextMonthBtn">翌月</button>
+      </div>
+      <p class="note" id="tplApplyInfo"></p>
+      <button class="primary" id="tplApplyBtn">この内容で作成する</button>
+    </div>
+  </section>
+
   <!-- 自分の設定 -->
   <section class="card">
     <h2>自分の設定</h2>
@@ -337,7 +491,7 @@
       <button id="importDataBtn">データを読み込み（JSON）</button>
     </div>
     <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
-    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書きをすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。</p>
+    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターンをすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。</p>
     <p class="note">データはこのブラウザの中に保存されます。LINEなどのアプリ内ブラウザで開くと、データが消えやすくなります。Safariで開いて「ホーム画面に追加」しておくと、データが残りやすくなります。別のブラウザで開くと、別のデータになります。大事なデータは、ときどき書き出してバックアップしてください。</p>
     <p class="note register-status" id="backupStatus"></p>
   </section>
@@ -512,12 +666,154 @@ function categoryBadge(shift){
 }
 // === CATEGORY LOGIC END ===
 
+// === BULK/TEMPLATE LOGIC START ===
+// "YYYY-MM-DD" を検証してローカル日付の Date を返す（不正な日付は null）
+function parseDateStr(dateStr){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ""));
+  if (!m) return null;
+  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  return dt;
+}
+
+// Date を "YYYY-MM-DD" に整形する
+function formatDateStr(d){
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+// 日付文字列に n 日を加えた日付文字列を返す
+function addDays(dateStr, n){
+  const d = parseDateStr(dateStr);
+  if (!d) return "";
+  d.setDate(d.getDate() + n);
+  return formatDateStr(d);
+}
+
+// 2つの日付文字列の差（to − from、日数）を返す
+function diffDays(fromStr, toStr){
+  const a = parseDateStr(fromStr), b = parseDateStr(toStr);
+  if (!a || !b) return 0;
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
+}
+
+// 期間 [fromStr, toStr] のうち、指定した曜日（0=日〜6=土）の日付だけを列挙する
+// 曜日が空・期間が逆転・期間が長すぎる（366日超）場合は空配列を返す
+function expandBulkDates(fromStr, toStr, weekdays){
+  const from = parseDateStr(fromStr), to = parseDateStr(toStr);
+  if (!from || !to) return [];
+  const wds = (weekdays || []).map(Number)
+    .filter(function(v){ return Number.isInteger(v) && v >= 0 && v <= 6; });
+  if (wds.length === 0) return [];
+  const span = Math.round((to.getTime() - from.getTime()) / 86400000);
+  if (span < 0 || span > 366) return [];
+  const out = [];
+  const d = new Date(from.getTime());
+  for (let i = 0; i <= span; i++){
+    if (wds.indexOf(d.getDay()) >= 0) out.push(formatDateStr(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+// その日を含む週の月曜日の日付文字列を返す
+function weekStartMonday(dateStr){
+  const d = parseDateStr(dateStr);
+  if (!d) return "";
+  const offset = (d.getDay() + 6) % 7; // 月曜からの日数
+  d.setDate(d.getDate() - offset);
+  return formatDateStr(d);
+}
+
+// ある週（月〜日）のシフトを別の週へコピーした新しいシフトデータ（idなし）を返す
+// srcDateStr / dstDateStr はそれぞれの週内の任意の日付でよい
+// 戻り値：{ srcStart, dstStart, copies }（copies は日付順）
+function copyWeekShifts(shiftsArr, srcDateStr, dstDateStr){
+  const srcStart = weekStartMonday(srcDateStr);
+  const dstStart = weekStartMonday(dstDateStr);
+  if (!srcStart || !dstStart) return { srcStart: srcStart, dstStart: dstStart, copies: [] };
+  const diff = diffDays(srcStart, dstStart);
+  const srcEnd = addDays(srcStart, 6);
+  const copies = [];
+  (shiftsArr || []).forEach(function(s){
+    if (s && s.date >= srcStart && s.date <= srcEnd){
+      copies.push({
+        date: addDays(s.date, diff),
+        workplaceId: s.workplaceId,
+        start: s.start,
+        end: s.end,
+        breakMin: Number(s.breakMin) || 0,
+        category: s.category || "",
+        memo: s.memo || ""
+      });
+    }
+  });
+  copies.sort(function(a, b){
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return timeToMin(a.start) - timeToMin(b.start);
+  });
+  return { srcStart: srcStart, dstStart: dstStart, copies: copies };
+}
+
+// テンプレートの配列を整える（壊れた項目は捨て、曜日は 0〜6 の重複なし配列にする）
+function normalizeTemplates(list){
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  list.forEach(function(t){
+    if (!t || typeof t !== "object") return;
+    const name = String(t.name || "").trim();
+    if (!name || !t.workplaceId || !t.start || !t.end) return;
+    const wds = [];
+    (Array.isArray(t.weekdays) ? t.weekdays : []).forEach(function(v){
+      const n = Number(v);
+      if (Number.isInteger(n) && n >= 0 && n <= 6 && wds.indexOf(n) < 0) wds.push(n);
+    });
+    if (wds.length === 0) return;
+    wds.sort(function(a, b){ return a - b; });
+    out.push({
+      id: String(t.id || ""),
+      name: name,
+      workplaceId: String(t.workplaceId),
+      category: String(t.category || ""),
+      start: String(t.start),
+      end: String(t.end),
+      breakMin: Number(t.breakMin) || 0,
+      weekdays: wds
+    });
+  });
+  return out;
+}
+
+// テンプレートと日付の配列から、登録用シフトデータ（idなし）の配列を作る
+function buildShiftsFromTemplate(template, dates){
+  if (!template) return [];
+  return (dates || []).map(function(d){
+    return {
+      date: d,
+      workplaceId: template.workplaceId,
+      start: template.start,
+      end: template.end,
+      breakMin: Number(template.breakMin) || 0,
+      category: template.category || "",
+      memo: ""
+    };
+  });
+}
+
+// テンプレートの曜日に当たる日を期間から列挙する（テンプレート適用の本体）
+function expandTemplateDates(template, fromStr, toStr){
+  if (!template) return [];
+  return expandBulkDates(fromStr, toStr, template.weekdays);
+}
+// === BULK/TEMPLATE LOGIC END ===
+
 // ---------- データ管理（localStorage） ----------
 const LS_WP = "shiftPayApp.workplaces";
 const LS_SH = "shiftPayApp.shifts";
 const LS_IMG = "shiftPayApp.images";
 const LS_SET = "shiftPayApp.settings";
 const LS_DRAFTS = "shiftPayApp.ocrDrafts";
+const LS_TPL = "shiftPayApp.templates";
 const MAX_IMAGES_PER_MONTH = 3;
 const MAX_IMAGE_WIDTH = 1200;
 
@@ -540,6 +836,13 @@ let shifts = loadJSON(LS_SH, []);
 workplaces.forEach(function(w){ ensurePresets(w); });
 let monthImages = loadJSON(LS_IMG, {}); // { "YYYY-MM": [ {id, dataUrl}, ... ] }
 let settings = loadJSON(LS_SET, { myNames: "" }); // { myNames: "まりん、山岡" }
+let templates = normalizeTemplates(loadJSON(LS_TPL, [])); // いつものパターン
+
+function saveTemplates(){
+  try {
+    localStorage.setItem(LS_TPL, JSON.stringify(templates));
+  } catch (e) { /* 保存できなくても動作は続ける */ }
+}
 
 function saveSettings(){
   try {
@@ -807,6 +1110,7 @@ function render(){
         "（実働 " + fmtDuration(r.workedMin) + nightNote + "）</div>" + memo +
         '<div class="shift-actions">' +
         '<button class="small" data-edit-shift="' + s.id + '">編集</button>' +
+        '<button class="small" data-dup-shift="' + s.id + '">複製</button>' +
         '<button class="small danger" data-del-shift="' + s.id + '">削除</button>' +
         "</div></div>";
     }).join("");
@@ -841,6 +1145,12 @@ function render(){
 
   // OCR 用の保存済み画像セレクト
   renderOcrSources();
+
+  // 週のコピーの件数表示を最新化する
+  updateWeekCopyInfo();
+
+  // テンプレート一覧を最新化する
+  renderTemplates();
 }
 
 // ---------- 月切替 ----------
@@ -855,6 +1165,66 @@ document.getElementById("nextMonth").addEventListener("click", function(){
   render();
 });
 
+// ---------- 週のコピー ----------
+// コピー元・コピー先の週と件数を表示する
+function updateWeekCopyInfo(){
+  const srcEl = document.getElementById("wcSrc");
+  const dstEl = document.getElementById("wcDst");
+  const infoEl = document.getElementById("wcInfo");
+  const runBtn = document.getElementById("wcRunBtn");
+  if (!srcEl || !dstEl || !infoEl) return;
+  if (!srcEl.value || !dstEl.value){
+    infoEl.textContent = "";
+    if (runBtn) runBtn.disabled = true;
+    return;
+  }
+  const res = copyWeekShifts(shifts, srcEl.value, dstEl.value);
+  infoEl.textContent =
+    fmtDateLabel(res.srcStart) + "〜" + fmtDateLabel(addDays(res.srcStart, 6)) + "のシフト" + res.copies.length + "件を、" +
+    fmtDateLabel(res.dstStart) + "〜" + fmtDateLabel(addDays(res.dstStart, 6)) + "にコピーします";
+  if (runBtn) runBtn.disabled = res.copies.length === 0 || res.srcStart === res.dstStart;
+}
+(function initWeekCopy(){
+  const todayStr = formatDateStr(new Date());
+  const srcEl = document.getElementById("wcSrc");
+  const dstEl = document.getElementById("wcDst");
+  if (srcEl && !srcEl.value) srcEl.value = todayStr;
+  if (dstEl && !dstEl.value) dstEl.value = addDays(weekStartMonday(todayStr), 7);
+  if (srcEl) srcEl.addEventListener("change", updateWeekCopyInfo);
+  if (dstEl) dstEl.addEventListener("change", updateWeekCopyInfo);
+  const nextBtn = document.getElementById("wcNextWeekBtn");
+  if (nextBtn) nextBtn.addEventListener("click", function(){
+    if (!srcEl.value) return;
+    dstEl.value = addDays(weekStartMonday(srcEl.value), 7);
+    updateWeekCopyInfo();
+  });
+  const runBtn = document.getElementById("wcRunBtn");
+  if (runBtn) runBtn.addEventListener("click", function(){
+    const res = copyWeekShifts(shifts, srcEl.value, dstEl.value);
+    if (res.copies.length === 0){
+      alert("コピー元の週にシフトがありません");
+      return;
+    }
+    if (res.srcStart === res.dstStart){
+      alert("コピー元とコピー先が同じ週です");
+      return;
+    }
+    const msg = fmtDateLabel(res.srcStart) + "〜" + fmtDateLabel(addDays(res.srcStart, 6)) + "のシフト" + res.copies.length + "件を、" +
+      fmtDateLabel(res.dstStart) + "〜" + fmtDateLabel(addDays(res.dstStart, 6)) + "にコピーします。同じ日に既存のシフトがあっても追加されます。よろしいですか？";
+    if (!confirm(msg)) return;
+    res.copies.forEach(function(c){
+      c.id = newId();
+      shifts.push(c);
+    });
+    saveAll();
+    // コピー先の週の月へ移動
+    viewYear = Number(res.dstStart.slice(0, 4));
+    viewMonth = Number(res.dstStart.slice(5, 7)) - 1;
+    render();
+    updateWeekCopyInfo();
+  });
+})();
+
 // ---------- シフトフォーム ----------
 const shiftForm = document.getElementById("shiftForm");
 document.getElementById("toggleShiftForm").addEventListener("click", function(){
@@ -864,6 +1234,8 @@ document.getElementById("toggleShiftForm").addEventListener("click", function(){
   }
   editingShiftId = null;
   shiftForm.reset();
+  resetBulkForm();
+  document.getElementById("sfBulkArea").classList.remove("hidden");
   document.getElementById("sfBreak").value = 0;
   const today = new Date();
   document.getElementById("sfDate").value =
@@ -886,13 +1258,38 @@ shiftForm.addEventListener("submit", function(e){
     category: document.getElementById("sfCategory").value,
     memo: document.getElementById("sfMemo").value.trim()
   };
-  if (!data.date || !data.start || !data.end || !data.workplaceId){
+  if (!data.start || !data.end || !data.workplaceId){
+    alert("バイト先・開始時刻・終了時刻を入力してください");
+    return;
+  }
+  const bulkOn = !editingShiftId && document.getElementById("sfBulkToggle").checked;
+  if (!bulkOn && !data.date){
     alert("日付・バイト先・開始時刻・終了時刻を入力してください");
     return;
   }
+  let savedDate = data.date;
+  let bulkCreated = 0;
   if (editingShiftId){
     const s = shifts.find(function(x){ return x.id === editingShiftId; });
     if (s) Object.assign(s, data);
+  } else if (bulkOn){
+    // 一括作成：期間内の指定曜日の日に、同じ内容でシフトを作る
+    const dates = expandBulkDates(
+      document.getElementById("sfBulkFrom").value,
+      document.getElementById("sfBulkTo").value,
+      readWeekdayChecks("sfBulkWeekdays")
+    );
+    if (dates.length === 0){
+      alert("期間と曜日を確認してください（作成される日がありません）");
+      return;
+    }
+    dates.forEach(function(d){
+      const nd = Object.assign({}, data, { date: d });
+      nd.id = newId();
+      shifts.push(nd);
+    });
+    bulkCreated = dates.length;
+    savedDate = dates[0];
   } else {
     data.id = newId();
     shifts.push(data);
@@ -901,9 +1298,10 @@ shiftForm.addEventListener("submit", function(e){
   saveAll();
   shiftForm.classList.add("hidden");
   // 保存したシフトの月へ移動
-  viewYear = Number(data.date.slice(0, 4));
-  viewMonth = Number(data.date.slice(5, 7)) - 1;
+  viewYear = Number(savedDate.slice(0, 4));
+  viewMonth = Number(savedDate.slice(5, 7)) - 1;
   render();
+  if (bulkCreated > 0) alert(bulkCreated + "件のシフトを登録しました");
 });
 
 // 区分を選ぶと、そのバイト先のプリセット時刻を開始・終了に自動入力する
@@ -919,14 +1317,85 @@ document.getElementById("sfWorkplace").addEventListener("change", function(){
   if (document.getElementById("sfCategory").value) applyCategoryPreset();
 });
 
+// ---------- 一括作成（期間＋曜日）と曜日ショートカット ----------
+// 曜日チェック群（containerId で指定）の選択中曜日を数値配列で返す
+function readWeekdayChecks(containerId){
+  return Array.prototype.map.call(
+    document.querySelectorAll("#" + containerId + " input[type=checkbox]:checked"),
+    function(b){ return Number(b.value); }
+  );
+}
+
+// 曜日ショートカット（平日／全て／クリア）をチェック群に適用する
+function applyWeekdayShortcut(containerId, kind){
+  document.querySelectorAll("#" + containerId + " input[type=checkbox]").forEach(function(b){
+    const v = Number(b.value);
+    if (kind === "all") b.checked = true;
+    else if (kind === "clear") b.checked = false;
+    else if (kind === "weekday") b.checked = (v >= 1 && v <= 5);
+  });
+}
+document.querySelectorAll("[data-wd-shortcut]").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    applyWeekdayShortcut(btn.getAttribute("data-wd-target"), btn.getAttribute("data-wd-shortcut"));
+    updateBulkCount();
+    updateTplApplyInfo();
+  });
+});
+
+// 一括作成の入力状態を初期化する
+function resetBulkForm(){
+  document.getElementById("sfBulkToggle").checked = false;
+  document.getElementById("sfBulkPanel").classList.add("hidden");
+  document.getElementById("sfDate").required = true;
+  document.getElementById("sfBulkCount").textContent = "";
+}
+
+// 一括作成で作られる件数を表示する
+function updateBulkCount(){
+  const el = document.getElementById("sfBulkCount");
+  if (!el) return;
+  if (!document.getElementById("sfBulkToggle").checked){
+    el.textContent = "";
+    return;
+  }
+  const dates = expandBulkDates(
+    document.getElementById("sfBulkFrom").value,
+    document.getElementById("sfBulkTo").value,
+    readWeekdayChecks("sfBulkWeekdays")
+  );
+  el.textContent = dates.length > 0
+    ? dates.length + "件作成されます（" + fmtDateLabel(dates[0]) + "〜" + fmtDateLabel(dates[dates.length - 1]) + "）"
+    : "期間と曜日を選ぶと、作成される件数が表示されます";
+}
+document.getElementById("sfBulkToggle").addEventListener("change", function(e){
+  const on = e.target.checked;
+  document.getElementById("sfBulkPanel").classList.toggle("hidden", !on);
+  document.getElementById("sfDate").required = !on;
+  if (on){
+    const base = document.getElementById("sfDate").value;
+    const fromEl = document.getElementById("sfBulkFrom");
+    const toEl = document.getElementById("sfBulkTo");
+    if (base && !fromEl.value) fromEl.value = base;
+    if (base && !toEl.value) toEl.value = base;
+  }
+  updateBulkCount();
+});
+["sfBulkFrom", "sfBulkTo"].forEach(function(id){
+  document.getElementById(id).addEventListener("change", updateBulkCount);
+});
+document.getElementById("sfBulkWeekdays").addEventListener("change", updateBulkCount);
+
 // シフトの編集・削除（イベント委譲）
 document.getElementById("shiftList").addEventListener("click", function(e){
   const editBtn = e.target.closest("[data-edit-shift]");
+  const dupBtn = e.target.closest("[data-dup-shift]");
   const delBtn = e.target.closest("[data-del-shift]");
   if (editBtn){
     const s = shifts.find(function(x){ return x.id === editBtn.getAttribute("data-edit-shift"); });
     if (!s) return;
     editingShiftId = s.id;
+    document.getElementById("sfBulkArea").classList.add("hidden");
     document.getElementById("sfDate").value = s.date;
     render();
     document.getElementById("sfWorkplace").value = s.workplaceId;
@@ -938,6 +1407,26 @@ document.getElementById("shiftList").addEventListener("click", function(e){
     document.getElementById("sfSubmit").textContent = "更新する";
     shiftForm.classList.remove("hidden");
     shiftForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (dupBtn){
+    // 複製：元のシフトの内容をフォームに入れ、日付だけ変えて新規登録できるようにする
+    const s = shifts.find(function(x){ return x.id === dupBtn.getAttribute("data-dup-shift"); });
+    if (!s) return;
+    editingShiftId = null;
+    resetBulkForm();
+    document.getElementById("sfBulkArea").classList.remove("hidden");
+    document.getElementById("sfDate").value = s.date;
+    render();
+    document.getElementById("sfWorkplace").value = s.workplaceId;
+    document.getElementById("sfStart").value = s.start;
+    document.getElementById("sfEnd").value = s.end;
+    document.getElementById("sfBreak").value = s.breakMin || 0;
+    document.getElementById("sfCategory").value = s.category || "";
+    document.getElementById("sfMemo").value = s.memo || "";
+    document.getElementById("sfSubmit").textContent = "複製を保存";
+    shiftForm.classList.remove("hidden");
+    shiftForm.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("sfDate").focus();
   }
   if (delBtn){
     const id = delBtn.getAttribute("data-del-shift");
@@ -1087,14 +1576,235 @@ document.getElementById("imageGrid").addEventListener("click", function(e){
 });
 document.getElementById("lightbox").addEventListener("click", closeLightbox);
 
+// ---------- いつものパターン（テンプレート） ----------
+let editingTplId = null;   // 編集中のパターンのid
+let applyingTplId = null;  // 適用対象に選んだパターンのid
+
+function findTemplate(id){
+  return templates.find(function(t){ return t.id === id; });
+}
+
+// パターンの曜日を「月・木・金」のような表示にする
+function tplWeekdayLabel(t){
+  return t.weekdays.map(function(v){ return WEEKDAYS[v]; }).join("・");
+}
+
+// テンプレート一覧と、テンプレートフォームのバイト先セレクトを描き直す
+function renderTemplates(){
+  const listEl = document.getElementById("tplList");
+  if (listEl){
+    if (templates.length === 0){
+      listEl.innerHTML = '<div class="empty">保存したパターンはまだありません。下のフォームから作れます</div>';
+    } else {
+      listEl.innerHTML = templates.map(function(t){
+        const wp = findWp(t.workplaceId);
+        const wpName = wp ? wp.name : "（削除済みのバイト先）";
+        const cat = t.category ? t.category + "・" : "";
+        return '<div class="wp-item"><div><span class="wp-name">' + esc(t.name) + '</span>' +
+          '<div class="wp-detail">' + esc(wpName) + "・" + esc(cat) + esc(t.start) + "〜" + esc(t.end) +
+          "・休憩 " + (Number(t.breakMin) || 0) + "分・" + esc(tplWeekdayLabel(t)) + "</div></div>" +
+          '<div class="wp-actions">' +
+          '<button class="small" data-tpl-apply="' + t.id + '">適用</button>' +
+          '<button class="small" data-tpl-edit="' + t.id + '">編集</button>' +
+          '<button class="small danger" data-tpl-del="' + t.id + '">削除</button>' +
+          "</div></div>";
+      }).join("");
+    }
+  }
+  const sel = document.getElementById("tplWorkplace");
+  if (sel){
+    const current = sel.value;
+    sel.innerHTML = workplaces.map(function(w){
+      return '<option value="' + w.id + '">' + esc(w.name) + "</option>";
+    }).join("");
+    if (findWp(current)) sel.value = current;
+  }
+}
+
+const tplForm = document.getElementById("tplForm");
+function resetTplForm(){
+  editingTplId = null;
+  tplForm.reset();
+  document.getElementById("tplBreak").value = 0;
+  document.getElementById("tplSubmit").textContent = "パターンを保存";
+  document.getElementById("tplCancelEdit").classList.add("hidden");
+}
+tplForm.addEventListener("submit", function(e){
+  e.preventDefault();
+  const data = {
+    name: document.getElementById("tplName").value.trim(),
+    workplaceId: document.getElementById("tplWorkplace").value,
+    category: document.getElementById("tplCategory").value,
+    start: document.getElementById("tplStart").value,
+    end: document.getElementById("tplEnd").value,
+    breakMin: Number(document.getElementById("tplBreak").value) || 0,
+    weekdays: readWeekdayChecks("tplWeekdays")
+  };
+  if (!data.name || !data.workplaceId || !data.start || !data.end){
+    alert("名前・バイト先・開始時刻・終了時刻を入力してください");
+    return;
+  }
+  if (data.weekdays.length === 0){
+    alert("曜日を1つ以上選んでください");
+    return;
+  }
+  if (editingTplId){
+    const t = findTemplate(editingTplId);
+    if (t) Object.assign(t, data);
+  } else {
+    data.id = newId();
+    templates.push(data);
+  }
+  templates = normalizeTemplates(templates);
+  saveTemplates();
+  resetTplForm();
+  renderTemplates();
+  updateTplApplyInfo();
+});
+document.getElementById("tplCancelEdit").addEventListener("click", resetTplForm);
+
+// 区分を選ぶと、そのバイト先のプリセット時刻を開始・終了に入れる（シフトフォームと同じ動き）
+function applyTplCategoryPreset(){
+  const wp = findWp(document.getElementById("tplWorkplace").value);
+  const p = getPreset(wp, document.getElementById("tplCategory").value);
+  if (!p) return;
+  document.getElementById("tplStart").value = p.start;
+  document.getElementById("tplEnd").value = p.end;
+}
+document.getElementById("tplCategory").addEventListener("change", applyTplCategoryPreset);
+document.getElementById("tplWorkplace").addEventListener("change", function(){
+  if (document.getElementById("tplCategory").value) applyTplCategoryPreset();
+});
+
+// パターンの適用で作成される件数を表示する
+function updateTplApplyInfo(){
+  const infoEl = document.getElementById("tplApplyInfo");
+  const btn = document.getElementById("tplApplyBtn");
+  if (!infoEl || !btn) return;
+  const t = applyingTplId ? findTemplate(applyingTplId) : null;
+  if (!t){
+    infoEl.textContent = "";
+    btn.disabled = true;
+    return;
+  }
+  const dates = expandTemplateDates(t,
+    document.getElementById("tplFrom").value,
+    document.getElementById("tplTo").value);
+  infoEl.textContent = dates.length > 0
+    ? dates.length + "件作成されます（" + fmtDateLabel(dates[0]) + "〜" + fmtDateLabel(dates[dates.length - 1]) + "・" + tplWeekdayLabel(t) + "）"
+    : "期間を選ぶと、作成される件数が表示されます";
+  btn.disabled = dates.length === 0;
+}
+["tplFrom", "tplTo"].forEach(function(id){
+  document.getElementById(id).addEventListener("change", updateTplApplyInfo);
+});
+function setTplApplyMonth(year, monthIdx){
+  const ym = year + "-" + String(monthIdx + 1).padStart(2, "0");
+  const lastDay = new Date(year, monthIdx + 1, 0).getDate();
+  document.getElementById("tplFrom").value = ym + "-01";
+  document.getElementById("tplTo").value = ym + "-" + String(lastDay).padStart(2, "0");
+  updateTplApplyInfo();
+}
+document.getElementById("tplViewMonthBtn").addEventListener("click", function(){
+  setTplApplyMonth(viewYear, viewMonth);
+});
+document.getElementById("tplNextMonthBtn").addEventListener("click", function(){
+  let y = viewYear, m = viewMonth + 1;
+  if (m > 11){ m = 0; y++; }
+  setTplApplyMonth(y, m);
+});
+document.getElementById("tplApplyBtn").addEventListener("click", function(){
+  const t = applyingTplId ? findTemplate(applyingTplId) : null;
+  if (!t) return;
+  if (!findWp(t.workplaceId)){
+    alert("このパターンのバイト先が削除されています");
+    return;
+  }
+  const dates = expandTemplateDates(t,
+    document.getElementById("tplFrom").value,
+    document.getElementById("tplTo").value);
+  if (dates.length === 0){
+    alert("期間内に、パターンの曜日に当たる日がありません");
+    return;
+  }
+  const msg = "パターン「" + t.name + "」で、" + fmtDateLabel(dates[0]) + "〜" + fmtDateLabel(dates[dates.length - 1]) +
+    "に" + dates.length + "件のシフトを作成します。よろしいですか？";
+  if (!confirm(msg)) return;
+  buildShiftsFromTemplate(t, dates).forEach(function(s){
+    s.id = newId();
+    shifts.push(s);
+  });
+  saveAll();
+  // 作成した期間の月へ移動
+  viewYear = Number(dates[0].slice(0, 4));
+  viewMonth = Number(dates[0].slice(5, 7)) - 1;
+  render();
+  document.getElementById("tplApplyInfo").textContent = dates.length + "件のシフトを作成しました";
+});
+
+// パターン一覧の適用・編集・削除（イベント委譲）
+document.getElementById("tplList").addEventListener("click", function(e){
+  const applyBtn = e.target.closest("[data-tpl-apply]");
+  const editBtn = e.target.closest("[data-tpl-edit]");
+  const delBtn = e.target.closest("[data-tpl-del]");
+  if (applyBtn){
+    const t = findTemplate(applyBtn.getAttribute("data-tpl-apply"));
+    if (!t) return;
+    applyingTplId = t.id;
+    const wp = findWp(t.workplaceId);
+    document.getElementById("tplApplyName").textContent =
+      "パターン「" + t.name + "」：" + (wp ? wp.name : "（削除済みのバイト先）") +
+      "・" + t.start + "〜" + t.end + "・" + tplWeekdayLabel(t);
+    setTplApplyMonth(viewYear, viewMonth);
+    document.getElementById("tplApplyArea").classList.remove("hidden");
+    document.getElementById("tplApplyArea").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (editBtn){
+    const t = findTemplate(editBtn.getAttribute("data-tpl-edit"));
+    if (!t) return;
+    editingTplId = t.id;
+    document.getElementById("tplName").value = t.name;
+    renderTemplates();
+    document.getElementById("tplWorkplace").value = t.workplaceId;
+    document.getElementById("tplCategory").value = t.category || "";
+    document.getElementById("tplStart").value = t.start;
+    document.getElementById("tplEnd").value = t.end;
+    document.getElementById("tplBreak").value = t.breakMin || 0;
+    document.querySelectorAll("#tplWeekdays input[type=checkbox]").forEach(function(b){
+      b.checked = t.weekdays.indexOf(Number(b.value)) >= 0;
+    });
+    document.getElementById("tplSubmit").textContent = "パターンを更新";
+    document.getElementById("tplCancelEdit").classList.remove("hidden");
+    tplForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (delBtn){
+    const t = findTemplate(delBtn.getAttribute("data-tpl-del"));
+    if (!t) return;
+    if (confirm("パターン「" + t.name + "」を削除しますか？")){
+      templates = templates.filter(function(x){ return x.id !== t.id; });
+      saveTemplates();
+      if (applyingTplId === t.id){
+        applyingTplId = null;
+        document.getElementById("tplApplyArea").classList.add("hidden");
+      }
+      if (editingTplId === t.id) resetTplForm();
+      renderTemplates();
+    }
+  }
+});
+
 // ---------- 写真から読み取り（OCR・実験） ----------
 let ocrImageDataUrl = null; // 読み取り対象の画像（dataURL）
 let ocrPdfBuffer = null;    // 読み取り対象のPDF（ArrayBuffer）
 let ocrDrafts = [];         // 下書き候補
 let ocrPreprocessedUrl = null;  // 前処理後の画像（dataURL）
 let ocrPreprocessedFor = null;  // 前処理の元になった画像（dataURL）
+let ocrPreprocessedLevel = null;  // 前処理の強さ（"weak" / "strong"）
 let ocrPdfPositionDrafts = null;  // PDFの位置情報から作った下書き（時間割形式のときだけ）
 let ocrCropSel = null;  // 切り取り範囲（画像に対する割合 0..1 の {x,y,w,h}。nullは未選択）
+let ocrCropSelB = null; // 2か所モードの2つ目の切り取り範囲（自分の列）
+let ocrCropMode = "single"; // 切り取りモード："single"=1か所 / "double"=2か所（日付の列＋自分の列）
+let ocrCropActive = 0;  // 2か所モードでドラッグ編集中の範囲（0=日付の列 / 1=自分の列）
 
 // OCRの下書きを localStorage に保存する（ページを開き直しても復元できるように）
 function saveDrafts(){
@@ -1584,13 +2294,10 @@ function otsuThreshold(gray){
   return threshold;
 }
 
-// RGBAピクセルデータ（[r,g,b,a, ...] の並び）をその場で前処理する純粋な画素処理
+// RGBAピクセルデータから、グレースケール化＋コントラスト強調した輝度配列を作る
 // 1) グレースケール化 → 2) コントラスト強調（ヒストグラムの上下1%をカットして引き伸ばす）
-// → 3) 二値化（大津法）。色付きセルの背景色を飛ばし、文字を黒・背景を白に寄せる
-// 戻り値は二値化に使った閾値
-function preprocessPixelsInPlace(data){
+function grayscaleContrast(data){
   const n = Math.floor(data.length / 4);
-  if (n === 0) return 127;
   const gray = new Uint8Array(n);
   // 1) グレースケール化
   for (let i = 0; i < n; i++){
@@ -1611,16 +2318,69 @@ function preprocessPixelsInPlace(data){
       gray[i] = v < 0 ? 0 : (v > 255 ? 255 : v);
     }
   }
-  // 3) 二値化（大津法）
-  const threshold = otsuThreshold(gray);
+  return gray;
+}
+
+// 適応的二値化：各ピクセルの近傍（半径 radius px の正方形）の平均輝度より
+// offset 以上暗いピクセルだけを黒にする。局所平均は積分画像で計算する。
+// 色付きセルの背景は近傍の平均に近いため白になり、中の黒文字だけが残る
+// （大域的な閾値では色付きセルの背景ごと真っ黒になり、文字が消えてしまった）
+function adaptiveBinarize(gray, w, h, radius, offset){
+  const iw = w + 1;
+  const integral = new Float64Array(iw * (h + 1));
+  for (let y = 0; y < h; y++){
+    let rowSum = 0;
+    const sOff = y * w, dOff = (y + 1) * iw, uOff = y * iw;
+    for (let x = 0; x < w; x++){
+      rowSum += gray[sOff + x];
+      integral[dOff + x + 1] = integral[uOff + x + 1] + rowSum;
+    }
+  }
+  const out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++){
+    const y0 = Math.max(0, y - radius), y1 = Math.min(h - 1, y + radius);
+    for (let x = 0; x < w; x++){
+      const x0 = Math.max(0, x - radius), x1 = Math.min(w - 1, x + radius);
+      const cnt = (x1 - x0 + 1) * (y1 - y0 + 1);
+      const sum = integral[(y1 + 1) * iw + x1 + 1] - integral[y0 * iw + x1 + 1]
+                - integral[(y1 + 1) * iw + x0] + integral[y0 * iw + x0];
+      const mean = sum / cnt;
+      out[y * w + x] = (gray[y * w + x] < mean - offset) ? 0 : 255;
+    }
+  }
+  return out;
+}
+
+// 適応的二値化のパラメータ（実写真のOCR実測で決定：全体・切り取りの両方で最良だった設定）
+// 半径は画像の短辺に比例させる（短辺/40。幅2400×高さ1362の全体画像では約34px）
+const ADAPTIVE_RADIUS_DIVISOR = 40;
+const ADAPTIVE_OFFSET = 14;         // 局所平均よりどれだけ暗ければ黒にするか
+
+// RGBAピクセルデータ（[r,g,b,a, ...] の並び）をその場で前処理する画素処理
+// mode: "weak" = グレースケール＋コントラストのみ
+//       "strong"（既定）= さらに適応的二値化で文字を黒・背景を白に分ける
+function preprocessPixelsInPlace(data, w, h, mode){
+  const n = Math.floor(data.length / 4);
+  if (n === 0) return;
+  const gray = grayscaleContrast(data);
+  let out = gray;
+  if (mode !== "weak"){
+    if (w > 0 && h > 0 && w * h === n){
+      const radius = Math.min(60, Math.max(8, Math.round(Math.min(w, h) / ADAPTIVE_RADIUS_DIVISOR)));
+      out = adaptiveBinarize(gray, w, h, radius, ADAPTIVE_OFFSET);
+    } else {
+      // サイズが分からない場合は大域的な二値化にフォールバックする
+      const threshold = otsuThreshold(gray);
+      out = new Uint8Array(n);
+      for (let i = 0; i < n; i++) out[i] = gray[i] <= threshold ? 0 : 255;
+    }
+  }
   for (let i = 0; i < n; i++){
-    const v = gray[i] <= threshold ? 0 : 255;
-    data[i * 4] = v;
-    data[i * 4 + 1] = v;
-    data[i * 4 + 2] = v;
+    data[i * 4] = out[i];
+    data[i * 4 + 1] = out[i];
+    data[i * 4 + 2] = out[i];
     data[i * 4 + 3] = 255;
   }
-  return threshold;
 }
 // === OCR PREPROCESS END ===
 
@@ -1629,8 +2389,9 @@ const OCR_PREPROCESS_MAX_WIDTH = 2400;
 
 // 画像を読み取り用に前処理した dataURL を返す
 // （幅が小さい場合は最大2400px・最大3倍まで拡大 → グレースケール化 →
-//   コントラスト強調 → 二値化。PDFの読み取りには使わない）
-function preprocessImageForOcr(dataUrl){
+//   コントラスト強調 → level に応じて適応的二値化。PDFの読み取りには使わない）
+// level: "weak" = 二値化なし / それ以外 = "strong"（適応的二値化）
+function preprocessImageForOcr(dataUrl, level){
   return new Promise(function(resolve, reject){
     const img = new Image();
     img.onload = function(){
@@ -1651,7 +2412,7 @@ function preprocessImageForOcr(dataUrl){
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, w, h);
         const imageData = ctx.getImageData(0, 0, w, h);
-        preprocessPixelsInPlace(imageData.data);
+        preprocessPixelsInPlace(imageData.data, w, h, level === "weak" ? "weak" : "strong");
         ctx.putImageData(imageData, 0, 0);
         resolve(canvas.toDataURL("image/png"));
       } catch (e){
@@ -1676,14 +2437,16 @@ function showPreprocessedPreview(url){
   }
 }
 
-// 現在の読み取り対象画像に対する前処理済み dataURL を返す（結果はキャッシュする）
-function ensurePreprocessedImage(){
-  if (ocrPreprocessedFor === ocrImageDataUrl && ocrPreprocessedUrl){
+// 現在の読み取り対象画像に対する前処理済み dataURL を返す（結果は強さごとにキャッシュする）
+function ensurePreprocessedImage(level){
+  const lv = level === "weak" ? "weak" : "strong";
+  if (ocrPreprocessedFor === ocrImageDataUrl && ocrPreprocessedLevel === lv && ocrPreprocessedUrl){
     return Promise.resolve(ocrPreprocessedUrl);
   }
-  return preprocessImageForOcr(ocrImageDataUrl).then(function(url){
+  return preprocessImageForOcr(ocrImageDataUrl, lv).then(function(url){
     ocrPreprocessedUrl = url;
     ocrPreprocessedFor = ocrImageDataUrl;
+    ocrPreprocessedLevel = lv;
     showPreprocessedPreview(url);
     return url;
   });
@@ -1703,6 +2466,19 @@ function cropFracToNatural(sel, natW, natH){
   const nh = Math.round(y2 * natH) - ny;
   if (nw < 8 || nh < 8) return null;
   return { x: nx, y: ny, w: nw, h: nh };
+}
+
+// 2か所の切り取り（A=日付の列、B=自分の列）を横に連結するレイアウトを計算する純粋関数
+// Aを左、Bを右に、上端を揃えて並べ、間には gap px の余白を空ける
+function concatCropLayout(rectA, rectB, gap){
+  const g = Math.max(0, Math.round(gap) || 0);
+  return {
+    w: rectA.w + g + rectB.w,
+    h: Math.max(rectA.h, rectB.h),
+    ax: 0, ay: 0,
+    bx: rectA.w + g, by: 0,
+    gap: g
+  };
 }
 // === OCR CROP LOGIC END ===
 
@@ -1729,24 +2505,87 @@ function cropImageToDataUrl(dataUrl, natRect){
   });
 }
 
+// 2か所の切り取りを横に連結した dataURL を返す（A=日付の列が左、B=自分の列が右）
+function concatTwoCropsToDataUrl(dataUrl, rectA, rectB){
+  return new Promise(function(resolve, reject){
+    const img = new Image();
+    img.onload = function(){
+      try {
+        const gap = Math.max(8, Math.round(Math.max(rectA.h, rectB.h) * 0.03));
+        const layout = concatCropLayout(rectA, rectB, gap);
+        const canvas = document.createElement("canvas");
+        canvas.width = layout.w;
+        canvas.height = layout.h;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, rectA.x, rectA.y, rectA.w, rectA.h, layout.ax, layout.ay, rectA.w, rectA.h);
+        ctx.drawImage(img, rectB.x, rectB.y, rectB.w, rectB.h, layout.bx, layout.by, rectB.w, rectB.h);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (e){
+        reject(e);
+      }
+    };
+    img.onerror = function(){ reject(new Error("画像を読み込めませんでした")); };
+    img.src = dataUrl;
+  });
+}
+
+// 切り取り範囲（0=日付の列／単独、1=自分の列）の取得・設定
+function cropSelGet(idx){
+  return idx === 1 ? ocrCropSelB : ocrCropSel;
+}
+function cropSelSet(idx, v){
+  if (idx === 1) ocrCropSelB = v;
+  else ocrCropSel = v;
+}
+
 // 切り取り範囲の枠とボタンの状態を、現在の選択に合わせて描き直す
 function updateCropUi(){
   const wrap = document.getElementById("ocrCropWrap");
   const rectEl = document.getElementById("ocrCropRect");
+  const rectElB = document.getElementById("ocrCropRectB");
   const runBtn = document.getElementById("ocrCropRunBtn");
   const resetBtn = document.getElementById("ocrCropResetBtn");
   if (!wrap || !rectEl) return;
-  if (ocrCropSel && wrap.clientWidth > 0){
-    rectEl.style.left = (ocrCropSel.x * wrap.clientWidth) + "px";
-    rectEl.style.top = (ocrCropSel.y * wrap.clientHeight) + "px";
-    rectEl.style.width = (ocrCropSel.w * wrap.clientWidth) + "px";
-    rectEl.style.height = (ocrCropSel.h * wrap.clientHeight) + "px";
-    rectEl.classList.remove("hidden");
-  } else {
-    rectEl.classList.add("hidden");
+  function placeRect(el, sel){
+    if (!el) return;
+    if (sel && wrap.clientWidth > 0){
+      el.style.left = (sel.x * wrap.clientWidth) + "px";
+      el.style.top = (sel.y * wrap.clientHeight) + "px";
+      el.style.width = (sel.w * wrap.clientWidth) + "px";
+      el.style.height = (sel.h * wrap.clientHeight) + "px";
+      el.classList.remove("hidden");
+    } else {
+      el.classList.add("hidden");
+    }
   }
-  if (runBtn) runBtn.disabled = !ocrCropSel;
-  if (resetBtn) resetBtn.disabled = !ocrCropSel;
+  const isDouble = ocrCropMode === "double";
+  placeRect(rectEl, ocrCropSel);
+  placeRect(rectElB, isDouble ? ocrCropSelB : null);
+  rectEl.classList.toggle("inactive", isDouble && ocrCropActive !== 0);
+  if (rectElB) rectElB.classList.toggle("inactive", isDouble && ocrCropActive !== 1);
+  const tagA = document.getElementById("ocrCropTagA");
+  if (tagA) tagA.classList.toggle("hidden", !isDouble);
+  const noteEl = document.getElementById("ocrCropDoubleNote");
+  if (noteEl) noteEl.classList.toggle("hidden", !isDouble);
+  const slotBtns = document.getElementById("ocrCropSlotBtns");
+  if (slotBtns) slotBtns.classList.toggle("hidden", !isDouble);
+  const slotA = document.getElementById("ocrCropSlotABtn");
+  const slotB = document.getElementById("ocrCropSlotBBtn");
+  if (slotA) slotA.classList.toggle("active", ocrCropActive === 0);
+  if (slotB) slotB.classList.toggle("active", ocrCropActive === 1);
+  const statusEl = document.getElementById("ocrCropSlotStatus");
+  if (statusEl){
+    statusEl.classList.toggle("hidden", !isDouble);
+    if (isDouble){
+      statusEl.textContent =
+        "① 日付の列：" + (ocrCropSel ? "選択済み" : "未選択") +
+        "　② 自分の列：" + (ocrCropSelB ? "選択済み" : "未選択");
+    }
+  }
+  if (runBtn) runBtn.disabled = isDouble ? !(ocrCropSel && ocrCropSelB) : !ocrCropSel;
+  if (resetBtn) resetBtn.disabled = !(ocrCropSel || ocrCropSelB);
 }
 
 // ファイルを dataURL として読み込む
@@ -1786,9 +2625,12 @@ function setOcrPdf(buffer, fileName){
   ocrPdfPositionDrafts = null;
   ocrPreprocessedUrl = null;
   ocrPreprocessedFor = null;
+  ocrPreprocessedLevel = null;
   showPreprocessedPreview(null);
   // PDFには切り取りは不要なので、切り取りUIは隠す
   ocrCropSel = null;
+  ocrCropSelB = null;
+  ocrCropActive = 0;
   document.getElementById("ocrCropArea").classList.add("hidden");
   document.getElementById("ocrCropImg").removeAttribute("src");
   updateCropUi();
@@ -2071,6 +2913,7 @@ function setOcrImage(dataUrl){
   ocrPdfPositionDrafts = null;
   ocrPreprocessedUrl = null;
   ocrPreprocessedFor = null;
+  ocrPreprocessedLevel = null;
   showPreprocessedPreview(null);
   const pdfNote = document.getElementById("ocrPdfName");
   pdfNote.textContent = "";
@@ -2080,6 +2923,12 @@ function setOcrImage(dataUrl){
   prev.classList.add("hidden");
   // 切り取りUIに画像を表示する（この画像がプレビューも兼ねる）
   ocrCropSel = null;
+  ocrCropSelB = null;
+  ocrCropActive = 0;
+  ocrCropMode = "single";
+  document.querySelectorAll('input[name="ocrCropMode"]').forEach(function(r){
+    r.checked = (r.value === "single");
+  });
   const cropArea = document.getElementById("ocrCropArea");
   const cropImg = document.getElementById("ocrCropImg");
   if (ocrImageDataUrl){
@@ -2131,15 +2980,16 @@ function runOcrForSource(sourceUrl){
   runBtn.disabled = true;
   if (cropRunBtn) cropRunBtn.disabled = true;
   // 前処理ありの場合は前処理済み画像、なしの場合は元の画像を読み取る
-  const preprocessToggle = document.getElementById("ocrPreprocess");
-  const usePreprocess = !!(preprocessToggle && preprocessToggle.checked);
+  const levelSel = document.getElementById("ocrPreprocessLevel");
+  const preLevel = levelSel ? levelSel.value : "strong";
+  const usePreprocess = preLevel !== "none";
   let imagePromise;
   if (usePreprocess){
     statusEl.textContent = "前処理中…";
     // 全体読み取りのときはキャッシュを使い、切り取り画像のときはその画像を前処理する
     const prePromise = (sourceUrl === ocrImageDataUrl)
-      ? ensurePreprocessedImage()
-      : preprocessImageForOcr(sourceUrl).then(function(url){
+      ? ensurePreprocessedImage(preLevel)
+      : preprocessImageForOcr(sourceUrl, preLevel).then(function(url){
           showPreprocessedPreview(url);
           return url;
         });
@@ -2362,10 +3212,12 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
 // ---- 切り取り（トリミング）の操作 ----
 // ドラッグで矩形選択、四隅の丸（ハンドル）でリサイズ、枠の中のドラッグで移動。
 // ポインタイイベントでマウスとタッチを共通化し、選択範囲は割合（0..1）で保持する
+// 2か所モードでは、枠（日付の列／自分の列）ごとに選択を持ち、
+// ドラッグした枠の側を編集対象にする（枠の外では選択中スロットを編集する）
 (function(){
   const wrap = document.getElementById("ocrCropWrap");
   if (!wrap) return;
-  let drag = null; // {mode, anchorX, anchorY, startSel, startX, startY}（座標は表示px）
+  let drag = null; // {slot, mode, anchorX, anchorY, startSel, startX, startY}（座標は表示px）
   function posInWrap(e){
     const r = wrap.getBoundingClientRect();
     return {
@@ -2375,21 +3227,22 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
       h: r.height
     };
   }
-  function selPx(){
-    if (!ocrCropSel || wrap.clientWidth === 0) return null;
+  function selPx(slot){
+    const sel = cropSelGet(slot);
+    if (!sel || wrap.clientWidth === 0) return null;
     return {
-      x: ocrCropSel.x * wrap.clientWidth,
-      y: ocrCropSel.y * wrap.clientHeight,
-      w: ocrCropSel.w * wrap.clientWidth,
-      h: ocrCropSel.h * wrap.clientHeight
+      x: sel.x * wrap.clientWidth,
+      y: sel.y * wrap.clientHeight,
+      w: sel.w * wrap.clientWidth,
+      h: sel.h * wrap.clientHeight
     };
   }
-  function setSelFromPx(px){
+  function setSelFromPx(slot, px){
     const W = wrap.clientWidth, H = wrap.clientHeight;
     if (W === 0 || H === 0) return;
     const x1 = Math.min(Math.max(px.x, 0), W), x2 = Math.min(Math.max(px.x + px.w, 0), W);
     const y1 = Math.min(Math.max(px.y, 0), H), y2 = Math.min(Math.max(px.y + px.h, 0), H);
-    ocrCropSel = { x: x1 / W, y: y1 / H, w: (x2 - x1) / W, h: (y2 - y1) / H };
+    cropSelSet(slot, { x: x1 / W, y: y1 / H, w: (x2 - x1) / W, h: (y2 - y1) / H });
     updateCropUi();
   }
   function rectFromAnchor(anchor, p){
@@ -2400,24 +3253,35 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
       h: Math.abs(p.y - anchor.y)
     };
   }
+  function slotFromEvent(e){
+    if (ocrCropMode !== "double") return 0;
+    const t = e.target;
+    if (t && t.closest){
+      if (t.closest("#ocrCropRectB")) return 1;
+      if (t.closest("#ocrCropRect")) return 0;
+    }
+    return ocrCropActive;
+  }
   wrap.addEventListener("pointerdown", function(e){
     if (!ocrImageDataUrl) return;
     e.preventDefault();
     const p = posInWrap(e);
+    const slot = slotFromEvent(e);
+    if (ocrCropMode === "double") ocrCropActive = slot;
     const handle = e.target && e.target.getAttribute ? e.target.getAttribute("data-handle") : null;
-    const cur = selPx();
+    const cur = selPx(slot);
     if (handle && cur){
       // リサイズ：動かす角の反対側の角をアンカーにする
       const anchor = {
         x: (handle === "nw" || handle === "sw") ? cur.x + cur.w : cur.x,
         y: (handle === "nw" || handle === "ne") ? cur.y + cur.h : cur.y
       };
-      drag = { mode: "resize", anchorX: anchor.x, anchorY: anchor.y };
+      drag = { slot: slot, mode: "resize", anchorX: anchor.x, anchorY: anchor.y };
     } else if (cur && p.x >= cur.x && p.x <= cur.x + cur.w && p.y >= cur.y && p.y <= cur.y + cur.h){
-      drag = { mode: "move", startX: p.x, startY: p.y, startSel: cur };
+      drag = { slot: slot, mode: "move", startX: p.x, startY: p.y, startSel: cur };
     } else {
-      drag = { mode: "new", anchorX: p.x, anchorY: p.y };
-      setSelFromPx({ x: p.x, y: p.y, w: 0, h: 0 });
+      drag = { slot: slot, mode: "new", anchorX: p.x, anchorY: p.y };
+      setSelFromPx(slot, { x: p.x, y: p.y, w: 0, h: 0 });
     }
     if (wrap.setPointerCapture) {
       try { wrap.setPointerCapture(e.pointerId); } catch (err) {}
@@ -2428,23 +3292,24 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
     const p = posInWrap(e);
     if (drag.mode === "move"){
       const s = drag.startSel;
-      setSelFromPx({
+      setSelFromPx(drag.slot, {
         x: Math.min(Math.max(s.x + (p.x - drag.startX), 0), wrap.clientWidth - s.w),
         y: Math.min(Math.max(s.y + (p.y - drag.startY), 0), wrap.clientHeight - s.h),
         w: s.w,
         h: s.h
       });
     } else {
-      setSelFromPx(rectFromAnchor({ x: drag.anchorX, y: drag.anchorY }, p));
+      setSelFromPx(drag.slot, rectFromAnchor({ x: drag.anchorX, y: drag.anchorY }, p));
     }
   });
   function endDrag(){
     if (!drag) return;
+    const slot = drag.slot;
     drag = null;
     // 小さすぎる選択はタップとみなして解除する
-    const cur = selPx();
+    const cur = selPx(slot);
     if (cur && (cur.w < 10 || cur.h < 10)){
-      ocrCropSel = null;
+      cropSelSet(slot, null);
       updateCropUi();
     }
   }
@@ -2454,17 +3319,37 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
   document.getElementById("ocrCropImg").addEventListener("load", updateCropUi);
   document.getElementById("ocrCropResetBtn").addEventListener("click", function(){
     ocrCropSel = null;
+    ocrCropSelB = null;
     updateCropUi();
   });
   document.getElementById("ocrCropRunBtn").addEventListener("click", function(){
-    if (!ocrImageDataUrl || !ocrCropSel) return;
+    if (!ocrImageDataUrl) return;
     const cropImg = document.getElementById("ocrCropImg");
+    const statusEl = document.getElementById("ocrStatus");
+    if (ocrCropMode === "double"){
+      if (!ocrCropSel || !ocrCropSelB) return;
+      const natA = cropFracToNatural(ocrCropSel, cropImg.naturalWidth, cropImg.naturalHeight);
+      const natB = cropFracToNatural(ocrCropSelB, cropImg.naturalWidth, cropImg.naturalHeight);
+      if (!natA || !natB){
+        alert("切り取り範囲が小さすぎます。もう少し大きく範囲を選んでください");
+        return;
+      }
+      statusEl.textContent = "切り取り中…";
+      concatTwoCropsToDataUrl(ocrImageDataUrl, natA, natB).then(function(url){
+        statusEl.textContent = "";
+        runOcrForSource(url);
+      }).catch(function(){
+        statusEl.textContent = "";
+        alert("切り取りに失敗しました");
+      });
+      return;
+    }
+    if (!ocrCropSel) return;
     const nat = cropFracToNatural(ocrCropSel, cropImg.naturalWidth, cropImg.naturalHeight);
     if (!nat){
       alert("切り取り範囲が小さすぎます。もう少し大きく範囲を選んでください");
       return;
     }
-    const statusEl = document.getElementById("ocrStatus");
     statusEl.textContent = "切り取り中…";
     cropImageToDataUrl(ocrImageDataUrl, nat).then(function(url){
       statusEl.textContent = "";
@@ -2474,14 +3359,35 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
       alert("切り取りに失敗しました");
     });
   });
+  // 2か所モードのスロット切り替えボタン
+  const slotABtn = document.getElementById("ocrCropSlotABtn");
+  const slotBBtn = document.getElementById("ocrCropSlotBBtn");
+  if (slotABtn) slotABtn.addEventListener("click", function(){
+    ocrCropActive = 0;
+    updateCropUi();
+  });
+  if (slotBBtn) slotBBtn.addEventListener("click", function(){
+    ocrCropActive = 1;
+    updateCropUi();
+  });
+  // 切り取りモード（1か所／2か所）の切り替え
+  document.querySelectorAll('input[name="ocrCropMode"]').forEach(function(r){
+    r.addEventListener("change", function(){
+      if (r.checked){
+        ocrCropMode = r.value === "double" ? "double" : "single";
+        updateCropUi();
+      }
+    });
+  });
 })();
-// 前処理の切り替え：オンにしたら前処理後の画像を先に作ってプレビュー表示する
-document.getElementById("ocrPreprocess").addEventListener("change", function(e){
+// 前処理の強さの切り替え：なし以外を選んだら前処理後の画像を先に作ってプレビュー表示する
+document.getElementById("ocrPreprocessLevel").addEventListener("change", function(e){
   if (!ocrImageDataUrl) return;
   const statusEl = document.getElementById("ocrStatus");
-  if (e.target.checked){
+  const level = e.target.value;
+  if (level !== "none"){
     statusEl.textContent = "前処理後の画像を作成中…";
-    ensurePreprocessedImage().then(function(){
+    ensurePreprocessedImage(level).then(function(){
       statusEl.textContent = "前処理後の画像を表示しました。「読み取る」を押すと、この画像で読み取ります";
     }).catch(function(){
       statusEl.textContent = "";
@@ -2581,7 +3487,8 @@ function buildBackupData(){
     shifts: shifts,
     settings: settings,
     images: monthImages,
-    ocrDrafts: ocrDrafts
+    ocrDrafts: ocrDrafts,
+    templates: templates
   };
 }
 document.getElementById("exportDataBtn").addEventListener("click", function(){
@@ -2600,7 +3507,7 @@ document.getElementById("exportDataBtn").addEventListener("click", function(){
     a.click();
     a.remove();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-    statusEl.textContent = "バックアップを書き出しました（バイト先" + workplaces.length + "件・シフト" + shifts.length + "件・画像と下書きを含む全データ）。";
+    statusEl.textContent = "バックアップを書き出しました（バイト先" + workplaces.length + "件・シフト" + shifts.length + "件・パターン" + templates.length + "件・画像と下書きを含む全データ）。";
   } catch (e) {
     statusEl.textContent = "書き出しに失敗しました。ブラウザを変えてお試しください。";
   }
@@ -2621,7 +3528,7 @@ importFileInput.addEventListener("change", function(){
       statusEl.textContent = "読み込めませんでした。このアプリのバックアップファイル（JSON）を選んでください。";
       return;
     }
-    if (!window.confirm("現在のデータ（バイト先・シフト・画像・設定・下書き）を、読み込んだ内容で置き換えます。よろしいですか？")){
+    if (!window.confirm("現在のデータ（バイト先・シフト・画像・設定・下書き・パターン）を、読み込んだ内容で置き換えます。よろしいですか？")){
       statusEl.textContent = "読み込みをやめました。現在のデータはそのままです。";
       return;
     }
@@ -2631,10 +3538,12 @@ importFileInput.addEventListener("change", function(){
     settings = (data.settings && typeof data.settings === "object") ? data.settings : { myNames: "" };
     monthImages = (data.images && typeof data.images === "object" && !Array.isArray(data.images)) ? data.images : {};
     ocrDrafts = normalizeDrafts(data.ocrDrafts || []);
+    templates = normalizeTemplates(data.templates || []);
     saveAll();
     saveSettings();
     saveImages();
     saveDrafts();
+    saveTemplates();
     myNamesInput.value = settings.myNames || "";
     setOcrImage(null);
     renderOcrSources();
