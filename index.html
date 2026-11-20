@@ -1019,6 +1019,33 @@
         <button type="button" id="tplCancelEdit" class="hidden">編集をやめる</button>
       </div>
     </form>
+    <div style="margin-top:16px;">
+      <button type="button" id="toggleTplCatForm">＋ 区分を作る</button>
+      <p class="note">区分（早番・準夜勤など）はバイト先ごとに決まっています。バイト先の編集画面だけでなく、ここからも追加できます。追加した区分は、シフト登録・パターン・読み取りの下書きなど、すべての区分の選択肢にすぐ出ます。</p>
+    </div>
+    <form id="tplCatForm" class="hidden">
+      <label for="tcWorkplace">区分を追加するバイト先</label>
+      <select id="tcWorkplace"></select>
+      <label for="tcName">新しい区分名</label>
+      <input type="text" id="tcName" placeholder="例：準夜勤">
+      <div class="row2">
+        <div>
+          <label for="tcStart">開始</label>
+          <input type="time" id="tcStart">
+        </div>
+        <div>
+          <label for="tcEnd">終了</label>
+          <input type="time" id="tcEnd">
+        </div>
+      </div>
+      <label for="tcBreak">休憩（分）</label>
+      <input type="number" id="tcBreak" min="0" step="5" placeholder="任意" inputmode="numeric">
+      <div class="form-actions">
+        <button type="submit" class="primary">この区分を追加</button>
+        <button type="button" id="tcCancel">やめる</button>
+      </div>
+      <p class="note" id="tcStatus"></p>
+    </form>
     <div id="tplApplyArea" class="hidden">
       <h3 class="ocr-draft-title">パターンを適用する</h3>
       <p class="note" id="tplApplyName"></p>
@@ -4746,6 +4773,94 @@ tplForm.addEventListener("submit", function(e){
 });
 document.getElementById("tplCancelEdit").addEventListener("click", resetTplForm);
 
+// ---------- パターン画面から区分を作る ----------
+// 区分の保存先は従来どおり各バイト先の presets。チェック（空名・重複名・開始/終了必須）は
+// バイト先フォームの readPresetFields と同じルール・同じ文言にそろえる
+function fillTplCatWorkplaces(selectedId){
+  const sel = document.getElementById("tcWorkplace");
+  if (!sel) return;
+  sel.innerHTML = workplaces.map(function(w){
+    return '<option value="' + w.id + '">' + esc(w.name) + "</option>";
+  }).join("");
+  // 指定が無い・無効なときは先頭のバイト先を選んでおく
+  const target = (selectedId && findWp(selectedId)) ? selectedId : (workplaces[0] ? workplaces[0].id : "");
+  if (target) sel.value = target;
+}
+document.getElementById("toggleTplCatForm").addEventListener("click", function(){
+  const box = document.getElementById("tplCatForm");
+  const willShow = box.classList.contains("hidden");
+  if (willShow){
+    if (workplaces.length === 0){
+      alert("バイト先がまだ登録されていません。先に「バイト先」タブでバイト先を追加してください");
+      return;
+    }
+    // パターンのフォームで選んでいるバイト先を初期値にする
+    fillTplCatWorkplaces(document.getElementById("tplWorkplace").value);
+    document.getElementById("tcStatus").textContent = "";
+  }
+  box.classList.toggle("hidden", !willShow);
+  if (willShow){
+    const nameInput = document.getElementById("tcName");
+    if (nameInput) nameInput.focus();
+  }
+});
+document.getElementById("tcCancel").addEventListener("click", function(){
+  document.getElementById("tplCatForm").classList.add("hidden");
+  document.getElementById("tcStatus").textContent = "";
+});
+document.getElementById("tplCatForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const wp = findWp(document.getElementById("tcWorkplace").value);
+  if (!wp){
+    alert("バイト先を選んでください");
+    return;
+  }
+  const name = document.getElementById("tcName").value.trim();
+  if (!name){
+    alert("区分名を入力してください");
+    return;
+  }
+  ensurePresets(wp);
+  if (Object.prototype.hasOwnProperty.call(wp.presets, name)){
+    alert("区分名「" + name + "」が重複しています。名前を変えてください");
+    return;
+  }
+  const start = document.getElementById("tcStart").value;
+  const end = document.getElementById("tcEnd").value;
+  if (!start || !end){
+    alert("区分「" + name + "」の開始・終了を入力してください");
+    return;
+  }
+  const entry = { start: start, end: end };
+  const brkRaw = document.getElementById("tcBreak").value;
+  if (brkRaw !== ""){
+    const b = Math.floor(Number(brkRaw));
+    if (isFinite(b) && b >= 0) entry.breakMin = b;
+  }
+  wp.presets[name] = entry;
+  if (!Array.isArray(wp.categoryOrder)) wp.categoryOrder = orderedPresetNames(wp.presets, wp.categoryOrder);
+  if (wp.categoryOrder.indexOf(name) < 0) wp.categoryOrder.push(name);
+  saveAll();
+  // 開いている他の編集UIにも反映する（範囲一括登録・読み取りの下書き・バイト先フォームの区分一覧）
+  if (calRangeMode) fillCalRangeWorkplaces();
+  if (ocrDrafts.length > 0){ syncDraftsFromDom(); renderDrafts(); }
+  if (editingWpId === wp.id && !document.getElementById("wpForm").classList.contains("hidden")){
+    renderPresetEditor(wp.presets, wp.categoryOrder);
+  }
+  // パターンのフォーム側は、このバイト先・区分を選んだ状態にする（時刻もプリセットで入る）
+  document.getElementById("tplWorkplace").value = wp.id;
+  render();
+  document.getElementById("tplCategory").value = name;
+  applyTplCategoryPreset();
+  // 続けて追加できるよう入力欄を空にし、結果を知らせる
+  document.getElementById("tcName").value = "";
+  document.getElementById("tcStart").value = "";
+  document.getElementById("tcEnd").value = "";
+  document.getElementById("tcBreak").value = "";
+  document.getElementById("tcStatus").textContent =
+    "「" + wp.name + "」に区分「" + name + "」を追加しました。シフト登録やパターンの区分に選べます";
+});
+
 // 区分を選ぶと、そのバイト先のプリセット時刻を開始・終了に入れる（シフトフォームと同じ動き）
 function applyTplCategoryPreset(){
   const wp = findWp(document.getElementById("tplWorkplace").value);
@@ -7671,7 +7786,7 @@ const HELP_TEXTS = {
   },
   category: {
     title: "区分",
-    body: "早番・日勤・遅番・夜勤といった、シフトの種類のことです。\n区分はバイト先ごとに自由に作れます（バイト先の編集画面で、名前・開始・終了・休憩を追加・変更・削除できます）。\n区分を選ぶと、そのバイト先で決めた時刻と休憩（プリセット）が自動で入ります。時刻は後から変えられます。\n区分ごとの件数は、月のサマリーで確認できます。"
+    body: "早番・日勤・遅番・夜勤といった、シフトの種類のことです。\n区分はバイト先ごとに自由に作れます（バイト先の編集画面のほか、「いつものパターン」の下にある「＋ 区分を作る」からも、名前・開始・終了・休憩を指定して追加できます）。\n区分を選ぶと、そのバイト先で決めた時刻と休憩（プリセット）が自動で入ります。時刻は後から変えられます。\n区分ごとの件数は、月のサマリーで確認できます。"
   },
   timeInput: {
     title: "時刻の入力方法",
