@@ -23,7 +23,21 @@
     --danger-line:#fecaca;
     --dial-tick:#9ca3af;
     --dial-end:#ea580c;
+    --font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
   }
+  /* フォント（書体）：html[data-font] で切り替える。標準（システム）は :root の書体 */
+  html[data-font="gothic"]{
+    --font-family:"Yu Gothic",YuGothic,"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",Meiryo,sans-serif;
+  }
+  html[data-font="round"]{
+    --font-family:"Hiragino Maru Gothic ProN","Hiragino Maru Gothic Pro","HGMaruGothicMPRO","M PLUS Rounded 1c","Hiragino Sans",sans-serif;
+  }
+  html[data-font="mincho"]{
+    --font-family:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho",YuMincho,"Noto Serif JP","MS PMincho",serif;
+  }
+  /* 文字の大きさ：画面全体を拡大・縮小して反映する（標準は等倍） */
+  html[data-font-size="small"] body{zoom:.9;}
+  html[data-font-size="large"] body{zoom:1.15;}
   /* スキン（見た目のテーマ）：CSS変数を切り替える。標準は :root の青基調 */
   html[data-skin="pink"]{
     --blue:#db2777;--blue-dark:#be185d;--blue-light:#fdf2f8;--page-bg:#fff5f8;
@@ -47,9 +61,10 @@
     --dial-end:#f59e0b;
   }
   *{box-sizing:border-box;}
+  input,select,textarea{font-family:inherit;}
   body{
     margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    font-family:var(--font-family);
     background:var(--page-bg);
     color:var(--ink);
     -webkit-text-size-adjust:100%;
@@ -66,11 +81,34 @@
   .card{
     background:var(--bg);
     border:1px solid var(--line);
-    border-radius:12px;
-    padding:16px;
+    border-radius:16px;
+    padding:18px;
     margin-bottom:16px;
+    box-shadow:0 2px 8px rgba(15,23,42,.05);
+  }
+  /* 画面切り替えタブ（シフト／バイト先／設定） */
+  .tab-bar{
+    display:flex;gap:6px;background:var(--bg);border:1px solid var(--line);
+    border-radius:12px;padding:6px;margin-bottom:16px;
     box-shadow:0 1px 2px rgba(0,0,0,.04);
   }
+  .tab-btn{
+    flex:1;border:none;background:transparent;color:var(--muted);
+    font-size:15px;font-weight:700;min-height:44px;border-radius:8px;padding:8px 4px;
+  }
+  .tab-btn.active{background:var(--blue);color:#fff;}
+  /* かんたんモード：高度な機能を隠し、文字とボタンを大きくする（データには触らない） */
+  html[data-simple="on"] [data-simple-hide]{display:none !important;}
+  html[data-simple="on"] body{zoom:1.15;}
+  html[data-simple="on"][data-font-size="small"] body{zoom:1.05;}
+  html[data-simple="on"][data-font-size="large"] body{zoom:1.3;}
+  html[data-simple="on"] button{min-height:48px;font-size:16px;}
+  html[data-simple="on"] button.primary{font-size:18px;padding:14px;}
+  html[data-simple="on"] button.small{min-height:44px;font-size:15px;}
+  html[data-simple="on"] .tab-btn{min-height:52px;font-size:17px;}
+  html[data-simple="on"] .month-nav button{min-height:52px;}
+  html[data-simple="on"] form input,html[data-simple="on"] form select{min-height:52px;font-size:18px;}
+  html[data-simple="on"] .total-pay{font-size:42px;}
   .month-nav{
     display:flex;align-items:center;justify-content:space-between;
     margin-bottom:8px;
@@ -94,7 +132,7 @@
     padding:4px 0;font-size:14px;
   }
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
-  h2{font-size:16px;margin:0 0 12px;}
+  h2{font-size:17px;margin:0 0 12px;}
   .shift-item{
     border:1px solid var(--line);border-radius:10px;
     padding:10px 12px;margin-bottom:8px;background:var(--surface);
@@ -164,6 +202,12 @@
   }
   .wp-name{font-weight:700;}
   .wp-detail{color:var(--muted);font-size:13px;}
+  /* 時給の履歴（期間ごとの適用期間つき） */
+  .wp-wage-history{margin-top:6px;border-top:1px dashed var(--line);padding-top:6px;}
+  .wp-wage-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);padding:2px 0;}
+  .wp-wage-row.is-current{color:var(--ink);font-weight:700;}
+  .wp-wage-period{font-variant-numeric:tabular-nums;}
+  .wf-history-title{font-size:13px;color:var(--muted);font-weight:600;margin-top:12px;}
   .wp-actions{display:flex;gap:6px;}
   .hidden{display:none;}
   .note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;}
@@ -178,6 +222,21 @@
     font-size:12px;background:rgba(255,255,255,.95);color:var(--danger);border-color:var(--danger-line);
   }
   .image-count{font-size:13px;color:var(--muted);margin-left:8px;}
+  /* 月の添付（PDF・リンク）の行 */
+  .attach-item{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--surface);
+  }
+  .attach-main{min-width:0;}
+  .attach-name{font-weight:700;font-size:14px;word-break:break-all;}
+  a.attach-name{color:var(--blue-dark);text-decoration:none;}
+  .attach-meta{color:var(--muted);font-size:12px;margin-top:2px;word-break:break-all;}
+  .attach-actions{display:flex;gap:6px;flex:none;}
+  .pdf-badge{
+    display:inline-block;background:var(--danger-bg);color:var(--danger);
+    border:1px solid var(--danger-line);border-radius:6px;
+    font-size:11px;font-weight:700;padding:1px 6px;margin-right:6px;vertical-align:middle;
+  }
   .ocr-label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px;}
   .ocr-select{
     width:100%;font-size:16px;padding:10px;border:1px solid var(--line);
@@ -489,6 +548,12 @@
 </header>
 <main>
 
+  <nav class="tab-bar" aria-label="画面の切り替え">
+    <button type="button" class="tab-btn active" data-tab-btn="shift">シフト</button>
+    <button type="button" class="tab-btn" data-tab-btn="workplace">バイト先</button>
+    <button type="button" class="tab-btn" data-tab-btn="settings">設定</button>
+  </nav>
+  <div data-tab-panel="shift">
   <!-- 月サマリー -->
   <section class="card">
     <div class="month-nav">
@@ -504,11 +569,11 @@
       <h3>バイト先ごとの小計</h3>
       <div id="subtotals"></div>
     </div>
-    <div class="subtotals hidden" id="categoryWrap">
+    <div class="subtotals hidden" id="categoryWrap" data-simple-hide>
       <h3>区分ごとの件数</h3>
       <div id="categoryCounts"></div>
     </div>
-    <div class="subtotals" id="weekCopyWrap">
+    <div class="subtotals" id="weekCopyWrap" data-simple-hide>
       <h3>週のコピー</h3>
       <p class="note">ある週（月〜日）のシフトを、別の週にまとめてコピーできます。</p>
       <label class="field-label" for="wcSrc">コピー元の週（週内の日付）</label>
@@ -523,8 +588,109 @@
     </div>
   </section>
 
-  <!-- 収入まとめ -->
+  <!-- シフト一覧 -->
   <section class="card">
+    <h2>シフト一覧<button type="button" class="help-btn" data-help="calendar" aria-label="カレンダー表示の説明を表示">？</button></h2>
+    <div id="stickyTotal" class="sticky-total"></div>
+    <div class="seg-control" role="group" aria-label="一覧の表示方法" style="margin-top:0;">
+      <button type="button" data-view-mode-btn="list" class="active">リスト</button>
+      <button type="button" data-view-mode-btn="calendar">カレンダー</button>
+    </div>
+    <div id="shiftList"></div>
+    <div id="shiftCalendar" class="hidden"></div>
+    <div id="calDayDetail" class="hidden"></div>
+    <button class="primary" id="toggleShiftForm">＋ シフトを追加</button>
+
+    <form id="shiftForm" class="hidden">
+      <label for="sfDate">日付</label>
+      <input type="date" id="sfDate" required>
+      <div id="sfBulkArea" data-simple-hide>
+        <label class="ocr-check"><input type="checkbox" id="sfBulkToggle"> 複数の日にまとめて登録する（期間＋曜日）</label>
+        <div id="sfBulkPanel" class="hidden">
+          <div class="row2">
+            <div>
+              <label for="sfBulkFrom">期間の開始日</label>
+              <input type="date" id="sfBulkFrom">
+            </div>
+            <div>
+              <label for="sfBulkTo">期間の終了日</label>
+              <input type="date" id="sfBulkTo">
+            </div>
+          </div>
+          <label>曜日</label>
+          <div class="wd-checks" id="sfBulkWeekdays">
+            <label><input type="checkbox" value="1">月</label>
+            <label><input type="checkbox" value="2">火</label>
+            <label><input type="checkbox" value="3">水</label>
+            <label><input type="checkbox" value="4">木</label>
+            <label><input type="checkbox" value="5">金</label>
+            <label><input type="checkbox" value="6">土</label>
+            <label><input type="checkbox" value="0">日</label>
+          </div>
+          <div class="crop-btns" style="margin-top:6px;">
+            <button type="button" class="small" data-wd-shortcut="weekday" data-wd-target="sfBulkWeekdays">平日（月〜金）</button>
+            <button type="button" class="small" data-wd-shortcut="all" data-wd-target="sfBulkWeekdays">全て</button>
+            <button type="button" class="small" data-wd-shortcut="clear" data-wd-target="sfBulkWeekdays">クリア</button>
+          </div>
+          <p class="note" id="sfBulkCount"></p>
+        </div>
+      </div>
+      <label for="sfWorkplace">バイト先</label>
+      <select id="sfWorkplace"></select>
+      <p class="seg-label" data-simple-hide>時刻の入力方法<button type="button" class="help-btn" data-help="timeInput" aria-label="時刻の入力方法の説明を表示">？</button></p>
+      <div class="seg-control" role="group" aria-label="時刻の入力方法" style="margin-top:4px;" data-simple-hide>
+        <button type="button" data-time-mode-btn="type" class="active">打ち込み</button>
+        <button type="button" data-time-mode-btn="slider">スライダー</button>
+        <button type="button" data-time-mode-btn="dial">ダイヤル</button>
+      </div>
+      <div class="row2 time-fields-row">
+        <div>
+          <label for="sfStart">開始時刻</label>
+          <input type="time" id="sfStart" class="tm-type" required>
+          <div class="time-slider-row">
+            <input type="range" id="sfStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
+            <span class="time-slider-val" id="sfStartSliderVal">--:--</span>
+          </div>
+        </div>
+        <div>
+          <label for="sfEnd">終了時刻</label>
+          <input type="time" id="sfEnd" class="tm-type" required>
+          <div class="time-slider-row">
+            <input type="range" id="sfEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
+            <span class="time-slider-val" id="sfEndSliderVal">--:--</span>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="sfEndOffset" value="0">
+      <div class="time-dial time-dial-range" id="sfRangeDial"></div>
+      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻の入力方法は上の切り替えで選べます（打ち込み／スライダー（15分刻み）／ダイヤル（1つのリングで開始と終了を合わせます。終了のつまみを1周を超えて回すと、24時間以上の勤務も入力できます））。選んだ方法は次回も引き継がれます。</p>
+      <label for="sfCategory">区分</label><button type="button" class="help-btn" data-help="category" aria-label="区分の説明を表示">？</button>
+      <select id="sfCategory">
+        <option value="">未設定</option>
+        <option value="早番">早番</option>
+        <option value="日勤">日勤</option>
+        <option value="遅番">遅番</option>
+        <option value="夜勤">夜勤</option>
+      </select>
+      <p class="note">区分を選ぶと、そのバイト先のプリセット時刻が開始・終了に入ります（後から変更できます）。</p>
+      <label for="sfBreak">休憩時間（分）</label>
+      <input type="number" id="sfBreak" min="0" step="5" value="0" inputmode="numeric">
+      <div id="sfTransportWrap" data-simple-hide>
+        <label for="sfTransport">交通費（円・この日）</label>
+        <input type="number" id="sfTransport" min="0" step="1" value="0" inputmode="numeric">
+        <p class="note">初期値はバイト先の1日あたり交通費です。その日だけ違う金額（0円など）にもできます。</p>
+      </div>
+      <label for="sfMemo">メモ</label>
+      <input type="text" id="sfMemo" placeholder="任意">
+      <div class="form-actions">
+        <button type="submit" class="primary" id="sfSubmit">保存する</button>
+        <button type="button" id="sfCancel">キャンセル</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 収入まとめ -->
+  <section class="card" data-simple-hide>
     <h2><span id="incomeSummaryTitle">収入まとめ</span><button type="button" class="help-btn" data-help="income" aria-label="収入まとめの説明を表示">？</button></h2>
     <div id="incomeSummary"></div>
     <div id="otherIncomeArea">
@@ -551,18 +717,33 @@
     </div>
   </section>
 
-  <!-- シフト表の画像 -->
-  <section class="card">
-    <h2>シフト表の画像<span class="image-count" id="imageCount"></span></h2>
+  <!-- シフト表の添付（画像・PDF・リンク） -->
+  <section class="card" data-simple-hide>
+    <h2>シフト表の画像・PDF・リンク<button type="button" class="help-btn" data-help="attach" aria-label="添付の説明を表示">？</button></h2>
     <p class="note" id="imgMonthLabel" style="margin-top:0;"></p>
+    <h3 class="sub-h">画像<span class="image-count" id="imageCount"></span></h3>
     <div class="image-grid" id="imageGrid"></div>
     <button class="primary" id="addImageBtn">＋ 画像を追加</button>
     <input type="file" id="imageFileInput" accept="image/*" multiple class="hidden">
     <p class="note">表示中の月に、シフト表の画像を最大3枚まで保存できます。PCではコピーした画像をこのページに貼り付け（Ctrl+V）ても追加できます。画像は自動で縮小・圧縮して保存されます。</p>
+    <h3 class="sub-h">PDF<span class="image-count" id="pdfCount"></span></h3>
+    <div id="pdfList"></div>
+    <button id="addPdfBtn">＋ PDFを追加</button>
+    <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" class="hidden">
+    <p class="note">PDFはそのままの形で保存します。圧縮されないため、大きなファイル（目安：1ファイル2MBを超えるもの）は、ブラウザの保存容量の都合で保存できないことがあります。その場合は、保存できなかった旨の案内が出ます。</p>
+    <h3 class="sub-h">リンク</h3>
+    <div id="monthLinkList"></div>
+    <label class="field-label" for="linkUrlInput">URL</label>
+    <input type="url" id="linkUrlInput" class="text-input" placeholder="例：https://example.com/shift" inputmode="url">
+    <label class="field-label" for="linkLabelInput">表示名（任意）</label>
+    <input type="text" id="linkLabelInput" class="text-input" placeholder="例：シフト表のページ">
+    <div class="form-actions">
+      <button type="button" class="primary" id="addLinkBtn">リンクを追加</button>
+    </div>
+    <p class="note">シフト表のページなどのURLを、表示中の月に登録できます。タップすると新しいタブで開きます。複数登録できます。</p>
   </section>
-
   <!-- 写真から読み取り（OCR・実験） -->
-  <section class="card">
+  <section class="card" data-simple-hide>
     <h2>写真から読み取り（実験）<button type="button" class="help-btn" data-help="ocr" aria-label="写真から読み取りの説明を表示">？</button></h2>
     <p class="note" style="margin-top:0;">シフト表の写真から文字を読み取り、シフトの下書きを作る実験機能です。</p>
     <p class="note warn-note">実験機能です。読み取り間違いがあるので、必ず確認・修正してから登録してください。</p>
@@ -641,109 +822,8 @@
     <button id="ocrUndoRegister" class="small hidden">直前の登録を取り消す</button>
   </section>
 
-  <!-- シフト一覧 -->
-  <section class="card">
-    <h2>シフト一覧<button type="button" class="help-btn" data-help="calendar" aria-label="カレンダー表示の説明を表示">？</button></h2>
-    <div id="stickyTotal" class="sticky-total"></div>
-    <div class="seg-control" role="group" aria-label="一覧の表示方法" style="margin-top:0;">
-      <button type="button" data-view-mode-btn="list" class="active">リスト</button>
-      <button type="button" data-view-mode-btn="calendar">カレンダー</button>
-    </div>
-    <div id="shiftList"></div>
-    <div id="shiftCalendar" class="hidden"></div>
-    <div id="calDayDetail" class="hidden"></div>
-    <button class="primary" id="toggleShiftForm">＋ シフトを追加</button>
-
-    <form id="shiftForm" class="hidden">
-      <label for="sfDate">日付</label>
-      <input type="date" id="sfDate" required>
-      <div id="sfBulkArea">
-        <label class="ocr-check"><input type="checkbox" id="sfBulkToggle"> 複数の日にまとめて登録する（期間＋曜日）</label>
-        <div id="sfBulkPanel" class="hidden">
-          <div class="row2">
-            <div>
-              <label for="sfBulkFrom">期間の開始日</label>
-              <input type="date" id="sfBulkFrom">
-            </div>
-            <div>
-              <label for="sfBulkTo">期間の終了日</label>
-              <input type="date" id="sfBulkTo">
-            </div>
-          </div>
-          <label>曜日</label>
-          <div class="wd-checks" id="sfBulkWeekdays">
-            <label><input type="checkbox" value="1">月</label>
-            <label><input type="checkbox" value="2">火</label>
-            <label><input type="checkbox" value="3">水</label>
-            <label><input type="checkbox" value="4">木</label>
-            <label><input type="checkbox" value="5">金</label>
-            <label><input type="checkbox" value="6">土</label>
-            <label><input type="checkbox" value="0">日</label>
-          </div>
-          <div class="crop-btns" style="margin-top:6px;">
-            <button type="button" class="small" data-wd-shortcut="weekday" data-wd-target="sfBulkWeekdays">平日（月〜金）</button>
-            <button type="button" class="small" data-wd-shortcut="all" data-wd-target="sfBulkWeekdays">全て</button>
-            <button type="button" class="small" data-wd-shortcut="clear" data-wd-target="sfBulkWeekdays">クリア</button>
-          </div>
-          <p class="note" id="sfBulkCount"></p>
-        </div>
-      </div>
-      <label for="sfWorkplace">バイト先</label>
-      <select id="sfWorkplace"></select>
-      <p class="seg-label">時刻の入力方法<button type="button" class="help-btn" data-help="timeInput" aria-label="時刻の入力方法の説明を表示">？</button></p>
-      <div class="seg-control" role="group" aria-label="時刻の入力方法" style="margin-top:4px;">
-        <button type="button" data-time-mode-btn="type" class="active">打ち込み</button>
-        <button type="button" data-time-mode-btn="slider">スライダー</button>
-        <button type="button" data-time-mode-btn="dial">ダイヤル</button>
-      </div>
-      <div class="row2 time-fields-row">
-        <div>
-          <label for="sfStart">開始時刻</label>
-          <input type="time" id="sfStart" class="tm-type" required>
-          <div class="time-slider-row">
-            <input type="range" id="sfStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
-            <span class="time-slider-val" id="sfStartSliderVal">--:--</span>
-          </div>
-        </div>
-        <div>
-          <label for="sfEnd">終了時刻</label>
-          <input type="time" id="sfEnd" class="tm-type" required>
-          <div class="time-slider-row">
-            <input type="range" id="sfEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
-            <span class="time-slider-val" id="sfEndSliderVal">--:--</span>
-          </div>
-        </div>
-      </div>
-      <input type="hidden" id="sfEndOffset" value="0">
-      <div class="time-dial time-dial-range" id="sfRangeDial"></div>
-      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻の入力方法は上の切り替えで選べます（打ち込み／スライダー（15分刻み）／ダイヤル（1つのリングで開始と終了を合わせます。終了のつまみを1周を超えて回すと、24時間以上の勤務も入力できます））。選んだ方法は次回も引き継がれます。</p>
-      <label for="sfCategory">区分</label><button type="button" class="help-btn" data-help="category" aria-label="区分の説明を表示">？</button>
-      <select id="sfCategory">
-        <option value="">未設定</option>
-        <option value="早番">早番</option>
-        <option value="日勤">日勤</option>
-        <option value="遅番">遅番</option>
-        <option value="夜勤">夜勤</option>
-      </select>
-      <p class="note">区分を選ぶと、そのバイト先のプリセット時刻が開始・終了に入ります（後から変更できます）。</p>
-      <label for="sfBreak">休憩時間（分）</label>
-      <input type="number" id="sfBreak" min="0" step="5" value="0" inputmode="numeric">
-      <div id="sfTransportWrap">
-        <label for="sfTransport">交通費（円・この日）</label>
-        <input type="number" id="sfTransport" min="0" step="1" value="0" inputmode="numeric">
-        <p class="note">初期値はバイト先の1日あたり交通費です。その日だけ違う金額（0円など）にもできます。</p>
-      </div>
-      <label for="sfMemo">メモ</label>
-      <input type="text" id="sfMemo" placeholder="任意">
-      <div class="form-actions">
-        <button type="submit" class="primary" id="sfSubmit">保存する</button>
-        <button type="button" id="sfCancel">キャンセル</button>
-      </div>
-    </form>
-  </section>
-
   <!-- いつものパターン（テンプレート） -->
-  <section class="card">
+  <section class="card" data-simple-hide>
     <h2>いつものパターン</h2>
     <p class="note" style="margin-top:0;">バイト先・区分・時間・曜日を名前付きのパターンとして保存しておくと、期間を指定して一括でシフトを作れます（例：「カフェA 平日・遅番」）。シフトが固定の人向けの機能です。</p>
     <div id="tplList"></div>
@@ -831,7 +911,7 @@
   </section>
 
   <!-- メモ帳 -->
-  <section class="card">
+  <section class="card" data-simple-hide>
     <h2>メモ帳<button type="button" class="help-btn" data-help="memo" aria-label="メモの説明を表示">？</button></h2>
     <div id="noteList"></div>
     <button class="primary" id="toggleNoteForm">＋ メモを追加</button>
@@ -848,40 +928,11 @@
     <p class="note">メモはこのブラウザに保存されます。日付ごとのメモは、カレンダー表示で日を選ぶと書けます。どちらもバックアップ（自分の設定の「データを書き出し」）に含まれます。</p>
   </section>
 
-  <!-- 自分の設定 -->
-  <section class="card">
-    <h2>自分の設定</h2>
-    <label class="field-label" for="myNamesInput">自分の名前</label>
-    <input type="text" id="myNamesInput" class="text-input" placeholder="例：山田太郎、やまだ">
-    <p class="note">カンマ（、）区切りで複数の表記を登録できます。シフト表を読み取るとき、登録した名前の列（または行）に属するシフトだけを抽出対象にします。未登録の場合は全体が対象です。</p>
-
-    <label class="field-label" for="skinSelect" style="margin-top:16px;">スキン（見た目のテーマ）</label><button type="button" class="help-btn" data-help="skin" aria-label="スキンの説明を表示">？</button>
-    <select id="skinSelect" class="text-input">
-      <option value="standard">標準（青）</option>
-      <option value="pink">ピンク</option>
-      <option value="purple">紫</option>
-      <option value="green">緑</option>
-      <option value="dark">ダーク</option>
-      <option value="cute">キュート</option>
-    </select>
-    <p class="note">アプリ全体の色合いを変えます。選んだスキンは保存され、次回も同じスキンで開きます。バックアップ（自分の設定）にも含まれます。区分バッジやバイト先の色は、スキンによらずそのまま表示されます。</p>
-
-    <label class="field-label" style="margin-top:16px;">データのバックアップ</label><button type="button" class="help-btn" data-help="backup" aria-label="バックアップの説明を表示">？</button>
-    <div class="crop-btns" style="margin-top:0;">
-      <button id="exportDataBtn">データを書き出し（JSON）</button>
-      <button id="importDataBtn">データを読み込み（JSON）</button>
-      <button id="importWpOnlyBtn">バイト先だけを読み込み（JSON）</button>
-    </div>
-    <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
-    <input type="file" id="importWpFileInput" accept=".json,application/json" class="hidden">
-    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターン・日付メモ・メモ帳・受け取り確認・実際の金額・その他収入をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。「バイト先だけを読み込み」は、バックアップファイルの中のバイト先だけを取り込むもので、同じバイト先は読み込んだ内容で上書きし、新しいバイト先は追加します。シフトや他のデータは変わりません。</p>
-    <p class="note">データはこのブラウザの中に保存されます。LINEなどのアプリ内ブラウザで開くと、データが消えやすくなります。Safariで開いて「ホーム画面に追加」しておくと、データが残りやすくなります。別のブラウザで開くと、別のデータになります。大事なデータは、ときどき書き出してバックアップしてください。</p>
-    <p class="note register-status" id="backupStatus"></p>
-  </section>
-
+  </div>
+  <div data-tab-panel="workplace" class="hidden">
   <!-- バイト先管理 -->
   <section class="card">
-    <h2>バイト先の設定</h2>
+    <h2>バイト先</h2>
     <div id="workplaceList"></div>
     <button class="primary" id="toggleWpForm">＋ バイト先を追加</button>
 
@@ -914,18 +965,21 @@
         <input type="number" id="wfMonthlySalary" min="0" step="1" value="0" inputmode="numeric">
         <p class="note">シフトは出勤記録として登録でき、収入まとめにはこの月額をそのまま計上します（その月にシフトが1件以上ある月だけ計上します）。</p>
       </div>
+      <div data-simple-hide>
       <label for="wfDeductionRate">天引き率（%）</label>
       <input type="number" id="wfDeductionRate" min="0" max="100" step="0.1" inputmode="decimal" placeholder="例：10（未設定なら空欄）">
       <p class="note">所得税などで何%引かれるかの目安です。設定すると収入まとめに天引き額と「手取りの目安」が表示されます（あくまで概算で、実際の源泉徴収とは異なる場合があります）。</p>
-      <div id="wfWageHistoryWrap">
+      </div>
+      <div id="wfWageHistoryWrap" data-simple-hide>
         <label>期間別時給</label>
         <div id="wfWageHistoryList"></div>
         <div class="form-actions" style="margin-top:8px;">
           <button type="button" id="wfAddWageHistory">＋ 期間を追加</button>
         </div>
         <p class="note">開始日ごとに時給を設定できます（例：2026-11-01から¥1,240）。開始日より前の日は、上の基本の時給で計算します。</p>
+        <div id="wfWageHistoryView"></div>
       </div>
-      <div id="wfTrainingWrap">
+      <div id="wfTrainingWrap" data-simple-hide>
         <label>研修期間</label>
         <div class="row2">
           <div>
@@ -983,6 +1037,11 @@
         <input type="text" id="wfPayDay" list="wfPayDayList" placeholder="例：翌月25日">
       </div>
       <p class="note hidden" id="wfPayDayLastNote">最終の勤務日が終わったら、その場・その日に支給される形です（巫女バイトなど）。</p>
+      <label for="wfPaymentMethod">受け取り方法</label>
+      <select id="wfPaymentMethod">
+        <option value="bank">振り込み</option>
+        <option value="cash">手渡し</option>
+      </select>
       <datalist id="wfClosingList">
         <option value="月末"></option>
         <option value="5日"></option>
@@ -1002,6 +1061,7 @@
       </datalist>
       <label for="wfColor">色</label>
       <input type="color" id="wfColor" value="#2563eb">
+      <div data-simple-hide>
       <label for="wfTransportMode">交通費の方式</label><button type="button" class="help-btn" data-help="transport" aria-label="交通費の説明を表示">？</button>
       <select id="wfTransportMode">
         <option value="daily">1日あたり（出勤日ごと）</option>
@@ -1051,6 +1111,7 @@
         </div>
         <p class="note">定期代は自動では入力されません。「定期代を調べる」で路線検索のページを開き、定期代を確認して、上の「定期代」欄に自分で入力してください。収入まとめには、定期代÷期間（月数）の月換算（四捨五入）で計上します。</p>
       </div>
+      </div>
       <p class="note" style="margin-bottom:0;">区分プリセット（このバイト先用）。シフト登録で区分を選ぶと、この時刻が自動入力されます。</p>
       <div class="row2">
         <div>
@@ -1099,6 +1160,58 @@
     </form>
     <p class="note">深夜帯は22:00〜翌5:00です。深夜帯の時給は「時給×（1＋割増率）」で計算します。休憩時間は、深夜帯以外の時間から先に差し引きます。</p>
   </section>
+
+  </div>
+  <div data-tab-panel="settings" class="hidden">
+  <!-- 自分の設定 -->
+  <section class="card">
+    <h2>自分の設定</h2>
+    <label class="ocr-check" style="margin-top:0;"><input type="checkbox" id="simpleModeToggle"> かんたんモード</label><button type="button" class="help-btn" data-help="simple" aria-label="かんたんモードの説明を表示">？</button>
+    <p class="note">ONにすると、高度な機能（読み取り・期間別時給・研修時給・天引き率・交通費の細かい設定・その他収入・テンプレート・一括作成・月の添付など）が隠れ、「シフトを入れる」「一覧を見る」「今月の合計」だけのシンプルな画面になります。ボタンと文字も大きくなります。データはそのまま残り、OFFに戻せば全部元通りになります。</p>
+    <label class="field-label" for="myNamesInput">自分の名前</label>
+    <input type="text" id="myNamesInput" class="text-input" placeholder="例：山田太郎、やまだ">
+    <p class="note">カンマ（、）区切りで複数の表記を登録できます。シフト表を読み取るとき、登録した名前の列（または行）に属するシフトだけを抽出対象にします。未登録の場合は全体が対象です。</p>
+
+    <label class="field-label" for="skinSelect" style="margin-top:16px;">スキン（見た目のテーマ）</label><button type="button" class="help-btn" data-help="skin" aria-label="スキンの説明を表示">？</button>
+    <select id="skinSelect" class="text-input">
+      <option value="standard">標準（青）</option>
+      <option value="pink">ピンク</option>
+      <option value="purple">紫</option>
+      <option value="green">緑</option>
+      <option value="dark">ダーク</option>
+      <option value="cute">キュート</option>
+    </select>
+    <p class="note">アプリ全体の色合いを変えます。選んだスキンは保存され、次回も同じスキンで開きます。バックアップ（自分の設定）にも含まれます。区分バッジやバイト先の色は、スキンによらずそのまま表示されます。</p>
+
+    <label class="field-label" for="fontSizeSelect" style="margin-top:16px;">文字の大きさ</label><button type="button" class="help-btn" data-help="display" aria-label="表示設定の説明を表示">？</button>
+    <select id="fontSizeSelect" class="text-input">
+      <option value="small">小</option>
+      <option value="standard">標準</option>
+      <option value="large">大</option>
+    </select>
+    <label class="field-label" for="fontSelect" style="margin-top:16px;">フォント（書体）</label>
+    <select id="fontSelect" class="text-input">
+      <option value="system">標準（システム）</option>
+      <option value="gothic">ゴシック系</option>
+      <option value="round">丸ゴシック系</option>
+      <option value="mincho">明朝系</option>
+    </select>
+    <p class="note">文字の大きさとフォントは、アプリ全体に反映されます。選んだ内容は保存され、バックアップ（自分の設定）にも含まれます。フォントは、端末に入っている書体の中から近いものが使われます（端末によっては見た目が変わらない場合があります）。</p>
+
+    <label class="field-label" style="margin-top:16px;">データのバックアップ</label><button type="button" class="help-btn" data-help="backup" aria-label="バックアップの説明を表示">？</button>
+    <div class="crop-btns" style="margin-top:0;">
+      <button id="exportDataBtn">データを書き出し（JSON）</button>
+      <button id="importDataBtn">データを読み込み（JSON）</button>
+      <button id="importWpOnlyBtn">バイト先だけを読み込み（JSON）</button>
+    </div>
+    <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
+    <input type="file" id="importWpFileInput" accept=".json,application/json" class="hidden">
+    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・PDF・リンク・OCRの下書き・いつものパターン・日付メモ・メモ帳・受け取り確認・実際の金額・その他収入をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。「バイト先だけを読み込み」は、バックアップファイルの中のバイト先だけを取り込むもので、同じバイト先は読み込んだ内容で上書きし、新しいバイト先は追加します。シフトや他のデータは変わりません。</p>
+    <p class="note">データはこのブラウザの中に保存されます。LINEなどのアプリ内ブラウザで開くと、データが消えやすくなります。Safariで開いて「ホーム画面に追加」しておくと、データが残りやすくなります。別のブラウザで開くと、別のデータになります。大事なデータは、ときどき書き出してバックアップしてください。</p>
+    <p class="note register-status" id="backupStatus"></p>
+  </section>
+
+  </div>
 
 </main>
 
@@ -1331,6 +1444,63 @@ function wageForDate(wp, dateStr){
   });
   return wage;
 }
+
+// 今日の日付を "YYYY-MM-DD"（ローカル）で返す
+function todayDateStr(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+// 今日の時点で効いている時給と、その種別（"training" | "history" | "base"）を返す（表示用）。
+// 給料計算（wageForDate）と同じ優先順位：研修時給（研修期間内）＞ 期間別時給（開始日が来たもの）＞ 基本時給。
+function currentWageInfo(w){
+  if (!w) return { wage: 0, kind: "base" };
+  const today = todayDateStr();
+  if (isTrainingDate(w, today)){
+    return { wage: Math.max(0, Math.floor(Number(w.trainingWage) || 0)), kind: "training" };
+  }
+  const hist = (Array.isArray(w.wageHistory) ? w.wageHistory : [])
+    .filter(function(h){
+      return h && isValidDateStr(h.from) && h.from <= today &&
+        isFinite(Number(h.wage)) && Number(h.wage) >= 0;
+    })
+    .sort(function(a, b){ return a.from < b.from ? -1 : (a.from > b.from ? 1 : 0); });
+  if (hist.length > 0){
+    return { wage: Math.floor(Number(hist[hist.length - 1].wage)), kind: "history" };
+  }
+  return { wage: Math.max(0, Math.floor(Number(w.wage) || 0)), kind: "base" };
+}
+
+// 時給の履歴表示用の行を作る（基本時給の行＋期間別時給＝「特別時給」の行、適用期間つき）。
+// 期間の終わりは、次の期間の開始日の前日として表示する。最後の期間は終わりなし（「YYYY/MM/DD〜」）。
+// 例：基本1,180円・2026-11-01から1,240円 → 「〜2026/10/31まで 時給 ¥1,180」「2026/11/01〜 特別時給 ¥1,240」
+function wageHistoryDisplayRows(w){
+  if (!w) return [];
+  const fmt = function(ds){ return ds ? String(ds).replace(/-/g, "/") : ""; };
+  const today = todayDateStr();
+  const baseWage = Math.max(0, Math.floor(Number(w.wage) || 0));
+  const hist = normalizeWageHistory(w.wageHistory);
+  if (hist.length === 0){
+    return [{ period: "", label: "時給", wage: baseWage, kind: "base", current: true }];
+  }
+  const rows = [{
+    period: "〜" + fmt(addDaysToDateStr(hist[0].from, -1)) + "まで",
+    label: "時給", wage: baseWage, kind: "base",
+    current: today < hist[0].from
+  }];
+  hist.forEach(function(h, i){
+    const next = hist[i + 1] || null;
+    rows.push({
+      period: fmt(h.from) + "〜" + (next ? fmt(addDaysToDateStr(next.from, -1)) : ""),
+      label: "特別時給",
+      wage: Math.floor(Number(h.wage) || 0),
+      kind: "history",
+      current: h.from <= today && (!next || today < next.from)
+    });
+  });
+  return rows;
+}
+
 // === PURE LOGIC END ===
 
 // === CATEGORY LOGIC START ===
@@ -1405,6 +1575,8 @@ function normalizeWorkplace(w){
   // 給料日の種類： "date"＝日付で指定（payDay文字列を使う）、"lastday"＝勤務最終日（最終日が終わったら支給）。
   // 既存データ（payDayType無し）は "date" として扱い、payDay文字列はそのまま保持する。
   w.payDayType = (w.payDayType === "lastday") ? "lastday" : "date";
+  // 受け取り方法： "cash"＝手渡し、それ以外（既存データ含む）は "bank"＝振り込みとして扱う。
+  w.paymentMethod = (w.paymentMethod === "cash") ? "cash" : "bank";
   w.trainingStart = isValidDateStr(w.trainingStart) ? w.trainingStart : "";
   w.trainingEnd = isValidDateStr(w.trainingEnd) ? w.trainingEnd : "";
   const td = Math.floor(Number(w.trainingDays) || 0);
@@ -1425,9 +1597,14 @@ function paySummaryText(w){
   if (t === "daily") s = "日給 " + fmtYen(dailyWageOf(w));
   else if (t === "monthly") s = "月給 " + fmtYen(monthlySalaryOf(w));
   else {
-    s = "時給 " + fmtYen(w.wage) + "・深夜割増 " + esc(w.premium) + "%";
-    if (Array.isArray(w.wageHistory) && w.wageHistory.length > 0) s += "・期間別時給あり";
-    if (w.trainingWage !== null && w.trainingWage !== undefined && isValidDateStr(w.trainingStart)){
+    // 表示する時給は、今日の時点で効いている時給（研修＞期間別＞基本）に合わせる
+    const cw = currentWageInfo(w);
+    s = "時給 " + fmtYen(cw.wage);
+    if (cw.kind === "training") s += "（研修時給）";
+    else if (cw.kind === "history") s += "（期間別時給）";
+    s += "・深夜割増 " + esc(w.premium) + "%";
+    if (cw.kind !== "history" && Array.isArray(w.wageHistory) && w.wageHistory.length > 0) s += "・期間別時給あり";
+    if (cw.kind !== "training" && w.trainingWage !== null && w.trainingWage !== undefined && isValidDateStr(w.trainingStart)){
       s += "・研修時給 " + fmtYen(w.trainingWage);
     }
   }
@@ -1443,6 +1620,14 @@ function payDayLabel(w){
   return typeof w.payDay === "string" ? w.payDay : "";
 }
 
+// 受け取り方法（"cash"＝手渡し、それ以外は "bank"＝振り込み）
+function paymentMethodOf(w){
+  return (w && w.paymentMethod === "cash") ? "cash" : "bank";
+}
+function paymentMethodLabel(w){
+  return paymentMethodOf(w) === "cash" ? "手渡し" : "振り込み";
+}
+
 // バイト先一覧に出す、ジャンル・場所・締日・給料日の短い説明（未設定なら空文字）
 function workplaceMetaText(w){
   const parts = [];
@@ -1451,6 +1636,7 @@ function workplaceMetaText(w){
   if (w.closingDay) parts.push("締日 " + esc(w.closingDay));
   const pd = payDayLabel(w);
   if (pd) parts.push("給料日 " + esc(pd));
+  parts.push("受取 " + paymentMethodLabel(w));
   return parts.join("・");
 }
 
@@ -1699,8 +1885,35 @@ const LS_NOTES = "shiftPayApp.notes";
 const LS_RECEIVED = "shiftPayApp.received";
 const LS_ACTUAL = "shiftPayApp.actualPay";
 const LS_OTHER = "shiftPayApp.otherIncome";
+const LS_LINKS = "shiftPayApp.monthLinks";
 const MAX_IMAGES_PER_MONTH = 3;
+const MAX_PDFS_PER_MONTH = 3;
 const MAX_IMAGE_WIDTH = 1200;
+// PDFは圧縮されずに保存されるため、このサイズを超えたら保存前に注意を出す（目安）
+const PDF_SIZE_WARN_BYTES = 2 * 1024 * 1024;
+
+// 月のリンク { "YYYY-MM": [ {id, url, label}, ... ] } の正規化
+function normalizeMonthLinks(v){
+  const out = {};
+  if (!v || typeof v !== "object" || Array.isArray(v)) return out;
+  Object.keys(v).forEach(function(key){
+    if (!/^\d{4}-\d{2}$/.test(key)) return;
+    const arr = Array.isArray(v[key]) ? v[key] : [];
+    const list = [];
+    arr.forEach(function(l){
+      if (!l || typeof l !== "object") return;
+      const url = String(l.url || "").trim();
+      if (!url) return;
+      list.push({
+        id: l.id ? String(l.id) : newId(),
+        url: url,
+        label: String(l.label || "").trim()
+      });
+    });
+    if (list.length > 0) out[key] = list;
+  });
+  return out;
+}
 
 function loadJSON(key, fallback){
   try {
@@ -1719,7 +1932,8 @@ let workplaces = loadJSON(LS_WP, []);
 let shifts = loadJSON(LS_SH, []);
 // 既存のバイト先データに区分プリセットの初期値を持たせて移行する
 workplaces.forEach(function(w){ ensurePresets(w); normalizeWorkplace(w); });
-let monthImages = loadJSON(LS_IMG, {}); // { "YYYY-MM": [ {id, dataUrl}, ... ] }
+let monthImages = loadJSON(LS_IMG, {}); // { "YYYY-MM": [ {id, dataUrl}（画像）, {id, type:"pdf", name, size, dataUrl}（PDF）, ... ] }
+let monthLinks = normalizeMonthLinks(loadJSON(LS_LINKS, {})); // 月のリンク { "YYYY-MM": [ {id, url, label}, ... ] }
 let settings = loadJSON(LS_SET, { myNames: "" }); // { myNames: "" }
 let templates = normalizeTemplates(loadJSON(LS_TPL, [])); // いつものパターン
 let dayMemos = normalizeDayMemos(loadJSON(LS_DAYMEMO, {})); // 日付メモ { "YYYY-MM-DD": "本文" }
@@ -1781,6 +1995,12 @@ function saveImages(){
   } catch (e) {
     return false;
   }
+}
+
+function saveMonthLinks(){
+  try {
+    localStorage.setItem(LS_LINKS, JSON.stringify(monthLinks));
+  } catch (e) { /* 保存できなくても動作は続ける */ }
 }
 
 let viewYear, viewMonth; // 表示中の月（month は 0〜11）
@@ -1914,6 +2134,7 @@ function summarizeMonth(year, month){
       color: wp ? wp.color : "#9ca3af",
       pay: per[id].pay, min: per[id].min, count: per[id].count,
       payType: wp ? payTypeOf(wp) : "hourly",
+      paymentMethod: wp ? paymentMethodOf(wp) : "bank",
       transport: transport,
       transportLabel: wp ? transportModeLabel(wp) : "交通費",
       deductionRate: rate,
@@ -2210,6 +2431,7 @@ function buildIncomeSummaryHtml(summary, prevSummary, year, month){
         '<span><span class="dot" style="background:' + esc(w.color) + '"></span>' + esc(w.name) +
         (received ? '<span class="received-badge">受取済み</span>' : "") + "</span>" +
         '<div class="income-wp-sub">' + w.count + "件 ・ " + fmtDuration(w.min) + "</div>" +
+        '<div class="income-wp-sub">受け取り：' + paymentMethodLabel(w) + "</div>" +
         (w.payType === "monthly" ? '<div class="income-wp-sub">月給（時間数によらず固定・シフトは出勤記録）</div>' : "") +
         (w.payType === "daily" ? '<div class="income-wp-sub">日給（1シフトごとの金額）</div>' : "") +
         (w.transport > 0 ? '<div class="income-wp-sub">' + esc(w.transportLabel) + " " + fmtYen(w.transport) + "</div>" : "") +
@@ -2361,13 +2583,33 @@ if (oiListEl){
   });
 }
 
-// ---------- シフト表の画像 ----------
+// ---------- シフト表の添付（画像・PDF・リンク） ----------
 function monthKey(){
   return viewYear + "-" + String(viewMonth + 1).padStart(2, "0");
 }
 function getMonthImages(){
   const list = monthImages[monthKey()];
   return Array.isArray(list) ? list : [];
+}
+// 添付エントリの種別判定（type が無い既存エントリは画像として扱う）
+function isPdfEntry(im){
+  return !!(im && im.type === "pdf");
+}
+function getMonthImageFiles(){
+  return getMonthImages().filter(function(im){ return !isPdfEntry(im); });
+}
+function getMonthPdfFiles(){
+  return getMonthImages().filter(function(im){ return isPdfEntry(im); });
+}
+function getMonthLinks(){
+  const list = monthLinks[monthKey()];
+  return Array.isArray(list) ? list : [];
+}
+function fmtFileSize(bytes){
+  const n = Number(bytes) || 0;
+  if (n >= 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + " MB";
+  if (n >= 1024) return Math.round(n / 1024) + " KB";
+  return n + " B";
 }
 
 // 画像ファイルを canvas でリサイズ（幅最大 MAX_IMAGE_WIDTH px）し、JPEG の dataURL に変換
@@ -2409,7 +2651,7 @@ function addImageFiles(files){
   if (imageFiles.length === 0) return;
   const key = monthKey();
   const current = getMonthImages().slice();
-  const room = MAX_IMAGES_PER_MONTH - current.length;
+  const room = MAX_IMAGES_PER_MONTH - getMonthImageFiles().length;
   if (room <= 0){
     alert("この月の画像は最大" + MAX_IMAGES_PER_MONTH + "枚までです。不要な画像を削除してから追加してください");
     return;
@@ -2444,7 +2686,7 @@ function addImageFiles(files){
   });
 }
 
-// 画像を1枚削除
+// 添付を1件削除（画像・PDF共通）
 function deleteImage(id){
   const key = monthKey();
   monthImages[key] = getMonthImages().filter(function(im){ return im.id !== id; });
@@ -2453,11 +2695,136 @@ function deleteImage(id){
   render();
 }
 
-// 画像のサムネイル描画
+// PDFファイル（複数可）を表示中の月へ追加。画像と同じ保存仕組み（localStorageにdataURLで保存）を使う
+function readFileAsDataURL(file){
+  return new Promise(function(resolve, reject){
+    const reader = new FileReader();
+    reader.onload = function(){ resolve(String(reader.result || "")); };
+    reader.onerror = function(){ reject(new Error("ファイルを読み込めませんでした")); };
+    reader.readAsDataURL(file);
+  });
+}
+function addPdfFiles(files){
+  const pdfFiles = Array.prototype.filter.call(files || [], function(f){
+    if (!f) return false;
+    if (f.type === "application/pdf") return true;
+    return /\.pdf$/i.test(f.name || "");
+  });
+  if (pdfFiles.length === 0) return;
+  const key = monthKey();
+  const current = getMonthImages().slice();
+  const room = MAX_PDFS_PER_MONTH - getMonthPdfFiles().length;
+  if (room <= 0){
+    alert("この月のPDFは最大" + MAX_PDFS_PER_MONTH + "件までです。不要なPDFを削除してから追加してください");
+    return;
+  }
+  const targets = pdfFiles.slice(0, room);
+  if (pdfFiles.length > room){
+    alert("この月はあと" + room + "件まで追加できるため、先頭の" + room + "件だけ追加します");
+  }
+  const hasLarge = targets.some(function(f){ return (f.size || 0) > PDF_SIZE_WARN_BYTES; });
+  if (hasLarge && !confirm("大きなPDF（2MB超）が含まれています。PDFは圧縮されずに保存されるため、ブラウザの保存容量の都合で保存できないことがあります。追加しますか？")){
+    return;
+  }
+  const additions = [];
+  let chain = Promise.resolve();
+  targets.forEach(function(file){
+    chain = chain.then(function(){
+      return readFileAsDataURL(file).then(function(dataUrl){
+        if (dataUrl) additions.push({ id: newId(), type: "pdf", name: file.name || "PDFファイル", size: file.size || 0, dataUrl: dataUrl });
+      });
+    });
+  });
+  chain.then(function(){
+    if (additions.length === 0){
+      alert("PDFを追加できませんでした");
+      return;
+    }
+    monthImages[key] = current.concat(additions);
+    if (!saveImages()){
+      monthImages[key] = current;
+      alert("保存容量がいっぱいでPDFを保存できませんでした。古い月の画像やPDFを削除してからお試しください");
+      return;
+    }
+    render();
+  }).catch(function(){
+    alert("PDFを追加できませんでした");
+  });
+}
+
+// dataURL を Blob に変換する（PDFをブラウザのビューアで開くため）
+function dataUrlToBlob(dataUrl){
+  const parts = String(dataUrl || "").split(",");
+  const mimeMatch = (parts[0] || "").match(/data:([^;]+)/);
+  const mime = mimeMatch ? mimeMatch[1] : "application/pdf";
+  const bin = atob(parts.slice(1).join(","));
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+function openPdf(id){
+  const im = getMonthPdfFiles().find(function(x){ return x.id === id; });
+  if (!im) return;
+  try {
+    const url = URL.createObjectURL(dataUrlToBlob(im.dataUrl));
+    window.open(url, "_blank");
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+  } catch (e) {
+    alert("PDFを開けませんでした");
+  }
+}
+
+// 月のリンクの追加・削除
+function addMonthLink(){
+  const urlInput = document.getElementById("linkUrlInput");
+  const labelInput = document.getElementById("linkLabelInput");
+  let url = (urlInput.value || "").trim();
+  const label = (labelInput.value || "").trim();
+  if (!url){
+    alert("URLを入力してください");
+    return;
+  }
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+  const key = monthKey();
+  const list = getMonthLinks().slice();
+  list.push({ id: newId(), url: url, label: label });
+  monthLinks[key] = list;
+  saveMonthLinks();
+  urlInput.value = "";
+  labelInput.value = "";
+  renderMonthLinks();
+}
+function deleteMonthLink(id){
+  const key = monthKey();
+  monthLinks[key] = getMonthLinks().filter(function(l){ return l.id !== id; });
+  if (monthLinks[key].length === 0) delete monthLinks[key];
+  saveMonthLinks();
+  renderMonthLinks();
+}
+function renderMonthLinks(){
+  const el = document.getElementById("monthLinkList");
+  if (!el) return;
+  const list = getMonthLinks();
+  if (list.length === 0){
+    el.innerHTML = '<div class="empty">この月のリンクはまだありません</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(l){
+    const name = l.label || l.url;
+    return '<div class="attach-item"><div class="attach-main">' +
+      '<a class="attach-name" href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + esc(name) + "</a>" +
+      (l.label ? '<div class="attach-meta">' + esc(l.url) + "</div>" : "") +
+      '</div><div class="attach-actions">' +
+      '<button class="small danger" data-del-link="' + l.id + '">削除</button>' +
+      "</div></div>";
+  }).join("");
+}
+
+// 画像とPDFの描画
 function renderImages(){
   document.getElementById("imgMonthLabel").textContent =
     viewYear + "年" + (viewMonth + 1) + "月のシフト表";
-  const list = getMonthImages();
+  const list = getMonthImageFiles();
   document.getElementById("imageCount").textContent =
     "（" + list.length + " / " + MAX_IMAGES_PER_MONTH + "枚）";
   const grid = document.getElementById("imageGrid");
@@ -2472,6 +2839,25 @@ function renderImages(){
     }).join("");
   }
   document.getElementById("addImageBtn").disabled = list.length >= MAX_IMAGES_PER_MONTH;
+
+  const pdfs = getMonthPdfFiles();
+  document.getElementById("pdfCount").textContent =
+    "（" + pdfs.length + " / " + MAX_PDFS_PER_MONTH + "件）";
+  const pdfListEl = document.getElementById("pdfList");
+  if (pdfs.length === 0){
+    pdfListEl.innerHTML = '<div class="empty">この月のPDFはまだありません</div>';
+  } else {
+    pdfListEl.innerHTML = pdfs.map(function(im){
+      return '<div class="attach-item"><div class="attach-main">' +
+        '<div class="attach-name"><span class="pdf-badge">PDF</span>' + esc(im.name || "PDFファイル") + "</div>" +
+        '<div class="attach-meta">' + fmtFileSize(im.size) + "</div>" +
+        '</div><div class="attach-actions">' +
+        '<button class="small" data-open-pdf="' + im.id + '">開く</button>' +
+        '<button class="small danger" data-del-pdf="' + im.id + '">削除</button>' +
+        "</div></div>";
+    }).join("");
+  }
+  document.getElementById("addPdfBtn").disabled = pdfs.length >= MAX_PDFS_PER_MONTH;
 }
 
 // 拡大表示
@@ -2588,8 +2974,11 @@ function render(){
   }).join("");
   if (findWp(current)) sel.value = current;
 
-  // シフト表の画像
+  // シフト表の添付（画像・PDF）
   renderImages();
+
+  // 月のリンク
+  renderMonthLinks();
 
   // OCR 用の保存済み画像セレクト
   renderOcrSources();
@@ -3258,7 +3647,7 @@ function getTimeInputMode(){
   return TIME_INPUT_MODES.indexOf(m) >= 0 ? m : "type";
 }
 function applyTimeInputMode(){
-  const mode = getTimeInputMode();
+  const mode = isSimpleMode() ? "type" : getTimeInputMode();
   ["shiftForm", "tplForm"].forEach(function(id){
     const f = document.getElementById(id);
     if (f) f.setAttribute("data-time-mode", mode);
@@ -3500,6 +3889,26 @@ function updatePayDayFields(){
 }
 document.getElementById("wfPayDayType").addEventListener("change", updatePayDayFields);
 
+// 期間別時給セクション内の「時給の履歴」表示を更新する。
+// フォームの現在の入力（基本時給＋期間別時給の行）から、適用期間つきの一覧を作る
+function renderWageHistoryView(){
+  const view = document.getElementById("wfWageHistoryView");
+  if (!view) return;
+  const hist = readWageHistoryFields();
+  if (hist.length === 0){ view.innerHTML = ""; return; }
+  const pseudo = {
+    wage: Number(document.getElementById("wfWage").value) || 0,
+    wageHistory: hist
+  };
+  const rows = wageHistoryDisplayRows(pseudo);
+  view.innerHTML = '<div class="wf-history-title">時給の履歴（期間ごと）</div>' +
+    '<div class="wp-wage-history">' + rows.map(function(r){
+      return '<div class="wp-wage-row' + (r.current ? " is-current" : "") + '">' +
+        '<span class="wp-wage-period">' + esc(r.period) + "</span>" +
+        "<span>" + esc(r.label) + " " + fmtYen(r.wage) + "</span></div>";
+    }).join("") + "</div>";
+}
+
 // 期間別時給の入力行を1つ追加する
 function addWageHistoryRow(from, wage){
   const list = document.getElementById("wfWageHistoryList");
@@ -3512,12 +3921,16 @@ function addWageHistoryRow(from, wage){
     '<button type="button" class="small danger wf-wh-del">削除</button>';
   if (from) row.querySelector(".wf-wh-from").value = from;
   if (wage !== undefined && wage !== null && wage !== "") row.querySelector(".wf-wh-wage").value = wage;
-  row.querySelector(".wf-wh-del").addEventListener("click", function(){ row.remove(); });
+  row.querySelector(".wf-wh-del").addEventListener("click", function(){ row.remove(); renderWageHistoryView(); });
+  row.querySelector(".wf-wh-from").addEventListener("input", renderWageHistoryView);
+  row.querySelector(".wf-wh-wage").addEventListener("input", renderWageHistoryView);
   list.appendChild(row);
+  renderWageHistoryView();
 }
 document.getElementById("wfAddWageHistory").addEventListener("click", function(){
   addWageHistoryRow("", "");
 });
+document.getElementById("wfWage").addEventListener("input", renderWageHistoryView);
 
 // 期間別時給の入力行をすべて読み取る（開始日と時給がそろった行だけを対象にし、正規化して返す）
 function readWageHistoryFields(){
@@ -3553,6 +3966,7 @@ document.getElementById("toggleWpForm").addEventListener("click", function(){
   document.getElementById("wfMonthlySalary").value = 0;
   document.getElementById("wfDeductionRate").value = "";
   document.getElementById("wfWageHistoryList").innerHTML = "";
+  renderWageHistoryView();
   document.getElementById("wfTrainingWage").value = "";
   document.getElementById("wfTrainingDays").value = "";
   document.getElementById("wfTrainingStart").value = "";
@@ -3560,6 +3974,7 @@ document.getElementById("toggleWpForm").addEventListener("click", function(){
   updatePayTypeFields();
   document.getElementById("wfPayDayType").value = "date";
   updatePayDayFields();
+  document.getElementById("wfPaymentMethod").value = "bank";
   document.getElementById("wfColor").value = "#2563eb";
   document.getElementById("wfTransportMode").value = "daily";
   document.getElementById("wfTransportDaily").value = 0;
@@ -3604,6 +4019,7 @@ wpForm.addEventListener("submit", function(e){
     closingDay: document.getElementById("wfClosingDay").value.trim(),
     payDay: document.getElementById("wfPayDay").value.trim(),
     payDayType: document.getElementById("wfPayDayType").value,
+    paymentMethod: document.getElementById("wfPaymentMethod").value,
     color: document.getElementById("wfColor").value || "#2563eb",
     transportMode: document.getElementById("wfTransportMode").value,
     transportDaily: Math.max(0, Math.floor(Number(document.getElementById("wfTransportDaily").value) || 0)),
@@ -3658,6 +4074,7 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     document.getElementById("wfPayDay").value = w.payDay || "";
     document.getElementById("wfPayDayType").value = (w.payDayType === "lastday") ? "lastday" : "date";
     updatePayDayFields();
+    document.getElementById("wfPaymentMethod").value = paymentMethodOf(w);
     updatePayTypeFields();
     document.getElementById("wfColor").value = w.color || "#2563eb";
     document.getElementById("wfTransportMode").value = transportModeOf(w);
@@ -3682,6 +4099,21 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
       render();
     }
   }
+});
+
+// ---------- 画面切り替えタブ（シフト／バイト先／設定） ----------
+function switchTab(name){
+  document.querySelectorAll("[data-tab-btn]").forEach(function(b){
+    b.classList.toggle("active", b.getAttribute("data-tab-btn") === name);
+  });
+  document.querySelectorAll("[data-tab-panel]").forEach(function(p){
+    p.classList.toggle("hidden", p.getAttribute("data-tab-panel") !== name);
+  });
+}
+document.querySelectorAll("[data-tab-btn]").forEach(function(b){
+  b.addEventListener("click", function(){
+    switchTab(b.getAttribute("data-tab-btn"));
+  });
 });
 
 // ---------- シフト表の画像の操作 ----------
@@ -3726,6 +4158,38 @@ document.getElementById("imageGrid").addEventListener("click", function(e){
   }
 });
 document.getElementById("lightbox").addEventListener("click", closeLightbox);
+
+// ---------- PDF・リンクの操作 ----------
+const pdfFileInput = document.getElementById("pdfFileInput");
+document.getElementById("addPdfBtn").addEventListener("click", function(){
+  pdfFileInput.click();
+});
+pdfFileInput.addEventListener("change", function(){
+  addPdfFiles(pdfFileInput.files);
+  pdfFileInput.value = "";
+});
+document.getElementById("pdfList").addEventListener("click", function(e){
+  const openBtn = e.target.closest("[data-open-pdf]");
+  if (openBtn){
+    openPdf(openBtn.getAttribute("data-open-pdf"));
+    return;
+  }
+  const delBtn = e.target.closest("[data-del-pdf]");
+  if (delBtn){
+    if (confirm("このPDFを削除しますか？")){
+      deleteImage(delBtn.getAttribute("data-del-pdf"));
+    }
+  }
+});
+document.getElementById("addLinkBtn").addEventListener("click", addMonthLink);
+document.getElementById("monthLinkList").addEventListener("click", function(e){
+  const delBtn = e.target.closest("[data-del-link]");
+  if (delBtn){
+    if (confirm("このリンクを削除しますか？")){
+      deleteMonthLink(delBtn.getAttribute("data-del-link"));
+    }
+  }
+});
 
 // ---------- いつものパターン（テンプレート） ----------
 let editingTplId = null;   // 編集中のパターンのid
@@ -5318,7 +5782,7 @@ function renderOcrSources(){
   const sel = document.getElementById("ocrSavedImage");
   if (!sel) return;
   const current = sel.value;
-  const list = getMonthImages();
+  const list = getMonthImageFiles();
   sel.innerHTML = '<option value="">選んでください</option>' + list.map(function(im, i){
     return '<option value="' + im.id + '">' + (i + 1) + "枚目の画像</option>";
   }).join("");
@@ -6012,6 +6476,64 @@ document.getElementById("skinSelect").addEventListener("change", function(){
 });
 applySkin();
 
+// ---------- 表示設定（文字の大きさ・フォント） ----------
+// html[data-font-size] / html[data-font] で切り替える。選択は settings に保存し、バックアップにも含まれる
+const FONT_SIZES = ["small", "standard", "large"];
+const FONT_FAMILIES = ["system", "gothic", "round", "mincho"];
+function getFontSize(){
+  const s = settings && settings.fontSize;
+  return FONT_SIZES.indexOf(s) >= 0 ? s : "standard";
+}
+function getFontFamily(){
+  const s = settings && settings.fontFamily;
+  return FONT_FAMILIES.indexOf(s) >= 0 ? s : "system";
+}
+function applyDisplaySettings(){
+  const fs = getFontSize();
+  if (fs === "standard") document.documentElement.removeAttribute("data-font-size");
+  else document.documentElement.setAttribute("data-font-size", fs);
+  const ff = getFontFamily();
+  if (ff === "system") document.documentElement.removeAttribute("data-font");
+  else document.documentElement.setAttribute("data-font", ff);
+  const fsSel = document.getElementById("fontSizeSelect");
+  if (fsSel) fsSel.value = fs;
+  const ffSel = document.getElementById("fontSelect");
+  if (ffSel) ffSel.value = ff;
+}
+document.getElementById("fontSizeSelect").addEventListener("change", function(){
+  if (FONT_SIZES.indexOf(this.value) < 0) return;
+  settings.fontSize = this.value;
+  saveSettings();
+  applyDisplaySettings();
+});
+document.getElementById("fontSelect").addEventListener("change", function(){
+  if (FONT_FAMILIES.indexOf(this.value) < 0) return;
+  settings.fontFamily = this.value;
+  saveSettings();
+  applyDisplaySettings();
+});
+applyDisplaySettings();
+
+// ---------- かんたんモード ----------
+// 高度な機能を CSS（html[data-simple="on"]）で隠し、文字とボタンを大きくする表示モード。
+// データには一切触らない。選択は settings に保存し、バックアップにも含まれる
+function isSimpleMode(){
+  return !!(settings && settings.simpleMode);
+}
+function applySimpleMode(){
+  if (isSimpleMode()) document.documentElement.setAttribute("data-simple", "on");
+  else document.documentElement.removeAttribute("data-simple");
+  const chk = document.getElementById("simpleModeToggle");
+  if (chk) chk.checked = isSimpleMode();
+  applyTimeInputMode();
+}
+document.getElementById("simpleModeToggle").addEventListener("change", function(){
+  settings.simpleMode = this.checked;
+  saveSettings();
+  applySimpleMode();
+});
+applySimpleMode();
+
 // 自分の名前の初期表示と保存
 const myNamesInput = document.getElementById("myNamesInput");
 myNamesInput.value = settings.myNames || "";
@@ -6119,6 +6641,10 @@ const HELP_TEXTS = {
     title: "写真から読み取り",
     body: "シフト表の写真やPDFから文字を読み取って、シフトの下書きを作る機能です。\n読み取りは実験中なので、間違いが混ざることがあります。下書きの内容をよく確認してから登録してください。\n画像は外部に送信されず、このブラウザの中だけで処理されます。"
   },
+  attach: {
+    title: "シフト表の画像・PDF・リンク",
+    body: "表示中の月に、シフト表の画像（最大3枚）・PDF（最大3件）・リンクを付けておけます。\n画像は自動で縮小・圧縮して保存されます。PDFはそのままの形で保存するので、大きなファイル（目安：2MB超）はブラウザの保存容量の都合で保存できないことがあります。\nリンクは、シフト表のページなどのURLです。表示名は任意で、タップすると新しいタブで開きます。複数登録できます。\n画像・PDF・リンクはすべてバックアップに含まれます。"
+  },
   preprocess: {
     title: "画像の前処理",
     body: "写真の文字を読み取りやすくするための調整です。\n「強め」は、色のついたマスの中の文字も消えにくくなります。「なし」だと文字が薄くなって読めないことがあるので、うまく読めないときは「強め」を試してください。\n切り替えたら、もう一度「読み取る」を押してください。"
@@ -6146,6 +6672,14 @@ const HELP_TEXTS = {
   skin: {
     title: "スキン（見た目のテーマ）",
     body: "アプリ全体の色合いを変えられます。標準（青）・ピンク・紫・緑・ダーク・キュートの6種類です。\nキュートでは、スライダーやダイヤルのつまみと、カレンダーの印がハートになります。\n選んだスキンは保存されて、次回も同じ見た目で開きます。"
+  },
+  display: {
+    title: "表示設定（文字の大きさ・フォント）",
+    body: "文字の大きさは「小・標準・大」から選べ、画面全体の文字サイズに反映されます。\nフォントは「標準（システム）・ゴシック系・丸ゴシック系・明朝系」から選べます。端末に入っている書体の中から近いものが使われるため、端末によっては見た目が変わらない場合があります。\n選んだ内容は保存され、バックアップにも含まれます。"
+  },
+  simple: {
+    title: "かんたんモード",
+    body: "年配の方でも使いやすいように、高度な機能を隠してシンプルにするモードです。\nONにすると、読み取り（OCR）・期間別時給・研修時給・天引き率・交通費の細かい設定・その他収入・テンプレート・一括作成・月の添付などが隠れ、「シフトを入れる」「一覧を見る」「今月の合計」だけの画面になります。ボタンと文字も大きくなります。\nデータには一切触らないので、OFFに戻せば全部元通りになります。設定は保存され、バックアップにも含まれます。"
   },
   memo: {
     title: "メモ",
@@ -6204,6 +6738,7 @@ function buildBackupData(){
     shifts: shifts,
     settings: settings,
     images: monthImages,
+    monthLinks: monthLinks,
     ocrDrafts: ocrDrafts,
     templates: templates,
     dayMemos: dayMemos,
@@ -6229,7 +6764,7 @@ document.getElementById("exportDataBtn").addEventListener("click", function(){
     a.click();
     a.remove();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-    statusEl.textContent = "バックアップを書き出しました（バイト先" + workplaces.length + "件・シフト" + shifts.length + "件・パターン" + templates.length + "件・画像と下書きを含む全データ）。";
+    statusEl.textContent = "バックアップを書き出しました（バイト先" + workplaces.length + "件・シフト" + shifts.length + "件・パターン" + templates.length + "件・画像・PDF・リンクと下書きを含む全データ）。";
   } catch (e) {
     statusEl.textContent = "書き出しに失敗しました。ブラウザを変えてお試しください。";
   }
@@ -6250,7 +6785,7 @@ importFileInput.addEventListener("change", function(){
       statusEl.textContent = "読み込めませんでした。このアプリのバックアップファイル（JSON）を選んでください。";
       return;
     }
-    if (!window.confirm("現在のデータ（バイト先・シフト・画像・設定・下書き・パターン・日付メモ・メモ帳・受け取り確認・実際の金額・その他収入）を、読み込んだ内容で置き換えます。よろしいですか？")){
+    if (!window.confirm("現在のデータ（バイト先・シフト・画像・PDF・リンク・設定・下書き・パターン・日付メモ・メモ帳・受け取り確認・実際の金額・その他収入）を、読み込んだ内容で置き換えます。よろしいですか？")){
       statusEl.textContent = "読み込みをやめました。現在のデータはそのままです。";
       return;
     }
@@ -6259,6 +6794,7 @@ importFileInput.addEventListener("change", function(){
     shifts = data.shifts;
     settings = (data.settings && typeof data.settings === "object") ? data.settings : { myNames: "" };
     monthImages = (data.images && typeof data.images === "object" && !Array.isArray(data.images)) ? data.images : {};
+    monthLinks = normalizeMonthLinks((data.monthLinks && typeof data.monthLinks === "object" && !Array.isArray(data.monthLinks)) ? data.monthLinks : {});
     ocrDrafts = normalizeDrafts(data.ocrDrafts || []);
     templates = normalizeTemplates(data.templates || []);
     dayMemos = normalizeDayMemos((data.dayMemos && typeof data.dayMemos === "object" && !Array.isArray(data.dayMemos)) ? data.dayMemos : {});
@@ -6269,6 +6805,7 @@ importFileInput.addEventListener("change", function(){
     saveAll();
     saveSettings();
     saveImages();
+    saveMonthLinks();
     saveDrafts();
     saveTemplates();
     saveDayMemos();
@@ -6283,6 +6820,8 @@ importFileInput.addEventListener("change", function(){
     unlockRegisterButton();
     applyTimeInputMode();
     applySkin();
+    applyDisplaySettings();
+    applySimpleMode();
     render();
     statusEl.textContent = "データを読み込みました（バイト先" + workplaces.length + "件・シフト" + shifts.length + "件）。";
   }).catch(function(){
