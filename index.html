@@ -101,6 +101,23 @@
   .wp-actions{display:flex;gap:6px;}
   .hidden{display:none;}
   .note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;}
+  .image-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+  .image-thumb{position:relative;width:calc(33.333% - 7px);max-width:160px;}
+  .image-thumb img{
+    width:100%;aspect-ratio:1;object-fit:cover;display:block;
+    border:1px solid var(--line);border-radius:10px;cursor:pointer;background:#f3f4f6;
+  }
+  .image-thumb .del-image{
+    position:absolute;top:4px;right:4px;min-height:28px;padding:2px 8px;
+    font-size:12px;background:rgba(255,255,255,.95);color:var(--danger);border-color:#fecaca;
+  }
+  .image-count{font-size:13px;color:var(--muted);margin-left:8px;}
+  .lightbox{
+    position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:50;
+    display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer;
+  }
+  .lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;}
+  .lightbox.hidden{display:none;}
 </style>
 </head>
 <body>
@@ -124,6 +141,16 @@
       <h3>バイト先ごとの小計</h3>
       <div id="subtotals"></div>
     </div>
+  </section>
+
+  <!-- シフト表の画像 -->
+  <section class="card">
+    <h2>シフト表の画像<span class="image-count" id="imageCount"></span></h2>
+    <p class="note" id="imgMonthLabel" style="margin-top:0;"></p>
+    <div class="image-grid" id="imageGrid"></div>
+    <button class="primary" id="addImageBtn">＋ 画像を追加</button>
+    <input type="file" id="imageFileInput" accept="image/*" multiple class="hidden">
+    <p class="note">表示中の月に、シフト表の画像を最大3枚まで保存できます。PCではコピーした画像をこのページに貼り付け（Ctrl+V）ても追加できます。画像は自動で縮小・圧縮して保存されます。</p>
   </section>
 
   <!-- シフト一覧 -->
@@ -190,6 +217,11 @@
 
 </main>
 
+<!-- 画像の拡大表示 -->
+<div class="lightbox hidden" id="lightbox">
+  <img id="lightboxImg" alt="シフト表の画像（拡大）">
+</div>
+
 <script>
 "use strict";
 
@@ -233,6 +265,9 @@ function computePay(startMin, endMin, breakMin, wage, premiumPct){
 // ---------- データ管理（localStorage） ----------
 const LS_WP = "shiftPayApp.workplaces";
 const LS_SH = "shiftPayApp.shifts";
+const LS_IMG = "shiftPayApp.images";
+const MAX_IMAGES_PER_MONTH = 3;
+const MAX_IMAGE_WIDTH = 1200;
 
 function loadJSON(key, fallback){
   try {
@@ -249,6 +284,16 @@ function saveAll(){
 
 let workplaces = loadJSON(LS_WP, []);
 let shifts = loadJSON(LS_SH, []);
+let monthImages = loadJSON(LS_IMG, {}); // { "YYYY-MM": [ {id, dataUrl}, ... ] }
+
+function saveImages(){
+  try {
+    localStorage.setItem(LS_IMG, JSON.stringify(monthImages));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 let viewYear, viewMonth; // 表示中の月（month は 0〜11）
 (function(){
@@ -290,6 +335,129 @@ function esc(s){
   return String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// ---------- シフト表の画像 ----------
+function monthKey(){
+  return viewYear + "-" + String(viewMonth + 1).padStart(2, "0");
+}
+function getMonthImages(){
+  const list = monthImages[monthKey()];
+  return Array.isArray(list) ? list : [];
+}
+
+// 画像ファイルを canvas でリサイズ（幅最大 MAX_IMAGE_WIDTH px）し、JPEG の dataURL に変換
+function resizeImageToDataURL(file){
+  return new Promise(function(resolve, reject){
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+      if (!w || !h){ reject(new Error("画像のサイズが取得できませんでした")); return; }
+      if (w > MAX_IMAGE_WIDTH){
+        h = Math.round(h * MAX_IMAGE_WIDTH / w);
+        w = MAX_IMAGE_WIDTH;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = function(){
+      URL.revokeObjectURL(url);
+      reject(new Error("画像を読み込めませんでした"));
+    };
+    img.src = url;
+  });
+}
+
+// 画像ファイル（複数可）を表示中の月へ追加
+function addImageFiles(files){
+  const imageFiles = Array.prototype.filter.call(files || [], function(f){
+    return f && f.type && f.type.indexOf("image/") === 0;
+  });
+  if (imageFiles.length === 0) return;
+  const key = monthKey();
+  const current = getMonthImages().slice();
+  const room = MAX_IMAGES_PER_MONTH - current.length;
+  if (room <= 0){
+    alert("この月の画像は最大" + MAX_IMAGES_PER_MONTH + "枚までです。不要な画像を削除してから追加してください");
+    return;
+  }
+  const targets = imageFiles.slice(0, room);
+  if (imageFiles.length > room){
+    alert("この月はあと" + room + "枚まで追加できるため、先頭の" + room + "枚だけ追加します");
+  }
+  const additions = [];
+  let chain = Promise.resolve();
+  targets.forEach(function(file){
+    chain = chain.then(function(){
+      return resizeImageToDataURL(file).then(function(dataUrl){
+        additions.push({ id: newId(), dataUrl: dataUrl });
+      });
+    });
+  });
+  chain.then(function(){
+    if (additions.length === 0){
+      alert("画像を追加できませんでした");
+      return;
+    }
+    monthImages[key] = current.concat(additions);
+    if (!saveImages()){
+      monthImages[key] = current;
+      alert("保存容量がいっぱいで画像を保存できませんでした。古い月の画像を削除してからお試しください");
+      return;
+    }
+    render();
+  }).catch(function(){
+    alert("画像を追加できませんでした");
+  });
+}
+
+// 画像を1枚削除
+function deleteImage(id){
+  const key = monthKey();
+  monthImages[key] = getMonthImages().filter(function(im){ return im.id !== id; });
+  if (monthImages[key].length === 0) delete monthImages[key];
+  saveImages();
+  render();
+}
+
+// 画像のサムネイル描画
+function renderImages(){
+  document.getElementById("imgMonthLabel").textContent =
+    viewYear + "年" + (viewMonth + 1) + "月のシフト表";
+  const list = getMonthImages();
+  document.getElementById("imageCount").textContent =
+    "（" + list.length + " / " + MAX_IMAGES_PER_MONTH + "枚）";
+  const grid = document.getElementById("imageGrid");
+  if (list.length === 0){
+    grid.innerHTML = '<div class="empty">この月のシフト表画像はまだありません</div>';
+  } else {
+    grid.innerHTML = list.map(function(im){
+      return '<div class="image-thumb">' +
+        '<img src="' + im.dataUrl + '" alt="シフト表の画像" data-view-image="' + im.id + '">' +
+        '<button class="del-image" data-del-image="' + im.id + '">削除</button>' +
+        "</div>";
+    }).join("");
+  }
+  document.getElementById("addImageBtn").disabled = list.length >= MAX_IMAGES_PER_MONTH;
+}
+
+// 拡大表示
+function openLightbox(dataUrl){
+  document.getElementById("lightboxImg").src = dataUrl;
+  document.getElementById("lightbox").classList.remove("hidden");
+}
+function closeLightbox(){
+  document.getElementById("lightbox").classList.add("hidden");
+  document.getElementById("lightboxImg").removeAttribute("src");
 }
 
 // ---------- 描画 ----------
@@ -381,6 +549,9 @@ function render(){
     return '<option value="' + w.id + '">' + esc(w.name) + "</option>";
   }).join("");
   if (findWp(current)) sel.value = current;
+
+  // シフト表の画像
+  renderImages();
 }
 
 // ---------- 月切替 ----------
@@ -536,6 +707,49 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     }
   }
 });
+
+// ---------- シフト表の画像の操作 ----------
+const imageFileInput = document.getElementById("imageFileInput");
+document.getElementById("addImageBtn").addEventListener("click", function(){
+  imageFileInput.click();
+});
+imageFileInput.addEventListener("change", function(){
+  addImageFiles(imageFileInput.files);
+  imageFileInput.value = "";
+});
+
+// PC：クリップボードからの貼り付けで画像を追加
+document.addEventListener("paste", function(e){
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  const files = [];
+  for (let i = 0; i < items.length; i++){
+    if (items[i].type && items[i].type.indexOf("image/") === 0){
+      const f = items[i].getAsFile();
+      if (f) files.push(f);
+    }
+  }
+  if (files.length > 0){
+    e.preventDefault();
+    addImageFiles(files);
+  }
+});
+
+// サムネイルの拡大表示・削除（イベント委譲）
+document.getElementById("imageGrid").addEventListener("click", function(e){
+  const delBtn = e.target.closest("[data-del-image]");
+  if (delBtn){
+    if (confirm("この画像を削除しますか？")){
+      deleteImage(delBtn.getAttribute("data-del-image"));
+    }
+    return;
+  }
+  const imgEl = e.target.closest("[data-view-image]");
+  if (imgEl){
+    const im = getMonthImages().find(function(x){ return x.id === imgEl.getAttribute("data-view-image"); });
+    if (im) openLightbox(im.dataUrl);
+  }
+});
+document.getElementById("lightbox").addEventListener("click", closeLightbox);
 
 // 初期描画
 render();
