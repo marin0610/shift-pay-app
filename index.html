@@ -266,6 +266,7 @@
     position:absolute;top:4px;right:4px;min-height:28px;padding:2px 8px;
     font-size:12px;background:rgba(255,255,255,.95);color:var(--danger);border-color:var(--danger-line);
   }
+  .image-thumb .ocr-image{width:100%;margin-top:4px;min-height:32px;padding:2px 4px;font-size:12px;}
   .image-count{font-size:13px;color:var(--muted);margin-left:8px;}
   /* 月の添付（PDF・リンク）の行 */
   .attach-item{
@@ -792,21 +793,6 @@
     </div>
   </section>
 
-  <!-- 週のコピー（シフト一覧より下に配置） -->
-  <section class="card" id="weekCopyWrap" data-simple-hide>
-    <h2>週のコピー</h2>
-    <p class="note">ある週（月〜日）のシフトを、別の週にまとめてコピーできます。</p>
-    <label class="field-label" for="wcSrc">コピー元の週（週内の日付）</label>
-    <input type="date" id="wcSrc" class="text-input">
-    <label class="field-label" for="wcDst" style="margin-top:8px;">コピー先の週（週内の日付）</label>
-    <input type="date" id="wcDst" class="text-input">
-    <div class="crop-btns">
-      <button id="wcNextWeekBtn">コピー先を翌週にする</button>
-      <button id="wcRunBtn">週をコピー</button>
-    </div>
-    <p class="note" id="wcInfo"></p>
-  </section>
-
   <!-- 収入まとめ -->
   <section class="card" data-simple-hide>
     <h2><span id="incomeSummaryTitle">収入まとめ</span><button type="button" class="help-btn" data-help="income" aria-label="収入まとめの説明を表示">？</button></h2>
@@ -835,6 +821,21 @@
     </div>
   </section>
 
+  <!-- 週のコピー（使用頻度が低いため、収入まとめより下に配置） -->
+  <section class="card" id="weekCopyWrap" data-simple-hide>
+    <h2>週のコピー</h2>
+    <p class="note">ある週（月〜日）のシフトを、別の週にまとめてコピーできます。</p>
+    <label class="field-label" for="wcSrc">コピー元の週（週内の日付）</label>
+    <input type="date" id="wcSrc" class="text-input">
+    <label class="field-label" for="wcDst" style="margin-top:8px;">コピー先の週（週内の日付）</label>
+    <input type="date" id="wcDst" class="text-input">
+    <div class="crop-btns">
+      <button id="wcNextWeekBtn">コピー先を翌週にする</button>
+      <button id="wcRunBtn">週をコピー</button>
+    </div>
+    <p class="note" id="wcInfo"></p>
+  </section>
+
   <!-- シフト表の添付（画像・PDF・リンク） -->
   <section class="card" data-simple-hide>
     <h2>シフト表の画像・PDF・リンク<button type="button" class="help-btn" data-help="attach" aria-label="添付の説明を表示">？</button></h2>
@@ -861,7 +862,7 @@
     <p class="note">シフト表のページなどのURLを、表示中の月に登録できます。タップすると新しいタブで開きます。複数登録できます。</p>
   </section>
   <!-- 写真から読み取り（OCR・実験） -->
-  <section class="card" data-simple-hide>
+  <section class="card" id="ocrSection" data-simple-hide>
     <h2>写真から読み取り（実験）<button type="button" class="help-btn" data-help="ocr" aria-label="写真から読み取りの説明を表示">？</button></h2>
     <p class="note" style="margin-top:0;">シフト表のファイルや写真から文字を読み取り、シフトの下書きを作る実験機能です。いちばん正確に読めるのは、文字データの入ったPDFファイルからの読み取りです。写真からの読み取りは補助的な位置づけで、誤読が多くなります。</p>
     <p class="note warn-note">実験機能です。読み取り間違いがあるので、必ず確認・修正してから登録してください。</p>
@@ -3044,6 +3045,7 @@ function renderImages(){
       return '<div class="image-thumb">' +
         '<img src="' + im.dataUrl + '" alt="シフト表の画像" data-view-image="' + im.id + '">' +
         '<button class="del-image" data-del-image="' + im.id + '">削除</button>' +
+        '<button class="ocr-image" data-ocr-image="' + im.id + '">この画像で読み取る</button>' +
         "</div>";
     }).join("");
   }
@@ -4590,6 +4592,12 @@ document.addEventListener("paste", function(e){
 
 // サムネイルの拡大表示・削除（イベント委譲）
 document.getElementById("imageGrid").addEventListener("click", function(e){
+  const ocrBtn = e.target.closest("[data-ocr-image]");
+  if (ocrBtn){
+    const im = getMonthImages().find(function(x){ return x.id === ocrBtn.getAttribute("data-ocr-image"); });
+    if (im) useAttachmentImageForOcr(im);
+    return;
+  }
   const delBtn = e.target.closest("[data-del-image]");
   if (delBtn){
     if (confirm("この画像を削除しますか？")){
@@ -6541,6 +6549,16 @@ function setOcrImage(dataUrl){
   document.getElementById("ocrRunBtn").disabled = !ocrImageDataUrl;
 }
 
+// 添付画像を OCR の読み取り対象にセットし、読み取りセクションへ移動する
+function useAttachmentImageForOcr(im){
+  if (!im || !im.dataUrl) return;
+  const sel = document.getElementById("ocrSavedImage");
+  if (sel) sel.value = im.id;
+  setOcrImage(im.dataUrl);
+  const sec = document.getElementById("ocrSection");
+  if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 // 保存済みの今月の画像を OCR の選択肢に反映する
 function renderOcrSources(){
   const sel = document.getElementById("ocrSavedImage");
@@ -7595,7 +7613,7 @@ const HELP_TEXTS = {
   },
   attach: {
     title: "シフト表の画像・PDF・リンク",
-    body: "表示中の月に、シフト表の画像（最大3枚）・PDF（最大3件）・リンクを付けておけます。\n画像は自動で縮小・圧縮して保存されます。PDFはそのままの形で保存するので、大きなファイル（目安：2MB超）はブラウザの保存容量の都合で保存できないことがあります。\nリンクは、シフト表のページなどのURLです。表示名は任意で、タップすると新しいタブで開きます。複数登録できます。\n画像・PDF・リンクはすべてバックアップに含まれます。"
+    body: "表示中の月に、シフト表の画像（最大3枚）・PDF（最大3件）・リンクを付けておけます。\n画像は自動で縮小・圧縮して保存されます。PDFはそのままの形で保存するので、大きなファイル（目安：2MB超）はブラウザの保存容量の都合で保存できないことがあります。\n画像の「この画像で読み取る」ボタンを押すと、その画像が読み取り（写真から読み取り）の対象にセットされ、読み取りの欄へ移動します。\nリンクは、シフト表のページなどのURLです。表示名は任意で、タップすると新しいタブで開きます。複数登録できます。\n画像・PDF・リンクはすべてバックアップに含まれます。"
   },
   preprocess: {
     title: "画像の前処理",
