@@ -132,6 +132,23 @@
   /* かんたんモード：シフト追加ボタンは今月の合計のすぐ下に固定（カードの外に出るため余白とフォームの枠を付ける） */
   html[data-simple="on"] #toggleShiftForm{margin-bottom:16px;}
   html[data-simple="on"] #shiftForm{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;}
+  /* 通常モードでもシフト追加ボタンとフォームは今月の合計のすぐ下（カードの外）に置くため、フォームに枠を付ける */
+  div[data-tab-panel="shift"] > #toggleShiftForm{width:100%;margin-bottom:12px;}
+  div[data-tab-panel="shift"] > #shiftForm{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,.05);}
+  /* 電卓（設定タブ） */
+  .calc-display{
+    background:var(--fill);border:1px solid var(--line);border-radius:12px;
+    font-size:32px;font-weight:700;text-align:right;padding:14px 16px;
+    min-height:44px;overflow-x:auto;white-space:nowrap;margin-bottom:12px;
+  }
+  .calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .calc-grid button{
+    min-height:58px;font-size:21px;font-weight:600;border-radius:12px;
+    border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;
+  }
+  .calc-grid button.calc-op{background:var(--blue-light);color:var(--blue-dark);}
+  .calc-grid button.calc-eq{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .calc-grid button.calc-wide{grid-column:span 2;}
   /* かんたんモード専用の見出し（通常モードでは出さない） */
   .simple-block-title{display:none;}
   html[data-simple="on"] .simple-block-title{display:block;font-size:19px;margin:10px 0;}
@@ -635,57 +652,10 @@
     </div>
   </section>
 
-  <!-- シフト一覧 -->
-  <section class="card" id="shiftScheduleCard">
-    <h2 class="shift-list-main-title">シフト一覧<button type="button" class="help-btn" data-help="calendar" aria-label="カレンダー表示の説明を表示">？</button></h2>
-    <div id="stickyTotal" class="sticky-total"></div>
-    <div class="seg-control" role="group" aria-label="一覧の表示方法" style="margin-top:0;" data-simple-hide>
-      <button type="button" data-view-mode-btn="list" class="active">リスト</button>
-      <button type="button" data-view-mode-btn="calendar">カレンダー</button>
-    </div>
-    <div id="shiftListBlock">
-      <h3 class="simple-block-title">予定（シフト一覧）</h3>
-      <div id="shiftList"></div>
-    </div>
-    <div id="shiftCalendarBlock" class="hidden">
-      <h3 class="simple-block-title">カレンダー</h3>
-      <div id="shiftCalendar"></div>
-      <button type="button" class="small" id="calRangeBtn" data-simple-hide>📅 範囲を選んでまとめて登録</button>
-      <div id="calRangePanel" class="hidden" data-simple-hide>
-        <p class="note" id="calRangeInfo"></p>
-        <label for="crWorkplace">バイト先</label>
-        <select id="crWorkplace"></select>
-        <label for="crCategory">区分</label>
-        <select id="crCategory"></select>
-        <div class="row2">
-          <div>
-            <label for="crStart">開始</label>
-            <input type="time" id="crStart">
-          </div>
-          <div>
-            <label for="crEnd">終了</label>
-            <input type="time" id="crEnd">
-          </div>
-        </div>
-        <label for="crEndOffset">終了日</label>
-        <select id="crEndOffset">
-          <option value="0">当日（開始より前なら翌日）</option>
-          <option value="1">翌日</option>
-          <option value="2">翌々日</option>
-        </select>
-        <label for="crBreak">休憩（分）</label>
-        <input type="number" id="crBreak" min="0" step="5" value="0">
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button type="button" class="primary" id="crRegisterBtn" style="flex:1;">この範囲に登録</button>
-          <button type="button" class="small" id="crCancelBtn">やめる</button>
-        </div>
-        <p class="note" id="crStatus"></p>
-      </div>
-      <div id="calDayDetail" class="hidden"></div>
-    </div>
-    <button class="primary" id="toggleShiftForm">＋ シフトを追加</button>
+  <!-- シフトを追加（今月の合計のすぐ下に配置） -->
+  <button class="primary" id="toggleShiftForm">＋ シフトを追加</button>
 
-    <form id="shiftForm" class="hidden">
+  <form id="shiftForm" class="hidden">
       <label for="sfDate">日付</label>
       <input type="date" id="sfDate" required>
       <div id="sfBulkArea" data-simple-hide>
@@ -771,6 +741,55 @@
         <button type="button" id="sfCancel">キャンセル</button>
       </div>
     </form>
+
+  <!-- シフト一覧 -->
+  <section class="card" id="shiftScheduleCard">
+    <h2 class="shift-list-main-title">シフト一覧<button type="button" class="help-btn" data-help="calendar" aria-label="カレンダー表示の説明を表示">？</button></h2>
+    <div id="stickyTotal" class="sticky-total"></div>
+    <div class="seg-control" role="group" aria-label="一覧の表示方法" style="margin-top:0;" data-simple-hide>
+      <button type="button" data-view-mode-btn="list" class="active">リスト</button>
+      <button type="button" data-view-mode-btn="calendar">カレンダー</button>
+    </div>
+    <div id="shiftListBlock">
+      <h3 class="simple-block-title">予定（シフト一覧）</h3>
+      <div id="shiftList"></div>
+    </div>
+    <div id="shiftCalendarBlock" class="hidden">
+      <h3 class="simple-block-title">カレンダー</h3>
+      <div id="shiftCalendar"></div>
+      <button type="button" class="small" id="calRangeBtn" data-simple-hide>📅 範囲を選んでまとめて登録</button>
+      <div id="calRangePanel" class="hidden" data-simple-hide>
+        <p class="note" id="calRangeInfo"></p>
+        <label for="crWorkplace">バイト先</label>
+        <select id="crWorkplace"></select>
+        <label for="crCategory">区分</label>
+        <select id="crCategory"></select>
+        <div class="row2">
+          <div>
+            <label for="crStart">開始</label>
+            <input type="time" id="crStart">
+          </div>
+          <div>
+            <label for="crEnd">終了</label>
+            <input type="time" id="crEnd">
+          </div>
+        </div>
+        <label for="crEndOffset">終了日</label>
+        <select id="crEndOffset">
+          <option value="0">当日（開始より前なら翌日）</option>
+          <option value="1">翌日</option>
+          <option value="2">翌々日</option>
+        </select>
+        <label for="crBreak">休憩（分）</label>
+        <input type="number" id="crBreak" min="0" step="5" value="0">
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button type="button" class="primary" id="crRegisterBtn" style="flex:1;">この範囲に登録</button>
+          <button type="button" class="small" id="crCancelBtn">やめる</button>
+        </div>
+        <p class="note" id="crStatus"></p>
+      </div>
+      <div id="calDayDetail" class="hidden"></div>
+    </div>
   </section>
 
   <!-- 週のコピー（シフト一覧より下に配置） -->
@@ -844,15 +863,16 @@
   <!-- 写真から読み取り（OCR・実験） -->
   <section class="card" data-simple-hide>
     <h2>写真から読み取り（実験）<button type="button" class="help-btn" data-help="ocr" aria-label="写真から読み取りの説明を表示">？</button></h2>
-    <p class="note" style="margin-top:0;">シフト表の写真から文字を読み取り、シフトの下書きを作る実験機能です。</p>
+    <p class="note" style="margin-top:0;">シフト表のファイルや写真から文字を読み取り、シフトの下書きを作る実験機能です。いちばん正確に読めるのは、文字データの入ったPDFファイルからの読み取りです。写真からの読み取りは補助的な位置づけで、誤読が多くなります。</p>
     <p class="note warn-note">実験機能です。読み取り間違いがあるので、必ず確認・修正してから登録してください。</p>
     <p class="note">画像はブラウザの中で処理され、外部に送信されません（読み取りライブラリと言語データのダウンロードのみ通信します）。</p>
-    <p class="note">PDFにも対応しています。PDFに文字データが入っている場合は、写真より正確に読み取れます。文字データが入っていないPDF（スキャン画像など）は、画像として読み取ります。</p>
+    <p class="note">【推奨】シフト表をPDFファイルでもらえる場合は、そのPDFから読み取るのがおすすめです。文字データが入っているPDFは、写真とは比べものにならないほど正確に読み取れます。文字データが入っていないPDF（スキャン画像など）は画像として読み取るため、写真と同じくらいの精度になります。</p>
 
     <label class="ocr-label" for="ocrSavedImage">保存済みの今月の画像から選ぶ</label>
     <select id="ocrSavedImage" class="ocr-select"></select>
-    <label class="ocr-label">または、新しい画像・PDFファイルを選ぶ</label>
-    <button id="ocrFileBtn">画像・PDFファイルを選ぶ</button>
+    <label class="ocr-label">または、新しいファイルを選ぶ（推奨：PDFファイル）</label>
+    <button id="ocrFileBtn">ファイルを選ぶ（PDF推奨）</button>
+    <p class="note">PDFファイルが手元にある場合は、写真を撮るよりこのボタンでPDFを選ぶほうが正確です。写真しかない場合は、下の「帯に分けて読み取る」や切り取りを使うと読み取りやすくなります。</p>
     <input type="file" id="ocrFileInput" accept="image/*,.pdf" class="hidden">
     <img id="ocrPreview" class="ocr-preview hidden" alt="読み取り対象の画像">
     <p class="note hidden" id="ocrPdfName"></p>
@@ -898,8 +918,18 @@
       <option value="weak">弱め（白黒化＋コントラストのみ）</option>
       <option value="strong" selected>強め（適応的二値化・色付きのマス向け）</option>
     </select>
-    <p class="note">前処理では、写真を拡大し、白黒化とコントラスト強調を行います。「強め」はさらに適応的二値化（場所ごとの明るさに合わせて文字と背景を分ける処理）を行い、色付きのマスの中の文字が消えにくくなります。切り替えた場合は、もう一度「読み取る」を押してください。前処理後の画像は下に表示されます。</p>
+    <p class="note">前処理では、写真を拡大し、白黒化とコントラスト強調を行います。「強め」はさらに適応的二値化（場所ごとの明るさに合わせて文字と背景を分ける処理）を行い、色付きのマスの中の文字が消えにくくなります。切り替えた場合は、もう一度「読み取る」を押してください。前処理後の画像は下に表示されます。きれいに印刷された表（パソコンのシフト表など）は、「強め」だと数字が痩せて読みにくくなることがあります。その場合は「弱め」を試してください。</p>
     <img id="ocrPreprocessedPreview" class="ocr-preview hidden" alt="前処理後の画像">
+    <label class="ocr-label" for="ocrBandMode">帯に分けて読み取る（写真のみ・長い表向け）</label><button type="button" class="help-btn" data-help="band" aria-label="帯に分けて読み取る説明を表示">？</button>
+    <select id="ocrBandMode" class="ocr-select">
+      <option value="off" selected>分けない（通常）</option>
+      <option value="auto">自動で分ける（長い表におすすめ）</option>
+      <option value="2">2つに分ける</option>
+      <option value="3">3つに分ける</option>
+      <option value="4">4つに分ける</option>
+      <option value="6">6つに分ける</option>
+    </select>
+    <p class="note">1か月分など行数の多い表は、全体を一度に読むと文字が小さくて崩れやすくなります。横の帯（数行ずつの塊）に分けて上から順に読むと読み取りやすくなります。帯の境目は少し重ねて読み、重なった行は自動で1つにまとめます。切り取り・前処理と組み合わせて使えます。PDFには使えません。</p>
     <button class="primary" id="ocrRunBtn" disabled style="margin-top:10px;">読み取る</button>
     <p class="note" id="ocrStatus"></p>
 
@@ -1277,6 +1307,34 @@
     <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・PDF・リンク・OCRの下書き・いつものパターン・日付メモ・メモ帳・受け取り確認・実際の金額・その他収入をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。「バイト先だけを読み込み」は、バックアップファイルの中のバイト先だけを取り込むもので、同じバイト先は読み込んだ内容で上書きし、新しいバイト先は追加します。シフトや他のデータは変わりません。</p>
     <p class="note">データはこのブラウザの中に保存されます。LINEなどのアプリ内ブラウザで開くと、データが消えやすくなります。Safariで開いて「ホーム画面に追加」しておくと、データが残りやすくなります。別のブラウザで開くと、別のデータになります。大事なデータは、ときどき書き出してバックアップしてください。</p>
     <p class="note register-status" id="backupStatus"></p>
+  </section>
+
+  <!-- 電卓 -->
+  <section class="card" data-simple-hide>
+    <h2>電卓</h2>
+    <p class="note">給料の検算などに使える、かんたんな電卓です。</p>
+    <div class="calc-display" id="calcDisplay">0</div>
+    <div class="calc-grid" id="calcGrid">
+      <button type="button" data-calc-key="C" class="calc-op">C</button>
+      <button type="button" data-calc-key="BS" class="calc-op">⌫</button>
+      <button type="button" data-calc-key="%" class="calc-op">%</button>
+      <button type="button" data-calc-key="/" class="calc-op">÷</button>
+      <button type="button" data-calc-key="7">7</button>
+      <button type="button" data-calc-key="8">8</button>
+      <button type="button" data-calc-key="9">9</button>
+      <button type="button" data-calc-key="*" class="calc-op">×</button>
+      <button type="button" data-calc-key="4">4</button>
+      <button type="button" data-calc-key="5">5</button>
+      <button type="button" data-calc-key="6">6</button>
+      <button type="button" data-calc-key="-" class="calc-op">−</button>
+      <button type="button" data-calc-key="1">1</button>
+      <button type="button" data-calc-key="2">2</button>
+      <button type="button" data-calc-key="3">3</button>
+      <button type="button" data-calc-key="+" class="calc-op">＋</button>
+      <button type="button" data-calc-key="0" class="calc-wide">0</button>
+      <button type="button" data-calc-key=".">.</button>
+      <button type="button" data-calc-key="=" class="calc-eq">＝</button>
+    </div>
   </section>
 
   </div>
@@ -2583,6 +2641,7 @@ function buildIncomeSummaryHtml(summary, prevSummary, year, month){
         '<div class="income-wp-sub">' + w.count + "件 ・ " + fmtDuration(w.min) + "</div>" +
         '<div class="income-wp-sub">受け取り：' + paymentMethodLabel(w) + "</div>" +
         (w.payType === "monthly" ? '<div class="income-wp-sub">月給（時間数によらず固定・シフトは出勤記録）</div>' : "") +
+        (w.payType === "monthly" && w.min > 0 ? '<div class="income-wp-sub">実質時給 ' + fmtYen(Math.round(w.pay / (w.min / 60))) + '（月給 ÷ 勤務時間）</div>' : "") +
         (w.payType === "daily" ? '<div class="income-wp-sub">日給（1シフトごとの金額）</div>' : "") +
         (w.transport > 0 ? '<div class="income-wp-sub">' + esc(w.transportLabel) + " " + fmtYen(w.transport) + "</div>" : "") +
         (w.deductionRate > 0 ? '<div class="income-wp-sub">天引き（' + w.deductionRate + '%）−' + fmtYen(w.deduction) + "</div>" +
@@ -5779,21 +5838,25 @@ function preprocessPixelsInPlace(data, w, h, mode){
 // === OCR PREPROCESS END ===
 
 // 前処理後の拡大上限（幅px）。小さい画像は最大でこの幅まで拡大する
-const OCR_PREPROCESS_MAX_WIDTH = 2400;
+// 大きくしすぎると（幅2000px超）読み取りエンジンのレイアウト解析が崩れて
+// かえって読めなくなることが実測で分かったため、1800pxを上限にしている
+const OCR_PREPROCESS_MAX_WIDTH = 1800;
 
 // OCR前の拡大倍率を決める純粋関数
-// 幅2400px未満の画像は 2400px を上限に最大3倍まで拡大する
-// （幅1200px未満の小さい画像は、割り算の性質上つねに2倍以上になる）
+// 幅1800px未満の画像は 1800px を上限に最大2倍まで拡大する
+// （幅900px未満の小さい画像は、割り算の性質上つねに2倍になる）
 function ocrScaleForWidth(srcW){
   const w = Number(srcW) || 0;
   if (w <= 0 || w >= OCR_PREPROCESS_MAX_WIDTH) return 1;
-  return Math.min(OCR_PREPROCESS_MAX_WIDTH / w, 3);
+  return Math.min(OCR_PREPROCESS_MAX_WIDTH / w, 2);
 }
 
 // 画像を読み取り用に前処理した dataURL を返す
-// （幅が小さい場合は最大2400px・最大3倍まで拡大 → グレースケール化 →
+// （幅が小さい場合は最大1800px・最大2倍まで拡大 → グレースケール化 →
 //   コントラスト強調 → level に応じて適応的二値化。PDFの読み取りには使わない）
 // level: "weak" = 二値化なし / それ以外 = "strong"（適応的二値化）
+// 「強め」は、先に拡大してから二値化すると印刷された表の数字が痩せて崩れることが
+// 実測で分かったため、元の解像度のまま二値化してから拡大する順序にしている
 function preprocessImageForOcr(dataUrl, level){
   return new Promise(function(resolve, reject){
     const img = new Image();
@@ -5810,6 +5873,24 @@ function preprocessImageForOcr(dataUrl, level){
         const ctx = canvas.getContext("2d");
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, w, h);
+        if (level !== "weak" && scale > 1){
+          // 強め：元の解像度で二値化 → その結果を拡大する
+          const native = document.createElement("canvas");
+          native.width = srcW;
+          native.height = srcH;
+          const nctx = native.getContext("2d");
+          nctx.fillStyle = "#ffffff";
+          nctx.fillRect(0, 0, srcW, srcH);
+          nctx.drawImage(img, 0, 0, srcW, srcH);
+          const nData = nctx.getImageData(0, 0, srcW, srcH);
+          preprocessPixelsInPlace(nData.data, srcW, srcH, "strong");
+          nctx.putImageData(nData, 0, 0);
+          ctx.imageSmoothingEnabled = true;
+          if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(native, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/png"));
+          return;
+        }
         ctx.drawImage(img, 0, 0, w, h);
         const imageData = ctx.getImageData(0, 0, w, h);
         preprocessPixelsInPlace(imageData.data, w, h, level === "weak" ? "weak" : "strong");
@@ -5914,6 +5995,85 @@ function concatCropLayout(rectA, rectB, gap){
   };
 }
 // === OCR CROP LOGIC END ===
+
+// === OCR BAND LOGIC START ===
+// 画像を横の帯（数行ずつの塊）に分ける計画を立てる純粋関数
+// mode: "off" = 分けない / "auto" = 高さから自動で決める / "2"〜"6" = その数に分ける
+// 戻り値：[{y0, y1}]（元画像のピクセル座標）。帯の境目は、行が途中で切れて
+// 誤読・二重読みにならないよう、帯の幅の約22%ずつ重ねる（重なった行は
+// mergeBandTexts と下書き側の重複防止で1つにまとめる）
+function planOcrBands(imgW, imgH, mode){
+  const W = Number(imgW) || 0;
+  const H = Number(imgH) || 0;
+  if (!(W > 0) || !(H > 0)) return [{ y0: 0, y1: 0 }];
+  let count = 1;
+  if (mode === "auto"){
+    // 帯1つの高さが幅の45%くらいになる数を目安にする（数行〜十数行ずつ）
+    const target = Math.max(120, W * 0.45);
+    count = Math.round(H / target);
+    if (count < 1) count = 1;
+    if (count > 8) count = 8;
+  } else {
+    const n = parseInt(mode, 10);
+    if (n >= 2) count = Math.min(8, n);
+  }
+  if (count <= 1 || H < 80) return [{ y0: 0, y1: H }];
+  const core = H / count;
+  const overlap = Math.round(core * 0.22);
+  const bands = [];
+  for (let i = 0; i < count; i++){
+    const cy0 = Math.round(i * core);
+    const cy1 = Math.round((i + 1) * core);
+    bands.push({
+      y0: Math.max(0, cy0 - (i > 0 ? overlap : 0)),
+      y1: Math.min(H, cy1 + (i < count - 1 ? overlap : 0))
+    });
+  }
+  return bands;
+}
+
+// 帯ごとに読み取ったテキストを、上から順につなげる純粋関数
+// ・まったく同じ行は1つにまとめる（帯の重なりで同じ行が2回読まれるため）
+// ・同じ日付で始まる行同士は、短い行の要素がすべて長い行に含まれていれば
+//   短い行を落とす（見出しに近い帯で最後の列だけ別ブロックに分かれて
+//   時刻が欠けた行が残るのを防ぐ。時刻が違う行は要素が一致しないので残る）
+function mergeBandTexts(texts){
+  const seen = {};
+  const lines = [];
+  (texts || []).forEach(function(t){
+    String(t || "").split(/\r?\n/).forEach(function(raw){
+      const line = String(raw).replace(/\s+$/, "");
+      if (!line.trim()) return;
+      const key = line.replace(/\s+/g, " ").trim();
+      if (seen[key]) return;
+      seen[key] = true;
+      lines.push(line);
+    });
+  });
+  function dateKeyOf(line){
+    const m = line.replace(/\s+/g, " ").trim().match(/^(\d{1,2})[\/／](\d{1,2})/);
+    return m ? (Number(m[1]) + "/" + Number(m[2])) : null;
+  }
+  function tokensOf(line){
+    return line.replace(/\s+/g, " ").trim().split(" ");
+  }
+  const drop = {};
+  for (let i = 0; i < lines.length; i++){
+    const dk = dateKeyOf(lines[i]);
+    if (!dk) continue;
+    const ti = tokensOf(lines[i]);
+    for (let j = 0; j < lines.length; j++){
+      if (i === j || dateKeyOf(lines[j]) !== dk) continue;
+      const tj = tokensOf(lines[j]);
+      if (ti.length < tj.length && ti.every(function(t){ return tj.indexOf(t) >= 0; })){
+        drop[i] = true;
+        break;
+      }
+    }
+  }
+  return lines.filter(function(_, i){ return !drop[i]; }).join("\n");
+}
+// === OCR BAND LOGIC END ===
 
 // 元画像から指定範囲（元画像のピクセル座標）だけを切り取った dataURL を返す
 function cropImageToDataUrl(dataUrl, natRect){
@@ -6186,8 +6346,14 @@ function recognizeImageText(dataUrl, page, onProgress){
     logger: function(m){ if (onProgress) onProgress(m); }
   }).then(function(w){
     worker = w;
-    return worker.recognize(dataUrl, {}, { text: true, tsv: true }).catch(function(){
-      return worker.recognize(dataUrl);
+    // 表向けにページセグメンテーション（PSM 4：大きさの違う列が並ぶ文書として扱う）を指定する
+    const setParams = (typeof worker.setParameters === "function")
+      ? worker.setParameters({ tessedit_pageseg_mode: "4" }).catch(function(){})
+      : Promise.resolve();
+    return setParams.then(function(){
+      return worker.recognize(dataUrl, {}, { text: true, tsv: true }).catch(function(){
+        return worker.recognize(dataUrl);
+      });
     });
   }).then(function(result){
     if (worker) worker.terminate();
@@ -6443,12 +6609,147 @@ function runOcr(){
   runOcrForSource(ocrImageDataUrl);
 }
 
+// 画像の自然サイズ（ピクセル）を返す
+function getImageNaturalSize(dataUrl){
+  return new Promise(function(resolve, reject){
+    const img = new Image();
+    img.onload = function(){
+      resolve({ w: img.naturalWidth || img.width, h: img.naturalHeight || img.height });
+    };
+    img.onerror = function(){ reject(new Error("画像を読み込めませんでした")); };
+    img.src = dataUrl;
+  });
+}
+
 // 指定した画像（全体、または切り取り済みの画像）を対象に、前処理→OCRを行う
+// 「帯に分けて読み取る」が選ばれていて帯が2つ以上になる場合は、帯ごとの読み取りに回す
 function runOcrForSource(sourceUrl){
   if (typeof Tesseract === "undefined"){
     alert("読み取り用ライブラリを読み込めませんでした。インターネット接続を確認して、ページを再読み込みしてください");
     return;
   }
+  const bandSel = document.getElementById("ocrBandMode");
+  const bandMode = bandSel ? bandSel.value : "off";
+  if (bandMode && bandMode !== "off"){
+    getImageNaturalSize(sourceUrl).then(function(size){
+      const bands = planOcrBands(size.w, size.h, bandMode);
+      if (bands.length > 1){
+        runOcrBanded(sourceUrl, bands);
+        return;
+      }
+      runOcrSingle(sourceUrl);
+    }).catch(function(){
+      runOcrSingle(sourceUrl);
+    });
+    return;
+  }
+  runOcrSingle(sourceUrl);
+}
+
+// 帯に分けて読み取る：帯ごとに（切り出し→前処理→読み取り）を行い、
+// 結果テキストを上から順につなげる。進捗は帯ごとに表示する
+function runOcrBanded(sourceUrl, bands){
+  const statusEl = document.getElementById("ocrStatus");
+  const runBtn = document.getElementById("ocrRunBtn");
+  const cropRunBtn = document.getElementById("ocrCropRunBtn");
+  runBtn.disabled = true;
+  if (cropRunBtn) cropRunBtn.disabled = true;
+  const levelSel = document.getElementById("ocrPreprocessLevel");
+  const preLevel = levelSel ? levelSel.value : "strong";
+  showPreprocessedPreview(null);
+  let worker = null;
+  const texts = [];
+  const allWords = [];
+  let imgW = 0;
+  getImageNaturalSize(sourceUrl).then(function(size){
+    imgW = size.w;
+    statusEl.textContent = "準備中…";
+    return Tesseract.createWorker("jpn+eng", 1, {
+      logger: function(m){
+        if (m && typeof m.progress === "number" && m.status !== "recognizing text"){
+          statusEl.textContent = "準備中… " + Math.round(m.progress * 100) + "%（初回は言語データをダウンロードするため、少し時間がかかります）";
+        }
+      }
+    });
+  }).then(function(w){
+    worker = w;
+    // 表向けにページセグメンテーション（PSM 4：大きさの違う列が並ぶ文書として扱う）を指定する
+    const setParams = (typeof worker.setParameters === "function")
+      ? worker.setParameters({ tessedit_pageseg_mode: "4" }).catch(function(){})
+      : Promise.resolve();
+    return setParams;
+  }).then(function(){
+    // 1つの範囲（帯）を切り出し→前処理→読み取りして、結果データを返す
+    function readRect(rect){
+      return cropImageToDataUrl(sourceUrl, rect).then(function(bandUrl){
+        if (preLevel === "none") return upscaleImageForOcr(bandUrl);
+        return preprocessImageForOcr(bandUrl, preLevel).catch(function(){ return bandUrl; });
+      }).then(function(targetUrl){
+        return worker.recognize(targetUrl, {}, { text: true, tsv: true }).catch(function(){
+          return worker.recognize(targetUrl);
+        });
+      }).then(function(result){
+        return (result && result.data) || {};
+      });
+    }
+    let chain = Promise.resolve();
+    bands.forEach(function(band, idx){
+      chain = chain.then(function(){
+        statusEl.textContent = "帯 " + (idx + 1) + " / " + bands.length + " を読み取り中…";
+        const rects = [];
+        if (idx === 0){
+          // 最初の帯は、見出し行のすぐ下の行で最後の列（終了時刻など）が
+          // 読み取りから落ちることがあるため、見出し部分（帯の上部10%）を
+          // 除いた範囲でも読み取り、完全な行を先につなげる（不完全な行は
+          // mergeBandTexts が完全な行に吸収する）
+          const cut = Math.round((band.y1 - band.y0) * 0.10);
+          if (cut >= 8 && band.y1 - band.y0 - cut >= 40){
+            rects.push({ x: 0, y: band.y0 + cut, w: imgW, h: band.y1 - band.y0 - cut });
+          }
+        }
+        rects.push({ x: 0, y: band.y0, w: imgW, h: band.y1 - band.y0 });
+        let sub = Promise.resolve();
+        rects.forEach(function(rect){
+          sub = sub.then(function(){ return readRect(rect); }).then(function(data){
+            texts.push(data.text || "");
+            extractWordsFromResult(data, idx).forEach(function(it){ allWords.push(it); });
+          });
+        });
+        return sub;
+      });
+    });
+    return chain;
+  }).then(function(){
+    let text = mergeBandTexts(texts);
+    let note = "帯" + bands.length + "つに分けて読み取りました。";
+    // 自分の名前が登録されていれば、その名前の列だけを対象にする（帯をまたいでも列の位置は共通）
+    if (getMyNames().length > 0){
+      if (allWords.length > 0){
+        const res = filterItemsByMyColumn(allWords);
+        if (res && res.foundName){
+          text = buildTextFromItems(res.items);
+          note += "「" + res.foundName + "」の列だけを対象にしました。";
+        } else {
+          note += "登録した名前が見つからなかったため、全体を対象にしています。";
+        }
+      } else {
+        note += "名前の位置を取得できなかったため、全体を対象にしています。";
+      }
+    }
+    document.getElementById("ocrText").value = text;
+    statusEl.textContent = "読み取りが終わりました。内容を確認して「下書きを作成」を押してください（" + note + "）";
+  }).catch(function(){
+    statusEl.textContent = "";
+    alert("読み取りに失敗しました。画像を変えてお試しください");
+  }).then(function(){
+    runBtn.disabled = false;
+    updateCropUi();
+    if (worker) worker.terminate();
+  });
+}
+
+// 帯に分けず、画像全体を1回で読み取る
+function runOcrSingle(sourceUrl){
   const statusEl = document.getElementById("ocrStatus");
   const runBtn = document.getElementById("ocrRunBtn");
   const cropRunBtn = document.getElementById("ocrCropRunBtn");
@@ -6493,9 +6794,10 @@ function runOcrForSource(sourceUrl){
       }
     }).then(function(w){
       worker = w;
-      // 表向けにページセグメンテーション（PSM 6：均一なテキストブロックとして扱う）を指定する
+      // 表向けにページセグメンテーション（PSM 4：大きさの違う列が並ぶ文書として扱う）を指定する
+      // （PSM 6だと罫線のある表で日付や時刻のコロンが落ちて崩れることが実測で分かった）
       const setParams = (typeof worker.setParameters === "function")
-        ? worker.setParameters({ tessedit_pageseg_mode: "6" }).catch(function(){})
+        ? worker.setParameters({ tessedit_pageseg_mode: "4" }).catch(function(){})
         : Promise.resolve();
       return setParams.then(function(){
         return worker.recognize(targetUrl, {}, { text: true, tsv: true }).catch(function(){
@@ -7163,23 +7465,18 @@ function applySimpleMode(){
   relocateShiftAdd();
   applyTimeInputMode();
 }
-// かんたんモードでは「シフトを追加」ボタンと入力フォームを今月の合計のすぐ下に固定する
-// （予定とカレンダーが入れ替わっても追加の場所は変わらない）。OFFでは元の位置（一覧カードの末尾）に戻す
+// 「シフトを追加」ボタンと入力フォームは、通常・かんたん両モードとも今月の合計のすぐ下に置く
+// （予定とカレンダーが入れ替わっても追加の場所は変わらない）
 function relocateShiftAdd(){
   const summary = document.getElementById("monthSummaryCard");
   const schedule = document.getElementById("shiftScheduleCard");
   const btn = document.getElementById("toggleShiftForm");
   const form = document.getElementById("shiftForm");
   if (!summary || !schedule || !btn || !form) return;
-  if (isSimpleMode()){
-    const panel = summary.parentNode;
-    if (!panel) return;
-    panel.insertBefore(btn, schedule);
-    panel.insertBefore(form, schedule);
-  } else {
-    schedule.appendChild(btn);
-    schedule.appendChild(form);
-  }
+  const panel = summary.parentNode;
+  if (!panel) return;
+  panel.insertBefore(btn, schedule);
+  panel.insertBefore(form, schedule);
 }
 document.getElementById("simpleModeToggle").addEventListener("change", function(){
   settings.simpleMode = this.checked;
@@ -7294,7 +7591,7 @@ document.getElementById("noteList").addEventListener("click", function(e){
 const HELP_TEXTS = {
   ocr: {
     title: "写真から読み取り",
-    body: "シフト表の写真やPDFから文字を読み取って、シフトの下書きを作る機能です。\n読み取りは実験中なので、間違いが混ざることがあります。下書きの内容をよく確認してから登録してください。\n画像は外部に送信されず、このブラウザの中だけで処理されます。"
+    body: "シフト表のファイルや写真から文字を読み取って、シフトの下書きを作る機能です。\n【推奨】いちばん正確なのは、文字データの入ったPDFファイルからの読み取りです。シフト表をPDFでもらえる場合は、写真を撮らずにPDFファイルを選んでください。文字をそのまま取り出せるので、誤読がほとんどありません。\n写真からの読み取りは補助的な位置づけです。文字を推測して読むため、どうしても誤読が混ざります。長い表は「帯に分けて読み取る」、色付きのマスは前処理「強め」、きれいな印刷の表は前処理「弱め」が向いています。\n読み取りは実験中なので、間違いが混ざることがあります。下書きの内容をよく確認してから登録してください。\n画像は外部に送信されず、このブラウザの中だけで処理されます。"
   },
   attach: {
     title: "シフト表の画像・PDF・リンク",
@@ -7302,7 +7599,11 @@ const HELP_TEXTS = {
   },
   preprocess: {
     title: "画像の前処理",
-    body: "写真の文字を読み取りやすくするための調整です。\n「強め」は、色のついたマスの中の文字も消えにくくなります。「なし」だと文字が薄くなって読めないことがあるので、うまく読めないときは「強め」を試してください。\n切り替えたら、もう一度「読み取る」を押してください。"
+    body: "写真の文字を読み取りやすくするための調整です。\n「強め」は、色のついたマスの中の文字も消えにくくなります。「なし」だと文字が薄くなって読めないことがあるので、うまく読めないときは「強め」を試してください。\nただし、パソコンで作られたきれいな印刷の表では、「強め」だと数字が痩せて読みにくくなることがあります。その場合は「弱め（白黒化＋コントラストのみ）」がおすすめです。\n切り替えたら、もう一度「読み取る」を押してください。"
+  },
+  band: {
+    title: "帯に分けて読み取る",
+    body: "1か月分など行数の多い表を、横の帯（数行ずつの塊）に分けて、上から順に読み取る機能です。\n全体を一度に読むと文字が小さくて崩れやすくなりますが、帯ごとに分けて拡大して読むと読み取りやすくなります。\n帯の境目は少し重ねて読み、重なった行は自動で1つにまとめます。切り取りや前処理と組み合わせて使えます（PDFには使えません）。\n「自動で分ける」がおすすめです。分ける数を指定することもできます。"
   },
   crop: {
     title: "切り取り",
@@ -7537,6 +7838,75 @@ importWpFileInput.addEventListener("change", function(){
 // 保存済みのOCR下書きを復元する（ページを開き直しても下書きが残る）
 ocrDrafts = loadDrafts();
 if (ocrDrafts.length > 0) renderDrafts();
+
+// === CALC LOGIC START ===
+// 電卓の四則演算（純粋関数）。0で割った場合は null を返す
+function calcApplyOp(a, b, op){
+  const x = Number(a), y = Number(b);
+  if (!isFinite(x) || !isFinite(y)) return null;
+  if (op === "+") return x + y;
+  if (op === "-") return x - y;
+  if (op === "*") return x * y;
+  if (op === "/"){ if (y === 0) return null; return x / y; }
+  return null;
+}
+// 計算結果の表示用整形（浮動小数点の誤差を消す）
+function calcFormat(n){
+  if (n === null || n === undefined || !isFinite(n)) return "エラー";
+  return String(Math.round(n * 1e10) / 1e10);
+}
+// === CALC LOGIC END ===
+
+// 電卓の状態とボタン操作（設定タブ・給料の検算用）
+const calcState = { entry: "0", acc: null, op: null, fresh: true };
+function calcShow(){
+  const el = document.getElementById("calcDisplay");
+  if (el) el.textContent = calcState.entry;
+}
+function calcInput(key){
+  const s = calcState;
+  if (key === "C"){
+    s.entry = "0"; s.acc = null; s.op = null; s.fresh = true;
+  } else if (key === "BS"){
+    if (!s.fresh) s.entry = s.entry.length > 1 ? s.entry.slice(0, -1) : "0";
+  } else if (key === "%"){
+    const v = parseFloat(s.entry);
+    if (isFinite(v)) s.entry = calcFormat(v / 100);
+  } else if (key === "="){
+    if (s.op !== null && s.acc !== null){
+      s.entry = calcFormat(calcApplyOp(s.acc, parseFloat(s.entry), s.op));
+      s.acc = null; s.op = null; s.fresh = true;
+    }
+  } else if (key === "+" || key === "-" || key === "*" || key === "/"){
+    const v = parseFloat(s.entry);
+    if (s.op !== null && s.acc !== null && !s.fresh){
+      const r = calcApplyOp(s.acc, v, s.op);
+      if (r === null){
+        s.entry = "エラー"; s.acc = null; s.op = null; s.fresh = true;
+        calcShow();
+        return;
+      }
+      s.acc = r; s.entry = calcFormat(r);
+    } else {
+      s.acc = v;
+    }
+    s.op = key; s.fresh = true;
+  } else if (key === "."){
+    if (s.fresh){ s.entry = "0."; s.fresh = false; }
+    else if (s.entry.indexOf(".") < 0) s.entry += ".";
+  } else if (/^[0-9]$/.test(key)){
+    if (s.fresh || s.entry === "0" || s.entry === "エラー"){ s.entry = key; s.fresh = false; }
+    else if (s.entry.replace(/[-.]/g, "").length < 12) s.entry += key;
+  }
+  calcShow();
+}
+const calcGridEl = document.getElementById("calcGrid");
+if (calcGridEl){
+  calcGridEl.addEventListener("click", function(e){
+    const btn = e.target.closest("[data-calc-key]");
+    if (btn) calcInput(btn.getAttribute("data-calc-key"));
+  });
+}
 
 // 初期描画
 render();
