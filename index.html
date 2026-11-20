@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>シフト給料アプリ</title>
+<style>
+  :root{
+    --blue:#2563eb;
+    --blue-dark:#1d4ed8;
+    --blue-light:#eff6ff;
+    --ink:#1f2937;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --bg:#ffffff;
+    --danger:#dc2626;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    background:#f8fafc;
+    color:var(--ink);
+    -webkit-text-size-adjust:100%;
+  }
+  header{
+    background:var(--blue);
+    color:#fff;
+    padding:16px;
+    text-align:center;
+  }
+  header h1{margin:0;font-size:20px;font-weight:700;}
+  header p{margin:4px 0 0;font-size:12px;opacity:.9;}
+  main{max-width:640px;margin:0 auto;padding:12px 12px 48px;}
+  .card{
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:16px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+  .month-nav{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:8px;
+  }
+  .month-nav button{
+    background:var(--blue-light);color:var(--blue-dark);
+    border:1px solid var(--line);border-radius:8px;
+    font-size:18px;padding:6px 14px;cursor:pointer;min-height:44px;
+  }
+  .month-nav .month-label{font-size:18px;font-weight:700;}
+  .total-pay{
+    text-align:center;font-size:36px;font-weight:800;color:var(--blue-dark);
+    margin:8px 0 2px;
+  }
+  .total-pay-label{text-align:center;color:var(--muted);font-size:13px;}
+  .total-hours{text-align:center;font-size:15px;margin-top:6px;}
+  .subtotals{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;}
+  .subtotals h3{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:600;}
+  .subtotal-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:4px 0;font-size:14px;
+  }
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  h2{font-size:16px;margin:0 0 12px;}
+  .shift-item{
+    border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;margin-bottom:8px;background:#fff;
+  }
+  .shift-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .shift-date{font-weight:700;font-size:15px;}
+  .shift-pay{font-weight:800;font-size:18px;color:var(--blue-dark);white-space:nowrap;}
+  .shift-detail{color:var(--muted);font-size:13px;margin-top:2px;}
+  .shift-memo{font-size:13px;margin-top:2px;}
+  .shift-actions{margin-top:8px;display:flex;gap:8px;}
+  button{
+    font-family:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);font-size:14px;padding:8px 12px;min-height:40px;
+  }
+  button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700;width:100%;font-size:16px;padding:12px;}
+  button.small{min-height:34px;padding:4px 10px;font-size:13px;}
+  button.danger{color:var(--danger);border-color:#fecaca;}
+  .empty{color:var(--muted);text-align:center;padding:16px 0;font-size:14px;}
+  form label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px;}
+  form input,form select{
+    width:100%;font-size:16px;padding:10px;border:1px solid var(--line);
+    border-radius:8px;background:#fff;color:var(--ink);min-height:44px;
+  }
+  .row2{display:flex;gap:10px;}
+  .row2 > div{flex:1;}
+  input[type="color"]{padding:4px;height:44px;}
+  .form-actions{display:flex;gap:8px;margin-top:14px;}
+  .form-actions .primary{flex:1;}
+  .wp-item{
+    display:flex;justify-content:space-between;align-items:center;
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;
+  }
+  .wp-name{font-weight:700;}
+  .wp-detail{color:var(--muted);font-size:13px;}
+  .wp-actions{display:flex;gap:6px;}
+  .hidden{display:none;}
+  .note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;}
+</style>
+</head>
+<body>
+<header>
+  <h1>シフト給料アプリ</h1>
+  <p>シフトを入れるだけで、給料の見込みを自動計算</p>
+</header>
+<main>
+
+  <!-- 月サマリー -->
+  <section class="card">
+    <div class="month-nav">
+      <button id="prevMonth" aria-label="前月">◀</button>
+      <div class="month-label" id="monthLabel"></div>
+      <button id="nextMonth" aria-label="翌月">▶</button>
+    </div>
+    <div class="total-pay" id="totalPay">¥0</div>
+    <div class="total-pay-label">この月の給料見込み</div>
+    <div class="total-hours" id="totalHours">労働時間 合計 0時間0分</div>
+    <div class="subtotals" id="subtotalsWrap">
+      <h3>バイト先ごとの小計</h3>
+      <div id="subtotals"></div>
+    </div>
+  </section>
+
+  <!-- シフト一覧 -->
+  <section class="card">
+    <h2>シフト一覧</h2>
+    <div id="shiftList"></div>
+    <button class="primary" id="toggleShiftForm">＋ シフトを追加</button>
+
+    <form id="shiftForm" class="hidden">
+      <label for="sfDate">日付</label>
+      <input type="date" id="sfDate" required>
+      <label for="sfWorkplace">バイト先</label>
+      <select id="sfWorkplace"></select>
+      <div class="row2">
+        <div>
+          <label for="sfStart">開始時刻</label>
+          <input type="time" id="sfStart" required>
+        </div>
+        <div>
+          <label for="sfEnd">終了時刻</label>
+          <input type="time" id="sfEnd" required>
+        </div>
+      </div>
+      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。</p>
+      <label for="sfBreak">休憩時間（分）</label>
+      <input type="number" id="sfBreak" min="0" step="5" value="0" inputmode="numeric">
+      <label for="sfMemo">メモ</label>
+      <input type="text" id="sfMemo" placeholder="任意">
+      <div class="form-actions">
+        <button type="submit" class="primary" id="sfSubmit">保存する</button>
+        <button type="button" id="sfCancel">キャンセル</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- バイト先管理 -->
+  <section class="card">
+    <h2>バイト先の設定</h2>
+    <div id="workplaceList"></div>
+    <button class="primary" id="toggleWpForm">＋ バイト先を追加</button>
+
+    <form id="wpForm" class="hidden">
+      <label for="wfName">名前</label>
+      <input type="text" id="wfName" placeholder="例：カフェA" required>
+      <div class="row2">
+        <div>
+          <label for="wfWage">時給（円）</label>
+          <input type="number" id="wfWage" min="0" step="1" inputmode="numeric" required>
+        </div>
+        <div>
+          <label for="wfPremium">深夜割増率（%）</label>
+          <input type="number" id="wfPremium" min="0" step="1" value="25" inputmode="numeric" required>
+        </div>
+      </div>
+      <label for="wfColor">色</label>
+      <input type="color" id="wfColor" value="#2563eb">
+      <div class="form-actions">
+        <button type="submit" class="primary" id="wfSubmit">保存する</button>
+        <button type="button" id="wfCancel">キャンセル</button>
+      </div>
+    </form>
+    <p class="note">深夜帯は22:00〜翌5:00です。深夜帯の時給は「時給×（1＋割増率）」で計算します。休憩時間は、深夜帯以外の時間から先に差し引きます。</p>
+  </section>
+
+</main>
+
+<script>
+"use strict";
+
+// === PURE LOGIC START ===
+// 時刻 "HH:MM" を分に変換
+function timeToMin(s){
+  const parts = String(s).split(":");
+  return Number(parts[0]) * 60 + Number(parts[1]);
+}
+
+// 深夜帯（22:00〜翌5:00）かどうかを、0〜1439 の分で判定
+function isNightMin(clockMin){
+  return clockMin >= 22 * 60 || clockMin < 5 * 60;
+}
+
+// 給与計算
+// startMin/endMin: 分。endMin <= startMin の場合は翌日までとみなす。
+// 休憩は深夜帯以外の時間から先に差し引く。金額は円未満切り捨て。
+function computePay(startMin, endMin, breakMin, wage, premiumPct){
+  let end = endMin;
+  if (end <= startMin) end += 1440;
+  const total = end - startMin;
+  let night = 0;
+  for (let t = startMin; t < end; t++){
+    if (isNightMin(t % 1440)) night++;
+  }
+  const nonNight = total - night;
+  const breakFromNonNight = Math.min(breakMin, nonNight);
+  const nonNightWorked = nonNight - breakFromNonNight;
+  const nightWorked = night - (breakMin - breakFromNonNight);
+  const pay = Math.floor((nonNightWorked * wage + nightWorked * wage * (1 + premiumPct / 100)) / 60);
+  return {
+    pay: pay,
+    workedMin: nonNightWorked + nightWorked,
+    nightMin: nightWorked,
+    nonNightMin: nonNightWorked
+  };
+}
+// === PURE LOGIC END ===
+
+// ---------- データ管理（localStorage） ----------
+const LS_WP = "shiftPayApp.workplaces";
+const LS_SH = "shiftPayApp.shifts";
+
+function loadJSON(key, fallback){
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+function saveAll(){
+  localStorage.setItem(LS_WP, JSON.stringify(workplaces));
+  localStorage.setItem(LS_SH, JSON.stringify(shifts));
+}
+
+let workplaces = loadJSON(LS_WP, []);
+let shifts = loadJSON(LS_SH, []);
+
+let viewYear, viewMonth; // 表示中の月（month は 0〜11）
+(function(){
+  const now = new Date();
+  viewYear = now.getFullYear();
+  viewMonth = now.getMonth();
+})();
+
+let editingShiftId = null;
+let editingWpId = null;
+
+function newId(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+function findWp(id){
+  return workplaces.find(function(w){ return w.id === id; }) || null;
+}
+
+// ---------- 表示用ヘルパー ----------
+function fmtYen(n){
+  return "¥" + Math.floor(n).toLocaleString("ja-JP");
+}
+function fmtDuration(min){
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h + "時間" + m + "分";
+}
+const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
+function fmtDateLabel(dateStr){
+  const d = new Date(dateStr + "T00:00:00");
+  return (d.getMonth() + 1) + "月" + d.getDate() + "日（" + WEEKDAYS[d.getDay()] + "）";
+}
+function shiftResult(shift){
+  const wp = findWp(shift.workplaceId);
+  if (!wp) return { pay: 0, workedMin: 0, nightMin: 0 };
+  return computePay(timeToMin(shift.start), timeToMin(shift.end), Number(shift.breakMin) || 0, Number(wp.wage) || 0, Number(wp.premium) || 0);
+}
+function esc(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// ---------- 描画 ----------
+function render(){
+  document.getElementById("monthLabel").textContent = viewYear + "年" + (viewMonth + 1) + "月";
+
+  const prefix = viewYear + "-" + String(viewMonth + 1).padStart(2, "0");
+  const monthShifts = shifts
+    .filter(function(s){ return s.date && s.date.indexOf(prefix) === 0; })
+    .sort(function(a, b){
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return timeToMin(a.start) - timeToMin(b.start);
+    });
+
+  // 合計
+  let totalPay = 0, totalMin = 0;
+  const subtotal = {}; // workplaceId -> {pay, min}
+  monthShifts.forEach(function(s){
+    const r = shiftResult(s);
+    totalPay += r.pay;
+    totalMin += r.workedMin;
+    if (!subtotal[s.workplaceId]) subtotal[s.workplaceId] = { pay: 0, min: 0 };
+    subtotal[s.workplaceId].pay += r.pay;
+    subtotal[s.workplaceId].min += r.workedMin;
+  });
+  document.getElementById("totalPay").textContent = fmtYen(totalPay);
+  document.getElementById("totalHours").textContent = "労働時間 合計 " + fmtDuration(totalMin);
+
+  const subEl = document.getElementById("subtotals");
+  const subWrap = document.getElementById("subtotalsWrap");
+  const keys = Object.keys(subtotal);
+  if (keys.length === 0){
+    subWrap.classList.add("hidden");
+  } else {
+    subWrap.classList.remove("hidden");
+    subEl.innerHTML = keys.map(function(id){
+      const wp = findWp(id);
+      const name = wp ? wp.name : "（削除済みのバイト先）";
+      const color = wp ? wp.color : "#9ca3af";
+      return '<div class="subtotal-row"><span><span class="dot" style="background:' + esc(color) + '"></span>' +
+        esc(name) + "（" + fmtDuration(subtotal[id].min) + '）</span><span>' + fmtYen(subtotal[id].pay) + "</span></div>";
+    }).join("");
+  }
+
+  // シフト一覧
+  const listEl = document.getElementById("shiftList");
+  if (monthShifts.length === 0){
+    listEl.innerHTML = '<div class="empty">この月のシフトはまだありません</div>';
+  } else {
+    listEl.innerHTML = monthShifts.map(function(s){
+      const wp = findWp(s.workplaceId);
+      const r = shiftResult(s);
+      const color = wp ? wp.color : "#9ca3af";
+      const wpName = wp ? wp.name : "（削除済みのバイト先）";
+      const nightNote = r.nightMin > 0 ? "・深夜 " + fmtDuration(r.nightMin) : "";
+      const memo = s.memo ? '<div class="shift-memo">' + esc(s.memo) + "</div>" : "";
+      return '<div class="shift-item">' +
+        '<div class="shift-top"><span class="shift-date"><span class="dot" style="background:' + esc(color) + '"></span>' +
+        fmtDateLabel(s.date) + '</span><span class="shift-pay">' + fmtYen(r.pay) + "</span></div>" +
+        '<div class="shift-detail">' + esc(wpName) + " " + esc(s.start) + "〜" + esc(s.end) +
+        "（実働 " + fmtDuration(r.workedMin) + nightNote + "）</div>" + memo +
+        '<div class="shift-actions">' +
+        '<button class="small" data-edit-shift="' + s.id + '">編集</button>' +
+        '<button class="small danger" data-del-shift="' + s.id + '">削除</button>' +
+        "</div></div>";
+    }).join("");
+  }
+
+  // バイト先一覧
+  const wpEl = document.getElementById("workplaceList");
+  if (workplaces.length === 0){
+    wpEl.innerHTML = '<div class="empty">バイト先がまだ登録されていません。下のボタンから追加してください</div>';
+  } else {
+    wpEl.innerHTML = workplaces.map(function(w){
+      return '<div class="wp-item"><div><span class="dot" style="background:' + esc(w.color) + '"></span>' +
+        '<span class="wp-name">' + esc(w.name) + '</span><div class="wp-detail">時給 ' + fmtYen(w.wage) +
+        "・深夜割増 " + esc(w.premium) + '%</div></div>' +
+        '<div class="wp-actions">' +
+        '<button class="small" data-edit-wp="' + w.id + '">編集</button>' +
+        '<button class="small danger" data-del-wp="' + w.id + '">削除</button>' +
+        "</div></div>";
+    }).join("");
+  }
+
+  // シフトフォームのバイト先セレクト
+  const sel = document.getElementById("sfWorkplace");
+  const current = sel.value;
+  sel.innerHTML = workplaces.map(function(w){
+    return '<option value="' + w.id + '">' + esc(w.name) + "</option>";
+  }).join("");
+  if (findWp(current)) sel.value = current;
+}
+
+// ---------- 月切替 ----------
+document.getElementById("prevMonth").addEventListener("click", function(){
+  viewMonth--;
+  if (viewMonth < 0){ viewMonth = 11; viewYear--; }
+  render();
+});
+document.getElementById("nextMonth").addEventListener("click", function(){
+  viewMonth++;
+  if (viewMonth > 11){ viewMonth = 0; viewYear++; }
+  render();
+});
+
+// ---------- シフトフォーム ----------
+const shiftForm = document.getElementById("shiftForm");
+document.getElementById("toggleShiftForm").addEventListener("click", function(){
+  if (workplaces.length === 0){
+    alert("先にバイト先を登録してください");
+    return;
+  }
+  editingShiftId = null;
+  shiftForm.reset();
+  document.getElementById("sfBreak").value = 0;
+  const today = new Date();
+  document.getElementById("sfDate").value =
+    today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+  document.getElementById("sfSubmit").textContent = "保存する";
+  shiftForm.classList.remove("hidden");
+});
+document.getElementById("sfCancel").addEventListener("click", function(){
+  editingShiftId = null;
+  shiftForm.classList.add("hidden");
+});
+shiftForm.addEventListener("submit", function(e){
+  e.preventDefault();
+  const data = {
+    date: document.getElementById("sfDate").value,
+    workplaceId: document.getElementById("sfWorkplace").value,
+    start: document.getElementById("sfStart").value,
+    end: document.getElementById("sfEnd").value,
+    breakMin: Number(document.getElementById("sfBreak").value) || 0,
+    memo: document.getElementById("sfMemo").value.trim()
+  };
+  if (!data.date || !data.start || !data.end || !data.workplaceId){
+    alert("日付・バイト先・開始時刻・終了時刻を入力してください");
+    return;
+  }
+  if (editingShiftId){
+    const s = shifts.find(function(x){ return x.id === editingShiftId; });
+    if (s) Object.assign(s, data);
+  } else {
+    data.id = newId();
+    shifts.push(data);
+  }
+  editingShiftId = null;
+  saveAll();
+  shiftForm.classList.add("hidden");
+  // 保存したシフトの月へ移動
+  viewYear = Number(data.date.slice(0, 4));
+  viewMonth = Number(data.date.slice(5, 7)) - 1;
+  render();
+});
+
+// シフトの編集・削除（イベント委譲）
+document.getElementById("shiftList").addEventListener("click", function(e){
+  const editBtn = e.target.closest("[data-edit-shift]");
+  const delBtn = e.target.closest("[data-del-shift]");
+  if (editBtn){
+    const s = shifts.find(function(x){ return x.id === editBtn.getAttribute("data-edit-shift"); });
+    if (!s) return;
+    editingShiftId = s.id;
+    document.getElementById("sfDate").value = s.date;
+    render();
+    document.getElementById("sfWorkplace").value = s.workplaceId;
+    document.getElementById("sfStart").value = s.start;
+    document.getElementById("sfEnd").value = s.end;
+    document.getElementById("sfBreak").value = s.breakMin || 0;
+    document.getElementById("sfMemo").value = s.memo || "";
+    document.getElementById("sfSubmit").textContent = "更新する";
+    shiftForm.classList.remove("hidden");
+    shiftForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (delBtn){
+    const id = delBtn.getAttribute("data-del-shift");
+    if (confirm("このシフトを削除しますか？")){
+      shifts = shifts.filter(function(x){ return x.id !== id; });
+      saveAll();
+      render();
+    }
+  }
+});
+
+// ---------- バイト先フォーム ----------
+const wpForm = document.getElementById("wpForm");
+document.getElementById("toggleWpForm").addEventListener("click", function(){
+  editingWpId = null;
+  wpForm.reset();
+  document.getElementById("wfPremium").value = 25;
+  document.getElementById("wfColor").value = "#2563eb";
+  document.getElementById("wfSubmit").textContent = "保存する";
+  wpForm.classList.remove("hidden");
+});
+document.getElementById("wfCancel").addEventListener("click", function(){
+  editingWpId = null;
+  wpForm.classList.add("hidden");
+});
+wpForm.addEventListener("submit", function(e){
+  e.preventDefault();
+  const data = {
+    name: document.getElementById("wfName").value.trim(),
+    wage: Number(document.getElementById("wfWage").value) || 0,
+    premium: Number(document.getElementById("wfPremium").value) || 0,
+    color: document.getElementById("wfColor").value || "#2563eb"
+  };
+  if (!data.name){
+    alert("バイト先の名前を入力してください");
+    return;
+  }
+  if (editingWpId){
+    const w = findWp(editingWpId);
+    if (w) Object.assign(w, data);
+  } else {
+    data.id = newId();
+    workplaces.push(data);
+  }
+  editingWpId = null;
+  saveAll();
+  wpForm.classList.add("hidden");
+  render();
+});
+document.getElementById("workplaceList").addEventListener("click", function(e){
+  const editBtn = e.target.closest("[data-edit-wp]");
+  const delBtn = e.target.closest("[data-del-wp]");
+  if (editBtn){
+    const w = findWp(editBtn.getAttribute("data-edit-wp"));
+    if (!w) return;
+    editingWpId = w.id;
+    document.getElementById("wfName").value = w.name;
+    document.getElementById("wfWage").value = w.wage;
+    document.getElementById("wfPremium").value = w.premium;
+    document.getElementById("wfColor").value = w.color || "#2563eb";
+    document.getElementById("wfSubmit").textContent = "更新する";
+    wpForm.classList.remove("hidden");
+    wpForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (delBtn){
+    const id = delBtn.getAttribute("data-del-wp");
+    if (confirm("このバイト先を削除しますか？（登録済みのシフトは残りますが、給料は計算されなくなります）")){
+      workplaces = workplaces.filter(function(x){ return x.id !== id; });
+      saveAll();
+      render();
+    }
+  }
+});
+
+// 初期描画
+render();
+</script>
+</body>
+</html>
