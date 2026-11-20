@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>シフト給料アプリ</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <style>
   :root{
     --blue:#2563eb;
@@ -112,6 +114,46 @@
     font-size:12px;background:rgba(255,255,255,.95);color:var(--danger);border-color:#fecaca;
   }
   .image-count{font-size:13px;color:var(--muted);margin-left:8px;}
+  .ocr-label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px;}
+  .ocr-select{
+    width:100%;font-size:16px;padding:10px;border:1px solid var(--line);
+    border-radius:8px;background:#fff;color:var(--ink);min-height:44px;
+  }
+  .ocr-preview{
+    width:100%;max-height:240px;object-fit:contain;display:block;
+    border:1px solid var(--line);border-radius:10px;margin:10px 0;background:#f3f4f6;
+  }
+  .ocr-preview.hidden{display:none;}
+  textarea{
+    width:100%;font-size:14px;padding:10px;border:1px solid var(--line);
+    border-radius:8px;background:#fff;color:var(--ink);font-family:inherit;line-height:1.5;
+  }
+  .warn-note{color:var(--danger);font-weight:600;}
+  .ocr-draft-title{font-size:15px;margin:16px 0 4px;}
+  .draft-row{
+    border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;margin-bottom:10px;background:#fff;
+  }
+  .draft-row label{display:block;font-size:12px;color:var(--muted);margin:6px 0 3px;}
+  .draft-row input,.draft-row select{
+    width:100%;font-size:15px;padding:8px;border:1px solid var(--line);
+    border-radius:8px;background:#fff;color:var(--ink);min-height:40px;
+  }
+  .draft-actions{margin-top:8px;text-align:right;}
+  .cat-badge{
+    display:inline-block;font-size:11px;font-weight:700;line-height:1;
+    padding:4px 8px;border-radius:999px;vertical-align:middle;white-space:nowrap;
+  }
+  .cat-early{background:#fef3c7;color:#92400e;}
+  .cat-day{background:#dbeafe;color:#1d4ed8;}
+  .cat-late{background:#ede9fe;color:#6d28d9;}
+  .cat-night{background:#1f2937;color:#f9fafb;}
+  .cat-none{background:#f3f4f6;color:#6b7280;}
+  .field-label{display:block;font-size:13px;color:var(--muted);margin:0 0 4px;}
+  .text-input{
+    width:100%;font-size:16px;padding:10px;border:1px solid var(--line);
+    border-radius:8px;background:#fff;color:var(--ink);min-height:44px;
+  }
   .lightbox{
     position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:50;
     display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer;
@@ -141,6 +183,10 @@
       <h3>バイト先ごとの小計</h3>
       <div id="subtotals"></div>
     </div>
+    <div class="subtotals hidden" id="categoryWrap">
+      <h3>区分ごとの件数</h3>
+      <div id="categoryCounts"></div>
+    </div>
   </section>
 
   <!-- シフト表の画像 -->
@@ -151,6 +197,36 @@
     <button class="primary" id="addImageBtn">＋ 画像を追加</button>
     <input type="file" id="imageFileInput" accept="image/*" multiple class="hidden">
     <p class="note">表示中の月に、シフト表の画像を最大3枚まで保存できます。PCではコピーした画像をこのページに貼り付け（Ctrl+V）ても追加できます。画像は自動で縮小・圧縮して保存されます。</p>
+  </section>
+
+  <!-- 写真から読み取り（OCR・実験） -->
+  <section class="card">
+    <h2>写真から読み取り（実験）</h2>
+    <p class="note" style="margin-top:0;">シフト表の写真から文字を読み取り、シフトの下書きを作る実験機能です。</p>
+    <p class="note warn-note">実験機能です。読み取り間違いがあるので、必ず確認・修正してから登録してください。</p>
+    <p class="note">画像はブラウザの中で処理され、外部に送信されません（読み取りライブラリと言語データのダウンロードのみ通信します）。</p>
+    <p class="note">PDFにも対応しています。PDFに文字データが入っている場合は、写真より正確に読み取れます。文字データが入っていないPDF（スキャン画像など）は、画像として読み取ります。</p>
+
+    <label class="ocr-label" for="ocrSavedImage">保存済みの今月の画像から選ぶ</label>
+    <select id="ocrSavedImage" class="ocr-select"></select>
+    <label class="ocr-label">または、新しい画像・PDFファイルを選ぶ</label>
+    <button id="ocrFileBtn">画像・PDFファイルを選ぶ</button>
+    <input type="file" id="ocrFileInput" accept="image/*,.pdf" class="hidden">
+    <img id="ocrPreview" class="ocr-preview hidden" alt="読み取り対象の画像">
+    <p class="note hidden" id="ocrPdfName"></p>
+    <button class="primary" id="ocrRunBtn" disabled style="margin-top:10px;">読み取る</button>
+    <p class="note" id="ocrStatus"></p>
+
+    <label class="ocr-label" for="ocrText">読み取ったテキスト（修正できます）</label>
+    <textarea id="ocrText" rows="8" placeholder="ここに読み取り結果が表示されます"></textarea>
+    <button class="primary" id="ocrBuildDrafts" style="margin-top:10px;">下書きを作成</button>
+
+    <div id="ocrDraftArea" class="hidden">
+      <h3 class="ocr-draft-title">シフトの下書き</h3>
+      <p class="note">内容を確認し、間違いを直してから登録してください。終了時刻が空欄の行は、時刻を入力してください。</p>
+      <div id="ocrDrafts"></div>
+      <button class="primary" id="ocrRegisterAll">まとめて登録</button>
+    </div>
   </section>
 
   <!-- シフト一覧 -->
@@ -175,6 +251,15 @@
         </div>
       </div>
       <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。</p>
+      <label for="sfCategory">区分</label>
+      <select id="sfCategory">
+        <option value="">未設定</option>
+        <option value="早番">早番</option>
+        <option value="日勤">日勤</option>
+        <option value="遅番">遅番</option>
+        <option value="夜勤">夜勤</option>
+      </select>
+      <p class="note">区分を選ぶと、そのバイト先のプリセット時刻が開始・終了に入ります（後から変更できます）。</p>
       <label for="sfBreak">休憩時間（分）</label>
       <input type="number" id="sfBreak" min="0" step="5" value="0" inputmode="numeric">
       <label for="sfMemo">メモ</label>
@@ -184,6 +269,14 @@
         <button type="button" id="sfCancel">キャンセル</button>
       </div>
     </form>
+  </section>
+
+  <!-- 自分の設定 -->
+  <section class="card">
+    <h2>自分の設定</h2>
+    <label class="field-label" for="myNamesInput">自分の名前</label>
+    <input type="text" id="myNamesInput" class="text-input" placeholder="例：まりん、山岡">
+    <p class="note">カンマ（、）区切りで複数の表記を登録できます。シフト表を読み取るとき、登録した名前の列（または行）に属するシフトだけを抽出対象にします。未登録の場合は全体が対象です。</p>
   </section>
 
   <!-- バイト先管理 -->
@@ -207,6 +300,47 @@
       </div>
       <label for="wfColor">色</label>
       <input type="color" id="wfColor" value="#2563eb">
+      <p class="note" style="margin-bottom:0;">区分プリセット（このバイト先用）。シフト登録で区分を選ぶと、この時刻が自動入力されます。</p>
+      <div class="row2">
+        <div>
+          <label for="wfPreEarlyStart">早番 開始</label>
+          <input type="time" id="wfPreEarlyStart">
+        </div>
+        <div>
+          <label for="wfPreEarlyEnd">早番 終了</label>
+          <input type="time" id="wfPreEarlyEnd">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label for="wfPreDayStart">日勤 開始</label>
+          <input type="time" id="wfPreDayStart">
+        </div>
+        <div>
+          <label for="wfPreDayEnd">日勤 終了</label>
+          <input type="time" id="wfPreDayEnd">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label for="wfPreLateStart">遅番 開始</label>
+          <input type="time" id="wfPreLateStart">
+        </div>
+        <div>
+          <label for="wfPreLateEnd">遅番 終了</label>
+          <input type="time" id="wfPreLateEnd">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label for="wfPreNightStart">夜勤 開始</label>
+          <input type="time" id="wfPreNightStart">
+        </div>
+        <div>
+          <label for="wfPreNightEnd">夜勤 終了</label>
+          <input type="time" id="wfPreNightEnd">
+        </div>
+      </div>
       <div class="form-actions">
         <button type="submit" class="primary" id="wfSubmit">保存する</button>
         <button type="button" id="wfCancel">キャンセル</button>
@@ -262,10 +396,64 @@ function computePay(startMin, endMin, breakMin, wage, premiumPct){
 }
 // === PURE LOGIC END ===
 
+// === CATEGORY LOGIC START ===
+// ---------- シフト区分とプリセット ----------
+const SHIFT_CATEGORIES = ["早番", "日勤", "遅番", "夜勤"];
+const CATEGORY_ORDER = ["早番", "日勤", "遅番", "夜勤", "未設定"];
+const CATEGORY_CLASS = { "早番": "cat-early", "日勤": "cat-day", "遅番": "cat-late", "夜勤": "cat-night", "未設定": "cat-none" };
+// 区分プリセットの初期値（バイト先ごとに保持し、編集できる）
+const DEFAULT_PRESETS = {
+  "早番": { start: "06:30", end: "15:30" },
+  "日勤": { start: "09:30", end: "18:30" },
+  "遅番": { start: "12:30", end: "21:30" },
+  "夜勤": { start: "21:30", end: "06:30" }
+};
+// カレンダー形式のシフト表で使われる漢字1文字と区分の対応（深は夜勤として扱う）
+const KANJI_CATEGORY = { "早": "早番", "日": "日勤", "遅": "遅番", "夜": "夜勤", "深": "夜勤" };
+
+function defaultPresets(){
+  return JSON.parse(JSON.stringify(DEFAULT_PRESETS));
+}
+
+// バイト先にプリセットが無ければ初期値で補う（既存データの移行用）
+function ensurePresets(wp){
+  if (!wp.presets || typeof wp.presets !== "object") wp.presets = {};
+  SHIFT_CATEGORIES.forEach(function(c){
+    const p = wp.presets[c];
+    if (!p || !p.start || !p.end){
+      wp.presets[c] = { start: DEFAULT_PRESETS[c].start, end: DEFAULT_PRESETS[c].end };
+    }
+  });
+  return wp;
+}
+
+// バイト先の区分プリセットを取得する（無ければ初期値を返す）
+function getPreset(workplace, category){
+  if (!category || SHIFT_CATEGORIES.indexOf(category) < 0) return null;
+  if (workplace && workplace.presets && workplace.presets[category] &&
+      workplace.presets[category].start && workplace.presets[category].end){
+    return workplace.presets[category];
+  }
+  return DEFAULT_PRESETS[category];
+}
+
+// シフトの区分ラベル（区分なしの既存シフトは「未設定」）
+function categoryLabel(shift){
+  return (shift && SHIFT_CATEGORIES.indexOf(shift.category) >= 0) ? shift.category : "未設定";
+}
+
+// 区分バッジのHTML
+function categoryBadge(shift){
+  const label = categoryLabel(shift);
+  return '<span class="cat-badge ' + (CATEGORY_CLASS[label] || "cat-none") + '">' + label + "</span>";
+}
+// === CATEGORY LOGIC END ===
+
 // ---------- データ管理（localStorage） ----------
 const LS_WP = "shiftPayApp.workplaces";
 const LS_SH = "shiftPayApp.shifts";
 const LS_IMG = "shiftPayApp.images";
+const LS_SET = "shiftPayApp.settings";
 const MAX_IMAGES_PER_MONTH = 3;
 const MAX_IMAGE_WIDTH = 1200;
 
@@ -284,7 +472,24 @@ function saveAll(){
 
 let workplaces = loadJSON(LS_WP, []);
 let shifts = loadJSON(LS_SH, []);
+// 既存のバイト先データに区分プリセットの初期値を持たせて移行する
+workplaces.forEach(function(w){ ensurePresets(w); });
 let monthImages = loadJSON(LS_IMG, {}); // { "YYYY-MM": [ {id, dataUrl}, ... ] }
+let settings = loadJSON(LS_SET, { myNames: "" }); // { myNames: "まりん、山岡" }
+
+function saveSettings(){
+  try {
+    localStorage.setItem(LS_SET, JSON.stringify(settings));
+  } catch (e) { /* 保存できなくても動作は続ける */ }
+}
+
+// 登録した自分の名前の一覧（カンマ区切りを分解）
+function getMyNames(){
+  return String((settings && settings.myNames) || "")
+    .split(/[、,，]/)
+    .map(function(s){ return s.trim(); })
+    .filter(function(s){ return s.length > 0; });
+}
 
 function saveImages(){
   try {
@@ -502,6 +707,23 @@ function render(){
     }).join("");
   }
 
+  // 区分ごとの件数
+  const catCounts = {};
+  monthShifts.forEach(function(s){
+    const c = categoryLabel(s);
+    catCounts[c] = (catCounts[c] || 0) + 1;
+  });
+  const catWrap = document.getElementById("categoryWrap");
+  const catEl = document.getElementById("categoryCounts");
+  if (monthShifts.length === 0){
+    catWrap.classList.add("hidden");
+  } else {
+    catWrap.classList.remove("hidden");
+    catEl.innerHTML = CATEGORY_ORDER.filter(function(c){ return catCounts[c]; }).map(function(c){
+      return '<div class="subtotal-row"><span><span class="cat-badge ' + (CATEGORY_CLASS[c] || "cat-none") + '">' + c + '</span></span><span>' + catCounts[c] + "件</span></div>";
+    }).join("");
+  }
+
   // シフト一覧
   const listEl = document.getElementById("shiftList");
   if (monthShifts.length === 0){
@@ -517,7 +739,7 @@ function render(){
       return '<div class="shift-item">' +
         '<div class="shift-top"><span class="shift-date"><span class="dot" style="background:' + esc(color) + '"></span>' +
         fmtDateLabel(s.date) + '</span><span class="shift-pay">' + fmtYen(r.pay) + "</span></div>" +
-        '<div class="shift-detail">' + esc(wpName) + " " + esc(s.start) + "〜" + esc(s.end) +
+        '<div class="shift-detail">' + categoryBadge(s) + " " + esc(wpName) + " " + esc(s.start) + "〜" + esc(s.end) +
         "（実働 " + fmtDuration(r.workedMin) + nightNote + "）</div>" + memo +
         '<div class="shift-actions">' +
         '<button class="small" data-edit-shift="' + s.id + '">編集</button>' +
@@ -552,6 +774,9 @@ function render(){
 
   // シフト表の画像
   renderImages();
+
+  // OCR 用の保存済み画像セレクト
+  renderOcrSources();
 }
 
 // ---------- 月切替 ----------
@@ -594,6 +819,7 @@ shiftForm.addEventListener("submit", function(e){
     start: document.getElementById("sfStart").value,
     end: document.getElementById("sfEnd").value,
     breakMin: Number(document.getElementById("sfBreak").value) || 0,
+    category: document.getElementById("sfCategory").value,
     memo: document.getElementById("sfMemo").value.trim()
   };
   if (!data.date || !data.start || !data.end || !data.workplaceId){
@@ -616,6 +842,19 @@ shiftForm.addEventListener("submit", function(e){
   render();
 });
 
+// 区分を選ぶと、そのバイト先のプリセット時刻を開始・終了に自動入力する
+function applyCategoryPreset(){
+  const wp = findWp(document.getElementById("sfWorkplace").value);
+  const p = getPreset(wp, document.getElementById("sfCategory").value);
+  if (!p) return;
+  document.getElementById("sfStart").value = p.start;
+  document.getElementById("sfEnd").value = p.end;
+}
+document.getElementById("sfCategory").addEventListener("change", applyCategoryPreset);
+document.getElementById("sfWorkplace").addEventListener("change", function(){
+  if (document.getElementById("sfCategory").value) applyCategoryPreset();
+});
+
 // シフトの編集・削除（イベント委譲）
 document.getElementById("shiftList").addEventListener("click", function(e){
   const editBtn = e.target.closest("[data-edit-shift]");
@@ -630,6 +869,7 @@ document.getElementById("shiftList").addEventListener("click", function(e){
     document.getElementById("sfStart").value = s.start;
     document.getElementById("sfEnd").value = s.end;
     document.getElementById("sfBreak").value = s.breakMin || 0;
+    document.getElementById("sfCategory").value = s.category || "";
     document.getElementById("sfMemo").value = s.memo || "";
     document.getElementById("sfSubmit").textContent = "更新する";
     shiftForm.classList.remove("hidden");
@@ -646,12 +886,42 @@ document.getElementById("shiftList").addEventListener("click", function(e){
 });
 
 // ---------- バイト先フォーム ----------
+// 区分プリセットの入力欄と区分の対応
+const PRESET_FIELDS = [
+  { category: "早番", startId: "wfPreEarlyStart", endId: "wfPreEarlyEnd" },
+  { category: "日勤", startId: "wfPreDayStart", endId: "wfPreDayEnd" },
+  { category: "遅番", startId: "wfPreLateStart", endId: "wfPreLateEnd" },
+  { category: "夜勤", startId: "wfPreNightStart", endId: "wfPreNightEnd" }
+];
+
+// プリセット入力欄に値をセットする
+function fillPresetFields(presets){
+  PRESET_FIELDS.forEach(function(f){
+    const p = (presets && presets[f.category]) || DEFAULT_PRESETS[f.category];
+    document.getElementById(f.startId).value = p.start || "";
+    document.getElementById(f.endId).value = p.end || "";
+  });
+}
+
+// プリセット入力欄の値を読み取る（空欄は初期値で補う）
+function readPresetFields(){
+  const presets = {};
+  PRESET_FIELDS.forEach(function(f){
+    presets[f.category] = {
+      start: document.getElementById(f.startId).value || DEFAULT_PRESETS[f.category].start,
+      end: document.getElementById(f.endId).value || DEFAULT_PRESETS[f.category].end
+    };
+  });
+  return presets;
+}
+
 const wpForm = document.getElementById("wpForm");
 document.getElementById("toggleWpForm").addEventListener("click", function(){
   editingWpId = null;
   wpForm.reset();
   document.getElementById("wfPremium").value = 25;
   document.getElementById("wfColor").value = "#2563eb";
+  fillPresetFields(defaultPresets());
   document.getElementById("wfSubmit").textContent = "保存する";
   wpForm.classList.remove("hidden");
 });
@@ -665,7 +935,8 @@ wpForm.addEventListener("submit", function(e){
     name: document.getElementById("wfName").value.trim(),
     wage: Number(document.getElementById("wfWage").value) || 0,
     premium: Number(document.getElementById("wfPremium").value) || 0,
-    color: document.getElementById("wfColor").value || "#2563eb"
+    color: document.getElementById("wfColor").value || "#2563eb",
+    presets: readPresetFields()
   };
   if (!data.name){
     alert("バイト先の名前を入力してください");
@@ -694,6 +965,7 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     document.getElementById("wfWage").value = w.wage;
     document.getElementById("wfPremium").value = w.premium;
     document.getElementById("wfColor").value = w.color || "#2563eb";
+    fillPresetFields(w.presets);
     document.getElementById("wfSubmit").textContent = "更新する";
     wpForm.classList.remove("hidden");
     wpForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -750,6 +1022,712 @@ document.getElementById("imageGrid").addEventListener("click", function(e){
   }
 });
 document.getElementById("lightbox").addEventListener("click", closeLightbox);
+
+// ---------- 写真から読み取り（OCR・実験） ----------
+let ocrImageDataUrl = null; // 読み取り対象の画像（dataURL）
+let ocrPdfBuffer = null;    // 読み取り対象のPDF（ArrayBuffer）
+let ocrDrafts = [];         // 下書き候補
+const PDFJS_WORKER_SRC = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+
+// === OCR TEXT LOGIC START ===
+// "22.5" のような小数表記や "22:30" のような表記を "HH:MM" に変換する
+// 小数表記は「時」の小数として扱う（例：22.5 → 22:30、11.5 → 11:30）
+function hourTokenToTime(token){
+  token = String(token).trim();
+  let h, m;
+  if (token.indexOf(":") >= 0){
+    const p = token.split(":");
+    h = Number(p[0]);
+    m = Number(p[1]) || 0;
+  } else if (token.indexOf(".") >= 0){
+    const p = token.split(".");
+    h = Number(p[0]);
+    m = Math.round(parseFloat("0." + p[1]) * 60);
+  } else {
+    h = Number(token);
+    m = 0;
+  }
+  if (isNaN(h) || h < 0 || h > 29) return null;
+  if (m >= 60){ h += Math.floor(m / 60); m = m % 60; }
+  return {
+    text: String(h % 24).padStart(2, "0") + ":" + String(m).padStart(2, "0"),
+    hour: h
+  };
+}
+
+// 認識テキストから「日」と時間のパターンを抽出する
+// 対応例："17 11-22.5" → 17日 11:00〜22:30 / "18 11.5-23" → 18日 11:30〜23:00
+//         "24 17" → 24日 17:00〜（終了は空欄）
+// 日付は表示中の月と組み合わせる
+function extractTimePatterns(text){
+  const normalized = String(text || "")
+    .replace(/[０-９]/g, function(c){ return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+    .replace(/：/g, ":")
+    .replace(/．/g, ".");
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const rangeRe = /(\d{1,2}(?:[.:]\d{1,2})?)\s*[-~〜ー－―]\s*(\d{1,2}(?:[.:]\d{1,2})?)/;
+  const drafts = [];
+  normalized.split(/\r?\n/).forEach(function(rawLine){
+    const line = rawLine.trim();
+    if (!line) return;
+    let start = "", end = "";
+    let rest = line;
+    const rm = line.match(rangeRe);
+    if (rm){
+      const s = hourTokenToTime(rm[1]);
+      const e = hourTokenToTime(rm[2]);
+      if (!s || !e) return;
+      start = s.text;
+      end = e.text;
+      rest = line.replace(rm[0], " ");
+    }
+    // 「日」を探す（「◯月◯日」形式があればその日を優先）
+    let day = null;
+    const fullDate = line.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+    if (fullDate){
+      day = Number(fullDate[2]);
+    } else {
+      const dayMatch = rest.match(/(?:^|[^\d])(\d{1,2})(?:[^\d]|$)/);
+      if (dayMatch) day = Number(dayMatch[1]);
+    }
+    if (day === null || day < 1 || day > daysInMonth) return;
+    if (!rm){
+      // 開始のみのパターン：日を取り除いた残りから時刻を探す
+      const rest2 = rest.replace(/(?:^|[^\d])(\d{1,2})(?:[^\d]|$)/, " ");
+      const sm = rest2.match(/(\d{1,2}(?:[.:]\d{1,2})?)/);
+      if (!sm) return;
+      const s2 = hourTokenToTime(sm[1]);
+      if (!s2) return;
+      start = s2.text;
+      end = "";
+    }
+    const dateStr = viewYear + "-" + String(viewMonth + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+    drafts.push({
+      date: dateStr,
+      start: start,
+      end: end,
+      workplaceId: workplaces.length > 0 ? workplaces[0].id : "",
+      breakMin: 0,
+      category: ""
+    });
+  });
+  drafts.sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  return drafts;
+}
+
+// カレンダー形式のテキストから「日＋漢字1文字（早・日・遅・夜・深）」を抽出する
+// 日付と漢字の対応が取れた場合だけ、その区分のプリセット時刻で下書きを作る
+function extractKanjiDrafts(text){
+  const normalized = String(text || "")
+    .replace(/[０-９]/g, function(c){ return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); });
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const wp = workplaces.length > 0 ? workplaces[0] : null;
+  const drafts = [];
+  const seen = {};
+  function pushDraft(day, kanji){
+    const category = KANJI_CATEGORY[kanji];
+    if (!category || day < 1 || day > daysInMonth) return;
+    const dateStr = viewYear + "-" + String(viewMonth + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+    if (seen[dateStr]) return;
+    seen[dateStr] = true;
+    const p = getPreset(wp, category);
+    drafts.push({
+      date: dateStr,
+      start: p ? p.start : "",
+      end: p ? p.end : "",
+      workplaceId: wp ? wp.id : "",
+      breakMin: 0,
+      category: category
+    });
+  }
+  const lines = normalized.split(/\r?\n/);
+  lines.forEach(function(rawLine, idx){
+    const line = rawLine.trim();
+    if (!line) return;
+    // 同じ行にある「日＋漢字」の組を探す
+    const re = /(\d{1,2})\s*日?\s*[（(]?[月火水木金土日]?[）)]?\s*([早日遅夜深])/g;
+    let m;
+    let matched = false;
+    while ((m = re.exec(line)) !== null){
+      pushDraft(Number(m[1]), m[2]);
+      matched = true;
+    }
+    if (matched) return;
+    // 「日だけの行」の次が「漢字だけの行」なら、順番に対応づける
+    const tokens = line.split(/\s+/).filter(Boolean);
+    const isDayLine = tokens.length >= 3 && tokens.every(function(t){ return /^\d{1,2}$/.test(t); });
+    if (isDayLine && idx + 1 < lines.length){
+      const symTokens = lines[idx + 1].trim().split(/\s+/).filter(Boolean);
+      const isSymLine = symTokens.length === tokens.length &&
+        symTokens.every(function(t){ return /^[早日遅夜深×○休]$/.test(t); });
+      if (isSymLine){
+        tokens.forEach(function(dt, i){
+          if (KANJI_CATEGORY[symTokens[i]]) pushDraft(Number(dt), symTokens[i]);
+        });
+      }
+    }
+  });
+  drafts.sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  return drafts;
+}
+
+// 認識テキストからシフトの下書き候補を生成する
+// （時間パターンと漢字パターンを日付で統合する）
+function buildDraftsFromText(text){
+  const byDate = {};
+  extractTimePatterns(text).forEach(function(d){ byDate[d.date] = d; });
+  extractKanjiDrafts(text).forEach(function(d){
+    if (byDate[d.date]){
+      if (!byDate[d.date].category) byDate[d.date].category = d.category;
+    } else {
+      byDate[d.date] = d;
+    }
+  });
+  return Object.keys(byDate).sort().map(function(k){ return byDate[k]; });
+}
+// === OCR TEXT LOGIC END ===
+
+// ファイルを dataURL として読み込む
+function readFileAsDataURL(file){
+  return new Promise(function(resolve, reject){
+    const reader = new FileReader();
+    reader.onload = function(){ resolve(reader.result); };
+    reader.onerror = function(){ reject(new Error("ファイルを読み込めませんでした")); };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ファイルを ArrayBuffer として読み込む（PDF用）
+function readFileAsArrayBuffer(file){
+  return new Promise(function(resolve, reject){
+    const reader = new FileReader();
+    reader.onload = function(){ resolve(reader.result); };
+    reader.onerror = function(){ reject(new Error("ファイルを読み込めませんでした")); };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// 読み取り対象のPDFをセットする
+function setOcrPdf(buffer, fileName){
+  ocrPdfBuffer = buffer || null;
+  ocrImageDataUrl = null;
+  const prev = document.getElementById("ocrPreview");
+  prev.removeAttribute("src");
+  prev.classList.add("hidden");
+  const note = document.getElementById("ocrPdfName");
+  if (ocrPdfBuffer){
+    note.textContent = "PDFファイルが選択されています：" + (fileName || "");
+    note.classList.remove("hidden");
+  } else {
+    note.textContent = "";
+    note.classList.add("hidden");
+  }
+  document.getElementById("ocrRunBtn").disabled = !ocrPdfBuffer;
+}
+
+// 位置情報つきアイテム（{str,x0,x1,cy,h,page}）から、行ごとに並べたテキストを組み立てる
+function buildTextFromItems(items){
+  const linesMap = {};
+  (items || []).forEach(function(it){
+    const key = (it.page || 0) + ":" + Math.round(it.cy / 8);
+    if (!linesMap[key]) linesMap[key] = { page: it.page || 0, cy: it.cy, items: [] };
+    linesMap[key].items.push(it);
+  });
+  const lines = Object.keys(linesMap).map(function(k){ return linesMap[k]; })
+    .sort(function(a, b){
+      if (a.page !== b.page) return a.page - b.page;
+      return a.cy - b.cy;
+    });
+  return lines.map(function(line){
+    return line.items.slice().sort(function(a, b){ return a.x0 - b.x0; })
+      .map(function(it){ return it.str; }).join(" ");
+  }).join("\n");
+}
+
+// 登録した自分の名前の列に属するアイテムだけを残す
+// 名前と同じ行の見出しから列の範囲（左右の中点）を推定する
+// 戻り値：{items, foundName}（名前が見つからなければ foundName は null で全体を返す）
+function filterItemsByMyColumn(items){
+  const names = getMyNames();
+  if (names.length === 0 || !items || items.length === 0) return null;
+  let nameItem = null;
+  let foundName = null;
+  for (let i = 0; i < items.length && !nameItem; i++){
+    const str = String(items[i].str || "");
+    for (let j = 0; j < names.length; j++){
+      if (str.indexOf(names[j]) >= 0 || (str.length >= 2 && names[j].indexOf(str) >= 0)){
+        nameItem = items[i];
+        foundName = names[j];
+        break;
+      }
+    }
+  }
+  if (!nameItem) return { items: items, foundName: null };
+  const row = items.filter(function(it){
+    return it.page === nameItem.page &&
+      Math.abs(it.cy - nameItem.cy) <= Math.max(it.h, nameItem.h, 8);
+  }).sort(function(a, b){ return a.x0 - b.x0; });
+  const idx = row.indexOf(nameItem);
+  let left = -Infinity;
+  let right = Infinity;
+  if (idx > 0) left = (row[idx - 1].x1 + nameItem.x0) / 2;
+  if (idx >= 0 && idx < row.length - 1) right = (nameItem.x1 + row[idx + 1].x0) / 2;
+  if (idx < 0){ left = nameItem.x0; right = nameItem.x1; }
+  const filtered = items.filter(function(it){
+    const cx = (it.x0 + it.x1) / 2;
+    return cx >= left && cx <= right;
+  });
+  return { items: filtered, foundName: foundName };
+}
+
+// Tesseract の認識結果から単語の位置情報を取り出す（words が無ければ TSV を解析）
+function extractWordsFromResult(data, page){
+  const items = [];
+  if (!data) return items;
+  if (Array.isArray(data.words) && data.words.length > 0){
+    data.words.forEach(function(w){
+      if (!w || !w.bbox) return;
+      items.push({
+        str: w.text || "",
+        x0: w.bbox.x0,
+        x1: w.bbox.x1,
+        cy: (w.bbox.y0 + w.bbox.y1) / 2,
+        h: Math.max(1, w.bbox.y1 - w.bbox.y0),
+        page: page || 0
+      });
+    });
+    return items;
+  }
+  if (typeof data.tsv === "string"){
+    const lines = data.tsv.split(/\r?\n/);
+    for (let i = 1; i < lines.length; i++){
+      const cols = lines[i].split("\t");
+      if (cols.length < 12) continue;
+      if (Number(cols[0]) !== 5) continue; // word レベルだけ
+      const str = cols[11] || "";
+      if (!str) continue;
+      const left = Number(cols[6]);
+      const top = Number(cols[7]);
+      const width = Number(cols[8]);
+      const height = Number(cols[9]);
+      items.push({
+        str: str,
+        x0: left,
+        x1: left + width,
+        cy: top + height / 2,
+        h: Math.max(1, height),
+        page: page || 0
+      });
+    }
+  }
+  return items;
+}
+
+// 画像1枚を Tesseract.js で読み取り、テキストと単語位置を返す（スキャンPDF用）
+function recognizeImageText(dataUrl, page, onProgress){
+  let worker = null;
+  return Tesseract.createWorker("jpn+eng", 1, {
+    logger: function(m){ if (onProgress) onProgress(m); }
+  }).then(function(w){
+    worker = w;
+    return worker.recognize(dataUrl, {}, { text: true, tsv: true }).catch(function(){
+      return worker.recognize(dataUrl);
+    });
+  }).then(function(result){
+    if (worker) worker.terminate();
+    const data = (result && result.data) || {};
+    return { text: data.text || "", words: extractWordsFromResult(data, page) };
+  }).catch(function(err){
+    if (worker) worker.terminate();
+    throw err;
+  });
+}
+
+// PDFの全ページから埋め込みテキストを位置情報つきで取り出す（getTextContent）
+function extractPdfItems(pdf){
+  let chain = Promise.resolve([]);
+  for (let p = 1; p <= pdf.numPages; p++){
+    (function(pageNum){
+      chain = chain.then(function(acc){
+        return pdf.getPage(pageNum).then(function(page){
+          const pageHeight = page.getViewport({ scale: 1 }).height;
+          return page.getTextContent().then(function(content){
+            content.items.forEach(function(item){
+              if (!item.str) return;
+              const x0 = item.transform[4];
+              acc.push({
+                str: item.str,
+                x0: x0,
+                x1: x0 + (item.width || 0),
+                cy: pageHeight - item.transform[5],
+                h: item.height || 10,
+                page: pageNum
+              });
+            });
+            return acc;
+          });
+        });
+      });
+    })(p);
+  }
+  return chain;
+}
+
+// PDFの1ページを canvas に描画して画像（dataURL）にする（スキャンPDFのOCR用）
+function renderPdfPageToDataURL(page, scale){
+  const viewport = page.getViewport({ scale: scale || 2 });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  return page.render({ canvasContext: ctx, viewport: viewport }).promise.then(function(){
+    return canvas.toDataURL("image/jpeg", 0.85);
+  });
+}
+
+// PDFを読み取る：埋め込みテキストが十分あればそれを使い、無ければ画像化してOCRする
+function runPdfRead(){
+  const statusEl = document.getElementById("ocrStatus");
+  const runBtn = document.getElementById("ocrRunBtn");
+  if (typeof pdfjsLib === "undefined"){
+    alert("PDF読み取り用ライブラリを読み込めませんでした。インターネット接続を確認して、ページを再読み込みしてください");
+    return;
+  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
+  runBtn.disabled = true;
+  statusEl.textContent = "PDFを読み込み中…";
+  pdfjsLib.getDocument({ data: ocrPdfBuffer }).promise.then(function(pdf){
+    return extractPdfItems(pdf).then(function(items){
+      const totalChars = items.reduce(function(sum, it){
+        return sum + String(it.str || "").replace(/\s/g, "").length;
+      }, 0);
+      if (totalChars >= 20){
+        // 埋め込みテキストが十分ある → そのまま使う（写真OCRより高精度）
+        let useItems = items;
+        let note = "";
+        if (getMyNames().length > 0){
+          const res = filterItemsByMyColumn(items);
+          if (res && res.foundName){
+            useItems = res.items;
+            note = "「" + res.foundName + "」の列だけを対象にしました。";
+          } else {
+            note = "登録した名前が見つからなかったため、全体を対象にしています。";
+          }
+        }
+        document.getElementById("ocrText").value = buildTextFromItems(useItems);
+        statusEl.textContent = "PDFの文字データを読み取りました。内容を確認して「下書きを作成」を押してください" + (note ? "（" + note + "）" : "");
+        return null;
+      }
+      // 埋め込みテキストがほぼ無い → スキャン画像PDFとしてOCRする
+      if (typeof Tesseract === "undefined"){
+        alert("読み取り用ライブラリを読み込めませんでした。インターネット接続を確認して、ページを再読み込みしてください");
+        statusEl.textContent = "";
+        return null;
+      }
+      statusEl.textContent = "文字データが少ないため、画像として読み取ります…";
+      let anyFound = false;
+      let chain = Promise.resolve("");
+      const totalPages = pdf.numPages;
+      for (let p = 1; p <= totalPages; p++){
+        (function(pageNum){
+          chain = chain.then(function(acc){
+            statusEl.textContent = "ページ " + pageNum + " / " + totalPages + " を準備中…";
+            return pdf.getPage(pageNum).then(function(page){
+              return renderPdfPageToDataURL(page, 2);
+            }).then(function(dataUrl){
+              return recognizeImageText(dataUrl, pageNum, function(m){
+                if (m && m.status === "recognizing text" && typeof m.progress === "number"){
+                  statusEl.textContent = "ページ " + pageNum + " / " + totalPages + " を読み取り中… " + Math.round(m.progress * 100) + "%";
+                }
+              });
+            }).then(function(res){
+              let pageText = res.text;
+              if (getMyNames().length > 0 && res.words.length > 0){
+                const fres = filterItemsByMyColumn(res.words);
+                if (fres && fres.foundName){
+                  pageText = buildTextFromItems(fres.items);
+                  anyFound = true;
+                }
+              }
+              return acc + pageText + "\n";
+            });
+          });
+        })(p);
+      }
+      return chain.then(function(allText){
+        document.getElementById("ocrText").value = allText;
+        let note = "";
+        if (getMyNames().length > 0){
+          note = anyFound
+            ? "登録した名前の列だけを対象にしました。"
+            : "登録した名前が見つからなかったため、全体を対象にしています。";
+        }
+        statusEl.textContent = "読み取りが終わりました。内容を確認して「下書きを作成」を押してください" + (note ? "（" + note + "）" : "");
+      });
+    });
+  }).catch(function(){
+    statusEl.textContent = "";
+    alert("PDFの読み取りに失敗しました。ファイルを確認してください");
+  }).then(function(){
+    runBtn.disabled = false;
+  });
+}
+
+// 読み取り対象の画像をセットし、プレビューを更新する
+function setOcrImage(dataUrl){
+  ocrImageDataUrl = dataUrl || null;
+  ocrPdfBuffer = null;
+  const pdfNote = document.getElementById("ocrPdfName");
+  pdfNote.textContent = "";
+  pdfNote.classList.add("hidden");
+  const prev = document.getElementById("ocrPreview");
+  if (ocrImageDataUrl){
+    prev.src = ocrImageDataUrl;
+    prev.classList.remove("hidden");
+  } else {
+    prev.removeAttribute("src");
+    prev.classList.add("hidden");
+  }
+  document.getElementById("ocrRunBtn").disabled = !ocrImageDataUrl;
+}
+
+// 保存済みの今月の画像を OCR の選択肢に反映する
+function renderOcrSources(){
+  const sel = document.getElementById("ocrSavedImage");
+  if (!sel) return;
+  const current = sel.value;
+  const list = getMonthImages();
+  sel.innerHTML = '<option value="">選んでください</option>' + list.map(function(im, i){
+    return '<option value="' + im.id + '">' + (i + 1) + "枚目の画像</option>";
+  }).join("");
+  if (list.some(function(im){ return im.id === current; })) sel.value = current;
+}
+
+// Tesseract.js で画像からテキストを読み取る（jpn+eng）
+function runOcr(){
+  if (ocrPdfBuffer){
+    runPdfRead();
+    return;
+  }
+  if (!ocrImageDataUrl){
+    alert("先に画像を選んでください");
+    return;
+  }
+  if (typeof Tesseract === "undefined"){
+    alert("読み取り用ライブラリを読み込めませんでした。インターネット接続を確認して、ページを再読み込みしてください");
+    return;
+  }
+  const statusEl = document.getElementById("ocrStatus");
+  const runBtn = document.getElementById("ocrRunBtn");
+  runBtn.disabled = true;
+  statusEl.textContent = "準備中…";
+  let worker = null;
+  Tesseract.createWorker("jpn+eng", 1, {
+    logger: function(m){
+      if (m && typeof m.progress === "number"){
+        const pct = Math.round(m.progress * 100);
+        if (m.status === "recognizing text"){
+          statusEl.textContent = "読み取り中… " + pct + "%";
+        } else {
+          statusEl.textContent = "準備中… " + pct + "%（初回は言語データをダウンロードするため、少し時間がかかります）";
+        }
+      }
+    }
+  }).then(function(w){
+    worker = w;
+    return worker.recognize(ocrImageDataUrl, {}, { text: true, tsv: true }).catch(function(){
+      return worker.recognize(ocrImageDataUrl);
+    });
+  }).then(function(result){
+    const data = (result && result.data) || {};
+    let text = data.text || "";
+    let note = "";
+    // 自分の名前が登録されていれば、その名前の列だけを対象にする
+    if (getMyNames().length > 0){
+      const words = extractWordsFromResult(data, 0);
+      if (words.length > 0){
+        const res = filterItemsByMyColumn(words);
+        if (res && res.foundName){
+          text = buildTextFromItems(res.items);
+          note = "「" + res.foundName + "」の列だけを対象にしました。";
+        } else {
+          note = "登録した名前が見つからなかったため、全体を対象にしています。";
+        }
+      } else {
+        note = "名前の位置を取得できなかったため、全体を対象にしています。";
+      }
+    }
+    document.getElementById("ocrText").value = text;
+    statusEl.textContent = "読み取りが終わりました。内容を確認して「下書きを作成」を押してください" + (note ? "（" + note + "）" : "");
+  }).catch(function(){
+    statusEl.textContent = "";
+    alert("読み取りに失敗しました。画像を変えてお試しください");
+  }).then(function(){
+    runBtn.disabled = false;
+    if (worker) worker.terminate();
+  });
+}
+
+// 下書き行の入力内容を ocrDrafts に同期する
+function syncDraftsFromDom(){
+  const rows = document.querySelectorAll("#ocrDrafts .draft-row");
+  rows.forEach(function(row, i){
+    if (!ocrDrafts[i]) return;
+    ocrDrafts[i].date = row.querySelector('[data-df="date"]').value;
+    ocrDrafts[i].workplaceId = row.querySelector('[data-df="workplaceId"]').value;
+    ocrDrafts[i].start = row.querySelector('[data-df="start"]').value;
+    ocrDrafts[i].end = row.querySelector('[data-df="end"]').value;
+    ocrDrafts[i].breakMin = Number(row.querySelector('[data-df="breakMin"]').value) || 0;
+    ocrDrafts[i].category = row.querySelector('[data-df="category"]').value;
+  });
+}
+
+// 下書き候補を編集可能な行として描画する
+function renderDrafts(){
+  const wrap = document.getElementById("ocrDrafts");
+  const area = document.getElementById("ocrDraftArea");
+  if (ocrDrafts.length === 0){
+    area.classList.add("hidden");
+    wrap.innerHTML = "";
+    return;
+  }
+  area.classList.remove("hidden");
+  wrap.innerHTML = ocrDrafts.map(function(d, i){
+    const wpOptions = workplaces.map(function(w){
+      return '<option value="' + w.id + '"' + (w.id === d.workplaceId ? " selected" : "") + ">" + esc(w.name) + "</option>";
+    }).join("");
+    const catOptions = ["", "早番", "日勤", "遅番", "夜勤"].map(function(c){
+      const label = c === "" ? "未設定" : c;
+      return '<option value="' + c + '"' + (c === (d.category || "") ? " selected" : "") + ">" + label + "</option>";
+    }).join("");
+    return '<div class="draft-row">' +
+      '<div class="row2">' +
+      '<div><label>日付</label><input type="date" data-df="date" value="' + esc(d.date) + '"></div>' +
+      '<div><label>バイト先</label><select data-df="workplaceId">' + wpOptions + "</select></div>" +
+      "</div>" +
+      '<div class="row2">' +
+      '<div><label>開始</label><input type="time" data-df="start" value="' + esc(d.start) + '"></div>' +
+      '<div><label>終了</label><input type="time" data-df="end" value="' + esc(d.end) + '"></div>' +
+      "</div>" +
+      '<div class="row2">' +
+      '<div><label>区分</label><select data-df="category">' + catOptions + "</select></div>" +
+      '<div><label>休憩（分）</label><input type="number" data-df="breakMin" min="0" step="5" value="' + (d.breakMin || 0) + '"></div>' +
+      "</div>" +
+      '<div class="draft-actions"><button class="small danger" data-del-draft="' + i + '">この行を削除</button></div>' +
+      "</div>";
+  }).join("");
+}
+
+// 下書きをまとめてシフトとして登録する
+function registerAllDrafts(){
+  syncDraftsFromDom();
+  if (ocrDrafts.length === 0) return;
+  const invalid = ocrDrafts.some(function(d){
+    return !d.date || !d.start || !d.end || !d.workplaceId;
+  });
+  if (invalid){
+    alert("日付・開始・終了・バイト先が未入力の行があります。確認してから登録してください");
+    return;
+  }
+  ocrDrafts.forEach(function(d){
+    shifts.push({
+      id: newId(),
+      date: d.date,
+      workplaceId: d.workplaceId,
+      start: d.start,
+      end: d.end,
+      breakMin: Number(d.breakMin) || 0,
+      category: d.category || "",
+      memo: "写真から読み取り"
+    });
+  });
+  const count = ocrDrafts.length;
+  ocrDrafts = [];
+  saveAll();
+  renderDrafts();
+  render();
+  alert(count + "件のシフトを登録しました");
+}
+
+// OCR セクションの操作
+const ocrFileInput = document.getElementById("ocrFileInput");
+document.getElementById("ocrFileBtn").addEventListener("click", function(){
+  ocrFileInput.click();
+});
+ocrFileInput.addEventListener("change", function(){
+  const f = ocrFileInput.files && ocrFileInput.files[0];
+  if (f){
+    const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name || "");
+    if (isPdf){
+      readFileAsArrayBuffer(f).then(function(buffer){
+        document.getElementById("ocrSavedImage").value = "";
+        setOcrPdf(buffer, f.name);
+      }).catch(function(){
+        alert("PDFを読み込めませんでした");
+      });
+    } else {
+      readFileAsDataURL(f).then(function(dataUrl){
+        document.getElementById("ocrSavedImage").value = "";
+        setOcrImage(dataUrl);
+      }).catch(function(){
+        alert("画像を読み込めませんでした");
+      });
+    }
+  }
+  ocrFileInput.value = "";
+});
+document.getElementById("ocrSavedImage").addEventListener("change", function(e){
+  const im = getMonthImages().find(function(x){ return x.id === e.target.value; });
+  setOcrImage(im ? im.dataUrl : null);
+});
+document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
+document.getElementById("ocrBuildDrafts").addEventListener("click", function(){
+  if (workplaces.length === 0){
+    alert("先にバイト先を登録してください");
+    return;
+  }
+  ocrDrafts = buildDraftsFromText(document.getElementById("ocrText").value);
+  if (ocrDrafts.length === 0){
+    alert("時間の書かれた行が見つかりませんでした。テキストを確認してください");
+    renderDrafts();
+    return;
+  }
+  renderDrafts();
+  document.getElementById("ocrDraftArea").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+document.getElementById("ocrDrafts").addEventListener("click", function(e){
+  const delBtn = e.target.closest("[data-del-draft]");
+  if (delBtn){
+    syncDraftsFromDom();
+    ocrDrafts.splice(Number(delBtn.getAttribute("data-del-draft")), 1);
+    renderDrafts();
+  }
+});
+document.getElementById("ocrRegisterAll").addEventListener("click", registerAllDrafts);
+
+// 下書き行でバイト先や区分を変えたら、そのバイト先のプリセット時刻を反映する
+document.getElementById("ocrDrafts").addEventListener("change", function(e){
+  const field = e.target.getAttribute("data-df");
+  if (field !== "category" && field !== "workplaceId") return;
+  const row = e.target.closest(".draft-row");
+  if (!row) return;
+  const wp = findWp(row.querySelector('[data-df="workplaceId"]').value);
+  const p = getPreset(wp, row.querySelector('[data-df="category"]').value);
+  if (p){
+    row.querySelector('[data-df="start"]').value = p.start;
+    row.querySelector('[data-df="end"]').value = p.end;
+  }
+});
+
+// 自分の名前の初期表示と保存
+const myNamesInput = document.getElementById("myNamesInput");
+myNamesInput.value = settings.myNames || "";
+myNamesInput.addEventListener("change", function(){
+  settings.myNames = myNamesInput.value.trim();
+  saveSettings();
+});
 
 // 初期描画
 render();
