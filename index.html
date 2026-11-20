@@ -6,6 +6,10 @@
 <title>シフト給料アプリ</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<!-- Webフォント（書体の選択肢用）。読み込めない環境では各書体のフォールバック（端末の書体→標準）が使われる -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@500;700&family=Zen+Maru+Gothic:wght@500;700&family=Kosugi+Maru&family=Yomogi&display=swap" rel="stylesheet">
 <style>
   :root{
     --blue:#2563eb;
@@ -34,6 +38,22 @@
   }
   html[data-font="mincho"]{
     --font-family:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho",YuMincho,"Noto Serif JP","MS PMincho",serif;
+  }
+  /* Webフォント系の書体（読み込めない環境では後ろの端末書体・標準にフォールバックする） */
+  html[data-font="noto"]{
+    --font-family:"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;
+  }
+  html[data-font="zenkaku"]{
+    --font-family:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  }
+  html[data-font="zenmaru"]{
+    --font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Maru Gothic Pro","M PLUS Rounded 1c",sans-serif;
+  }
+  html[data-font="kosugi"]{
+    --font-family:"Kosugi Maru","Hiragino Maru Gothic ProN","Hiragino Maru Gothic Pro","M PLUS Rounded 1c",sans-serif;
+  }
+  html[data-font="yomogi"]{
+    --font-family:"Yomogi","Hiragino Maru Gothic ProN","Hiragino Maru Gothic Pro",sans-serif;
   }
   /* 文字の大きさ：画面全体を拡大・縮小して反映する（標準は等倍） */
   html[data-font-size="small"] body{zoom:.9;}
@@ -319,6 +339,27 @@
   }
   .draft-missing-note{color:var(--danger);font-weight:600;font-size:12px;margin:6px 0 0;}
   .draft-estimated-note{color:var(--blue-dark);font-weight:600;font-size:12px;margin:6px 0 0;}
+  /* 推測で補正した下書き行の確認ボックス（元の読み取り値と推測後の値を並べて見せる） */
+  .draft-repair-box{
+    margin-top:8px;padding:8px 10px;border:1px solid var(--blue);border-radius:8px;
+    background:var(--blue-light);
+  }
+  .draft-repair-box .draft-estimated-note{margin:2px 0;}
+  .draft-confirm-label{
+    display:flex !important;align-items:center;gap:8px;font-size:14px !important;
+    color:var(--ink) !important;font-weight:700;margin:8px 0 2px !important;cursor:pointer;
+  }
+  .draft-confirm-label input{width:20px !important;min-height:20px !important;flex:none;}
+  /* バイト先フォームの区分プリセット編集行 */
+  .wf-preset-row{
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0;
+    background:var(--surface);
+  }
+  .wf-preset-row label{display:block;font-size:12px;color:var(--muted);margin:6px 0 3px;}
+  .wf-preset-row input{
+    width:100%;font-size:15px;padding:8px;border:1px solid var(--line);
+    border-radius:8px;background:var(--surface);color:var(--ink);min-height:40px;
+  }
   .register-status{font-weight:600;}
   .cat-badge{
     display:inline-block;font-size:11px;font-weight:700;line-height:1;
@@ -329,6 +370,13 @@
   .cat-late{background:#ede9fe;color:#6d28d9;}
   .cat-night{background:#1f2937;color:#f9fafb;}
   .cat-none{background:#f3f4f6;color:#6b7280;}
+  /* 自由に作った区分（カスタム区分）用のバッジ色。名前のハッシュで6色から決める */
+  .cat-x1{background:#ffe4e6;color:#9f1239;}
+  .cat-x2{background:#ffedd5;color:#9a3412;}
+  .cat-x3{background:#dcfce7;color:#166534;}
+  .cat-x4{background:#cffafe;color:#155e75;}
+  .cat-x5{background:#fae8ff;color:#86198f;}
+  .cat-x6{background:#fef9c3;color:#854d0e;}
   .field-label{display:block;font-size:13px;color:var(--muted);margin:0 0 4px;}
   .text-input{
     width:100%;font-size:16px;padding:10px;border:1px solid var(--line);
@@ -375,6 +423,10 @@
   .cal-cell.cal-today{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue);}
   .cal-cell.cal-today .cal-daynum{color:var(--blue-dark);}
   .cal-cell.cal-selected{background:var(--blue-light);border-color:var(--blue);}
+  .cal-cell.cal-in-range{background:#dbeafe;}
+  .cal-cell.cal-range-edge{background:var(--blue-light);border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue);}
+  #calRangePanel{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface);}
+  #calRangeBtn{margin-top:10px;}
   .cal-marks{display:flex;gap:2px;min-height:10px;align-items:center;}
   .cal-dot{width:8px;height:8px;margin-right:0;}
   .cal-count{font-size:10px;color:var(--muted);line-height:1;}
@@ -598,6 +650,37 @@
     <div id="shiftCalendarBlock" class="hidden">
       <h3 class="simple-block-title">カレンダー</h3>
       <div id="shiftCalendar"></div>
+      <button type="button" class="small" id="calRangeBtn" data-simple-hide>📅 範囲を選んでまとめて登録</button>
+      <div id="calRangePanel" class="hidden" data-simple-hide>
+        <p class="note" id="calRangeInfo"></p>
+        <label for="crWorkplace">バイト先</label>
+        <select id="crWorkplace"></select>
+        <label for="crCategory">区分</label>
+        <select id="crCategory"></select>
+        <div class="row2">
+          <div>
+            <label for="crStart">開始</label>
+            <input type="time" id="crStart">
+          </div>
+          <div>
+            <label for="crEnd">終了</label>
+            <input type="time" id="crEnd">
+          </div>
+        </div>
+        <label for="crEndOffset">終了日</label>
+        <select id="crEndOffset">
+          <option value="0">当日（開始より前なら翌日）</option>
+          <option value="1">翌日</option>
+          <option value="2">翌々日</option>
+        </select>
+        <label for="crBreak">休憩（分）</label>
+        <input type="number" id="crBreak" min="0" step="5" value="0">
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button type="button" class="primary" id="crRegisterBtn" style="flex:1;">この範囲に登録</button>
+          <button type="button" class="small" id="crCancelBtn">やめる</button>
+        </div>
+        <p class="note" id="crStatus"></p>
+      </div>
       <div id="calDayDetail" class="hidden"></div>
     </div>
     <button class="primary" id="toggleShiftForm">＋ シフトを追加</button>
@@ -1128,46 +1211,10 @@
         <p class="note">定期代は自動では入力されません。「定期代を調べる」で路線検索のページを開き、定期代を確認して、上の「定期代」欄に自分で入力してください。収入まとめには、定期代÷期間（月数）の月換算（四捨五入）で計上します。</p>
       </div>
       </div>
-      <p class="note" style="margin-bottom:0;">区分プリセット（このバイト先用）。シフト登録で区分を選ぶと、この時刻が自動入力されます。</p>
-      <div class="row2">
-        <div>
-          <label for="wfPreEarlyStart">早番 開始</label>
-          <input type="time" id="wfPreEarlyStart">
-        </div>
-        <div>
-          <label for="wfPreEarlyEnd">早番 終了</label>
-          <input type="time" id="wfPreEarlyEnd">
-        </div>
-      </div>
-      <div class="row2">
-        <div>
-          <label for="wfPreDayStart">日勤 開始</label>
-          <input type="time" id="wfPreDayStart">
-        </div>
-        <div>
-          <label for="wfPreDayEnd">日勤 終了</label>
-          <input type="time" id="wfPreDayEnd">
-        </div>
-      </div>
-      <div class="row2">
-        <div>
-          <label for="wfPreLateStart">遅番 開始</label>
-          <input type="time" id="wfPreLateStart">
-        </div>
-        <div>
-          <label for="wfPreLateEnd">遅番 終了</label>
-          <input type="time" id="wfPreLateEnd">
-        </div>
-      </div>
-      <div class="row2">
-        <div>
-          <label for="wfPreNightStart">夜勤 開始</label>
-          <input type="time" id="wfPreNightStart">
-        </div>
-        <div>
-          <label for="wfPreNightEnd">夜勤 終了</label>
-          <input type="time" id="wfPreNightEnd">
-        </div>
+      <p class="note" style="margin-bottom:0;">勤務区分（このバイト先用）。区分名・開始・終了・休憩を自由に追加・編集・削除できます。シフト登録で区分を選ぶと、この時刻と休憩が自動入力されます。</p>
+      <div id="wfPresetList"></div>
+      <div class="form-actions" style="justify-content:flex-start;margin-top:4px;">
+        <button type="button" id="wfPresetAdd">＋ 区分を追加</button>
       </div>
       <div class="form-actions">
         <button type="submit" class="primary" id="wfSubmit">保存する</button>
@@ -1209,10 +1256,15 @@
     <select id="fontSelect" class="text-input">
       <option value="system">標準（システム）</option>
       <option value="gothic">ゴシック系</option>
+      <option value="noto">ゴシック（Noto・読みやすい）</option>
+      <option value="zenkaku">ゴシック（すっきり）</option>
       <option value="round">丸ゴシック系</option>
+      <option value="zenmaru">丸ゴシック（やわらかい）</option>
+      <option value="kosugi">丸ゴシック（まるみ強め）</option>
+      <option value="yomogi">手書き風</option>
       <option value="mincho">明朝系</option>
     </select>
-    <p class="note">文字の大きさとフォントは、アプリ全体に反映されます。選んだ内容は保存され、バックアップ（自分の設定）にも含まれます。フォントは、端末に入っている書体の中から近いものが使われます（端末によっては見た目が変わらない場合があります）。</p>
+    <p class="note">文字の大きさとフォントは、アプリ全体に反映されます。選んだ内容は保存され、バックアップ（自分の設定）にも含まれます。フォントは、端末に入っている書体の中から近いものが使われます（端末によっては見た目が変わらない場合があります）。「Noto」「すっきり」「やわらかい」「まるみ強め」「手書き風」はWebフォントを使うため、ネットから読み込めない環境では標準に近い書体で表示されます。</p>
 
     <label class="field-label" style="margin-top:16px;">データのバックアップ</label><button type="button" class="help-btn" data-help="backup" aria-label="バックアップの説明を表示">？</button>
     <div class="crop-btns" style="margin-top:0;">
@@ -1521,9 +1573,18 @@ function wageHistoryDisplayRows(w){
 
 // === CATEGORY LOGIC START ===
 // ---------- シフト区分とプリセット ----------
+// 区分はバイト先ごとに自由に作れる（名前・開始・終了・休憩）。初期値として用意する区分名
 const SHIFT_CATEGORIES = ["早番", "日勤", "遅番", "夜勤"];
-const CATEGORY_ORDER = ["早番", "日勤", "遅番", "夜勤", "未設定"];
 const CATEGORY_CLASS = { "早番": "cat-early", "日勤": "cat-day", "遅番": "cat-late", "夜勤": "cat-night", "未設定": "cat-none" };
+// 自由に作った区分のバッジ色（名前のハッシュで決めるため、同じ名前はいつも同じ色になる）
+const CUSTOM_CATEGORY_CLASSES = ["cat-x1", "cat-x2", "cat-x3", "cat-x4", "cat-x5", "cat-x6"];
+function categoryClassFor(name){
+  if (CATEGORY_CLASS[name]) return CATEGORY_CLASS[name];
+  const s = String(name || "");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return CUSTOM_CATEGORY_CLASSES[h % CUSTOM_CATEGORY_CLASSES.length];
+}
 // 区分プリセットの初期値（バイト先ごとに保持し、編集できる）
 const DEFAULT_PRESETS = {
   "早番": { start: "06:30", end: "15:30" },
@@ -1538,26 +1599,63 @@ function defaultPresets(){
   return JSON.parse(JSON.stringify(DEFAULT_PRESETS));
 }
 
-// バイト先にプリセットが無ければ初期値で補う（既存データの移行用）
+// プリセット（区分名→{start,end,breakMin?}）の並び順を決める
+// 保存済みの categoryOrder を優先し、残りは初期区分の順→その他の順で補う
+function orderedPresetNames(presets, categoryOrder){
+  const keys = Object.keys(presets || {});
+  const out = [];
+  (Array.isArray(categoryOrder) ? categoryOrder : []).forEach(function(n){
+    if (keys.indexOf(n) >= 0 && out.indexOf(n) < 0) out.push(n);
+  });
+  SHIFT_CATEGORIES.forEach(function(n){
+    if (keys.indexOf(n) >= 0 && out.indexOf(n) < 0) out.push(n);
+  });
+  keys.forEach(function(n){
+    if (out.indexOf(n) < 0) out.push(n);
+  });
+  return out;
+}
+
+// バイト先の区分一覧（並び順つき）を返す。バイト先が無い場合は初期区分を返す
+function categoriesOf(wp){
+  if (!wp || !wp.presets || typeof wp.presets !== "object") return SHIFT_CATEGORIES.slice();
+  return orderedPresetNames(wp.presets, wp.categoryOrder);
+}
+
+// バイト先の区分データを整える（既存データの移行用）
+// ・presets 自体が無いバイト先には初期区分を持たせる
+// ・presets がある場合は中身を正とし、消した区分を勝手に復活させない
+// ・不正な行（名前なし・時刻なし）は取り除き、breakMin を整え、categoryOrder を再構成する
 function ensurePresets(wp){
-  if (!wp.presets || typeof wp.presets !== "object") wp.presets = {};
-  SHIFT_CATEGORIES.forEach(function(c){
-    const p = wp.presets[c];
-    if (!p || !p.start || !p.end){
-      wp.presets[c] = { start: DEFAULT_PRESETS[c].start, end: DEFAULT_PRESETS[c].end };
+  if (!wp.presets || typeof wp.presets !== "object" || Array.isArray(wp.presets)){
+    wp.presets = defaultPresets();
+  }
+  Object.keys(wp.presets).forEach(function(name){
+    const p = wp.presets[name];
+    if (!name || !p || !p.start || !p.end){
+      delete wp.presets[name];
+      return;
+    }
+    if (p.breakMin !== undefined && p.breakMin !== null){
+      const b = Math.floor(Number(p.breakMin));
+      if (isFinite(b) && b >= 0) p.breakMin = b;
+      else delete p.breakMin;
     }
   });
+  wp.categoryOrder = orderedPresetNames(wp.presets, wp.categoryOrder);
   return wp;
 }
 
-// バイト先の区分プリセットを取得する（無ければ初期値を返す）
+// バイト先の区分プリセットを取得する（そのバイト先に無い区分は null。
+// バイト先自体が無い場合だけ、初期区分の初期値を返す）
 function getPreset(workplace, category){
-  if (!category || SHIFT_CATEGORIES.indexOf(category) < 0) return null;
+  if (!category) return null;
   if (workplace && workplace.presets && workplace.presets[category] &&
       workplace.presets[category].start && workplace.presets[category].end){
     return workplace.presets[category];
   }
-  return DEFAULT_PRESETS[category];
+  if (!workplace && DEFAULT_PRESETS[category]) return DEFAULT_PRESETS[category];
+  return null;
 }
 
 // 期間別時給の配列を正規化する（不正な行は捨て、開始日の昇順に並べ、同じ開始日は後のものを優先する）
@@ -1656,15 +1754,34 @@ function workplaceMetaText(w){
   return parts.join("・");
 }
 
-// シフトの区分ラベル（区分なしの既存シフトは「未設定」）
+// シフトの区分ラベル（区分名が入っていればそのまま使う。区分なしの既存シフトは「未設定」）
 function categoryLabel(shift){
-  return (shift && SHIFT_CATEGORIES.indexOf(shift.category) >= 0) ? shift.category : "未設定";
+  return (shift && typeof shift.category === "string" && shift.category) ? shift.category : "未設定";
 }
 
 // 区分バッジのHTML
 function categoryBadge(shift){
   const label = categoryLabel(shift);
-  return '<span class="cat-badge ' + (CATEGORY_CLASS[label] || "cat-none") + '">' + label + "</span>";
+  return '<span class="cat-badge ' + categoryClassFor(label) + '">' + esc(label) + "</span>";
+}
+
+// 区分のセレクト（select要素）の選択肢を、そのバイト先の区分一覧で作り直す
+// selected がそのバイト先の区分に無い場合は「未設定」に戻す。
+// keepExtra=true のときは、区分一覧に無い selected も「（現在の値）」として残す（編集時に値を消さないため）
+function fillCategoryOptions(selectEl, wp, selected, keepExtra){
+  if (!selectEl) return;
+  const names = categoriesOf(wp).slice();
+  let sel = (selected !== undefined && selected !== null) ? selected : selectEl.value;
+  let extra = false;
+  if (sel && names.indexOf(sel) < 0){
+    if (keepExtra){ names.push(sel); extra = true; }
+    else sel = "";
+  }
+  selectEl.innerHTML = '<option value="">未設定</option>' + names.map(function(n){
+    const label = (extra && n === sel) ? n + "（現在の値）" : n;
+    return '<option value="' + esc(n) + '"' + (n === sel ? " selected" : "") + ">" + esc(label) + "</option>";
+  }).join("");
+  selectEl.value = sel || "";
 }
 // === CATEGORY LOGIC END ===
 
@@ -1716,6 +1833,23 @@ function expandBulkDates(fromStr, toStr, weekdays){
     d.setDate(d.getDate() + 1);
   }
   return out;
+}
+
+// カレンダーの範囲一括登録の計画：期間内の全日を対象に、
+// 既に同じシフト（同じ日付・バイト先・開始・終了）がある日は二重登録を防ぐためスキップする
+// 戻り値 { dates: 登録対象の日付, skipped: 重複で除いた日付 }
+function planRangeRegistration(existingShifts, fromStr, toStr, workplaceId, start, end){
+  const all = expandBulkDates(fromStr, toStr, [0, 1, 2, 3, 4, 5, 6]);
+  const dates = [];
+  const skipped = [];
+  all.forEach(function(d){
+    const dup = (existingShifts || []).some(function(s){
+      return s.date === d && s.workplaceId === workplaceId && s.start === start && s.end === end;
+    });
+    if (dup) skipped.push(d);
+    else dates.push(d);
+  });
+  return { dates: dates, skipped: skipped };
 }
 
 // その日を含む週の月曜日の日付文字列を返す
@@ -2952,8 +3086,19 @@ function render(){
     catWrap.classList.add("hidden");
   } else {
     catWrap.classList.remove("hidden");
-    catEl.innerHTML = CATEGORY_ORDER.filter(function(c){ return catCounts[c]; }).map(function(c){
-      return '<div class="subtotal-row"><span><span class="cat-badge ' + (CATEGORY_CLASS[c] || "cat-none") + '">' + c + '</span></span><span>' + catCounts[c] + "件</span></div>";
+    // 並び順：初期区分→各バイト先の区分（登録順）→その他の区分→「未設定」
+    const catOrderList = [];
+    SHIFT_CATEGORIES.forEach(function(c){ if (catOrderList.indexOf(c) < 0) catOrderList.push(c); });
+    workplaces.forEach(function(w){
+      categoriesOf(w).forEach(function(c){ if (catOrderList.indexOf(c) < 0) catOrderList.push(c); });
+    });
+    const orderedCats = catOrderList.filter(function(c){ return catCounts[c]; })
+      .concat(Object.keys(catCounts).filter(function(c){
+        return catOrderList.indexOf(c) < 0 && c !== "未設定";
+      }));
+    if (catCounts["未設定"]) orderedCats.push("未設定");
+    catEl.innerHTML = orderedCats.map(function(c){
+      return '<div class="subtotal-row"><span><span class="cat-badge ' + categoryClassFor(c) + '">' + esc(c) + '</span></span><span>' + catCounts[c] + "件</span></div>";
     }).join("");
   }
 
@@ -2989,6 +3134,8 @@ function render(){
     return '<option value="' + w.id + '">' + esc(w.name) + "</option>";
   }).join("");
   if (findWp(current)) sel.value = current;
+  // 区分セレクトも、選択中のバイト先の区分一覧に合わせて作り直す
+  fillCategoryOptions(document.getElementById("sfCategory"), findWp(sel.value));
 
   // シフト表の添付（画像・PDF）
   renderImages();
@@ -3071,6 +3218,9 @@ function dayMemoEditorHtml(dateStr){
 }
 
 let selectedCalDate = null; // カレンダーで選択中の日付（"YYYY-MM-DD"）
+let calRangeMode = false; // カレンダーの範囲一括登録モード中か
+let calRangeStart = ""; // 範囲の開始日（"YYYY-MM-DD"）
+let calRangeEnd = ""; // 範囲の終了日（未選択なら ""）
 
 function getListViewMode(){
   const m = settings && settings.listViewMode;
@@ -3165,9 +3315,13 @@ function renderCalendar(monthShifts){
     const count = dayShifts.length >= 2 ? '<span class="cal-count">' + dayShifts.length + "件</span>" : "";
     const hasMemo = getDayMemo(dayMemos, ds) !== "";
     const memoMark = hasMemo ? '<span class="cal-memo-mark" title="メモあり">✎</span>' : "";
+    const inRange = calRangeMode && calRangeStart && calRangeEnd && ds >= calRangeStart && ds <= calRangeEnd;
+    const isRangeEdge = calRangeMode && (ds === calRangeStart || (calRangeEnd && ds === calRangeEnd));
     html += '<button type="button" class="cal-cell' +
       (ds === today ? " cal-today" : "") +
       (ds === selectedCalDate ? " cal-selected" : "") +
+      (inRange ? " cal-in-range" : "") +
+      (isRangeEdge ? " cal-range-edge" : "") +
       '" data-cal-date="' + ds + '" aria-label="' + fmtDateLabel(ds) + (hasMemo ? "（メモあり）" : "") + '">' +
       '<span class="cal-daynum">' + d + '</span><span class="cal-marks">' + dots + memoMark + "</span>" + count + "</button>";
   }
@@ -3193,8 +3347,145 @@ document.querySelectorAll("[data-view-mode-btn]").forEach(function(b){
 document.getElementById("shiftCalendar").addEventListener("click", function(e){
   const cell = e.target.closest("[data-cal-date]");
   if (!cell) return;
-  selectedCalDate = cell.getAttribute("data-cal-date");
+  const ds = cell.getAttribute("data-cal-date");
+  if (calRangeMode){
+    handleCalRangeTap(ds);
+    render();
+    return;
+  }
+  selectedCalDate = ds;
   render();
+});
+
+// ---------- カレンダーの範囲一括登録 ----------
+// 範囲モード中の日タップ：1回目で開始日、2回目で終了日（開始より前なら入れ替える）。
+// 両方選んだあとのタップは、新しい範囲の選び直しとして扱う
+function handleCalRangeTap(ds){
+  if (!calRangeStart || (calRangeStart && calRangeEnd)){
+    calRangeStart = ds;
+    calRangeEnd = "";
+  } else if (ds < calRangeStart){
+    calRangeEnd = calRangeStart;
+    calRangeStart = ds;
+  } else {
+    calRangeEnd = ds;
+  }
+  updateCalRangeInfo();
+}
+
+function updateCalRangeInfo(){
+  const el = document.getElementById("calRangeInfo");
+  if (!el) return;
+  if (!calRangeStart){
+    el.textContent = "カレンダーの日をタップして開始日を選び、もう1日タップして終了日を選んでください（月を切り替えて範囲を選ぶこともできます）。";
+  } else if (!calRangeEnd){
+    el.textContent = "開始日：" + fmtDateLabel(calRangeStart) + "。次に終了日をタップしてください。";
+  } else {
+    const n = expandBulkDates(calRangeStart, calRangeEnd, [0, 1, 2, 3, 4, 5, 6]).length;
+    el.textContent = "期間：" + fmtDateLabel(calRangeStart) + "〜" + fmtDateLabel(calRangeEnd) + "（" + n + "日間）。下の内容で、各日に同じシフトを登録します。";
+  }
+}
+
+// 範囲パネルのバイト先・区分セレクトを組み立て、区分プリセットを時刻に反映する
+function fillCalRangeWorkplaces(){
+  const sel = document.getElementById("crWorkplace");
+  const current = sel.value;
+  sel.innerHTML = workplaces.map(function(w){
+    return '<option value="' + w.id + '">' + esc(w.name) + "</option>";
+  }).join("");
+  if (findWp(current)) sel.value = current;
+  else if (settings.lastWorkplaceId && findWp(settings.lastWorkplaceId)) sel.value = settings.lastWorkplaceId;
+  fillCategoryOptions(document.getElementById("crCategory"), findWp(sel.value), settings.lastCategory || "");
+  applyCalRangePreset();
+}
+function applyCalRangePreset(){
+  const wp = findWp(document.getElementById("crWorkplace").value);
+  const p = getPreset(wp, document.getElementById("crCategory").value);
+  if (!p) return;
+  document.getElementById("crStart").value = p.start;
+  document.getElementById("crEnd").value = p.end;
+  document.getElementById("crEndOffset").value = "0"; // プリセットは当日〜翌日の範囲なので日オフセットは付けない
+  if (typeof p.breakMin === "number") document.getElementById("crBreak").value = p.breakMin;
+}
+document.getElementById("crWorkplace").addEventListener("change", function(){
+  fillCategoryOptions(document.getElementById("crCategory"),
+    findWp(document.getElementById("crWorkplace").value));
+  if (document.getElementById("crCategory").value) applyCalRangePreset();
+});
+document.getElementById("crCategory").addEventListener("change", applyCalRangePreset);
+
+function setCalRangeMode(on){
+  calRangeMode = on;
+  calRangeStart = "";
+  calRangeEnd = "";
+  document.getElementById("calRangePanel").classList.toggle("hidden", !on);
+  document.getElementById("calRangeBtn").textContent = on ? "範囲の選択をやめる" : "📅 範囲を選んでまとめて登録";
+  document.getElementById("crStatus").textContent = "";
+  if (on){
+    fillCalRangeWorkplaces();
+    updateCalRangeInfo();
+  }
+  render();
+}
+document.getElementById("calRangeBtn").addEventListener("click", function(){
+  setCalRangeMode(!calRangeMode);
+});
+document.getElementById("crCancelBtn").addEventListener("click", function(){
+  setCalRangeMode(false);
+});
+document.getElementById("crRegisterBtn").addEventListener("click", function(){
+  const statusEl = document.getElementById("crStatus");
+  const wpId = document.getElementById("crWorkplace").value;
+  const start = document.getElementById("crStart").value;
+  const end = document.getElementById("crEnd").value;
+  if (!calRangeStart || !calRangeEnd){
+    statusEl.textContent = "先にカレンダーで開始日と終了日を選んでください。";
+    return;
+  }
+  if (!wpId || !start || !end){
+    statusEl.textContent = "バイト先・開始時刻・終了時刻を入力してください。";
+    return;
+  }
+  const plan = planRangeRegistration(shifts, calRangeStart, calRangeEnd, wpId, start, end);
+  if (plan.dates.length === 0){
+    statusEl.textContent = plan.skipped.length > 0
+      ? "選んだ範囲は、すべて同じシフトが登録済みでした（" + plan.skipped.length + "件）。内容を変えるか、別の期間を選んでください。"
+      : "登録できる日がありませんでした。期間を確認してください。";
+    return;
+  }
+  const wp = findWp(wpId);
+  const mode = wp ? transportModeOf(wp) : "daily";
+  const base = {
+    workplaceId: wpId,
+    category: document.getElementById("crCategory").value,
+    start: start,
+    end: end,
+    endDayOffset: Number(document.getElementById("crEndOffset").value) || 0,
+    breakMin: Math.max(0, Math.floor(Number(document.getElementById("crBreak").value) || 0)),
+    memo: ""
+  };
+  if (mode === "daily" || mode === "cap"){
+    const tf = wp ? transportDailyRate(wp) : 0;
+    base.transportFee = tf > 0 ? tf : 0;
+  }
+  plan.dates.forEach(function(d){
+    const nd = Object.assign({}, base, { date: d });
+    nd.id = newId();
+    shifts.push(nd);
+  });
+  saveAll();
+  settings.lastWorkplaceId = wpId;
+  settings.lastCategory = base.category || "";
+  saveSettings();
+  const msg = plan.dates.length + "件のシフトを登録しました" +
+    (plan.skipped.length > 0 ? "（同じシフトが既にあるため" + plan.skipped.length + "件スキップ）" : "");
+  const firstDate = plan.dates[0];
+  setCalRangeMode(false);
+  viewYear = Number(firstDate.slice(0, 4));
+  viewMonth = Number(firstDate.slice(5, 7)) - 1;
+  selectedCalDate = firstDate;
+  render();
+  alert(msg);
 });
 
 // ---------- 週のコピー ----------
@@ -3271,9 +3562,8 @@ document.getElementById("toggleShiftForm").addEventListener("click", function(){
   if (settings.lastWorkplaceId && findWp(settings.lastWorkplaceId)){
     document.getElementById("sfWorkplace").value = settings.lastWorkplaceId;
   }
-  if (settings.lastCategory){
-    document.getElementById("sfCategory").value = settings.lastCategory;
-  }
+  fillCategoryOptions(document.getElementById("sfCategory"),
+    findWp(document.getElementById("sfWorkplace").value), settings.lastCategory || "");
   syncShiftTransportField(true);
   document.getElementById("sfEndOffset").value = "0";
   syncAllTimeSliders();
@@ -3709,10 +3999,14 @@ function applyCategoryPreset(){
   document.getElementById("sfStart").value = p.start;
   document.getElementById("sfEnd").value = p.end;
   document.getElementById("sfEndOffset").value = "0"; // プリセットは当日〜翌日の範囲なので日オフセットは付けない
+  if (typeof p.breakMin === "number") document.getElementById("sfBreak").value = p.breakMin;
   syncAllTimeSliders();
 }
 document.getElementById("sfCategory").addEventListener("change", applyCategoryPreset);
 document.getElementById("sfWorkplace").addEventListener("change", function(){
+  // バイト先が変わったら、区分セレクトをそのバイト先の区分一覧で作り直す
+  fillCategoryOptions(document.getElementById("sfCategory"),
+    findWp(document.getElementById("sfWorkplace").value));
   if (document.getElementById("sfCategory").value) applyCategoryPreset();
 });
 
@@ -3818,7 +4112,7 @@ function handleShiftItemClick(e){
     document.getElementById("sfEnd").value = s.end;
     document.getElementById("sfEndOffset").value = String(Number(s.endDayOffset) || 0);
     document.getElementById("sfBreak").value = s.breakMin || 0;
-    document.getElementById("sfCategory").value = s.category || "";
+    fillCategoryOptions(document.getElementById("sfCategory"), findWp(s.workplaceId), s.category || "", true);
     document.getElementById("sfMemo").value = s.memo || "";
     document.getElementById("sfTransport").value = shiftTransportFee(s);
     syncShiftTransportField(false);
@@ -3841,7 +4135,7 @@ function handleShiftItemClick(e){
     document.getElementById("sfEnd").value = s.end;
     document.getElementById("sfEndOffset").value = String(Number(s.endDayOffset) || 0);
     document.getElementById("sfBreak").value = s.breakMin || 0;
-    document.getElementById("sfCategory").value = s.category || "";
+    fillCategoryOptions(document.getElementById("sfCategory"), findWp(s.workplaceId), s.category || "", true);
     document.getElementById("sfMemo").value = s.memo || "";
     document.getElementById("sfTransport").value = shiftTransportFee(s);
     syncShiftTransportField(false);
@@ -3864,33 +4158,88 @@ document.getElementById("shiftList").addEventListener("click", handleShiftItemCl
 document.getElementById("calDayDetail").addEventListener("click", handleShiftItemClick);
 
 // ---------- バイト先フォーム ----------
-// 区分プリセットの入力欄と区分の対応
-const PRESET_FIELDS = [
-  { category: "早番", startId: "wfPreEarlyStart", endId: "wfPreEarlyEnd" },
-  { category: "日勤", startId: "wfPreDayStart", endId: "wfPreDayEnd" },
-  { category: "遅番", startId: "wfPreLateStart", endId: "wfPreLateEnd" },
-  { category: "夜勤", startId: "wfPreNightStart", endId: "wfPreNightEnd" }
-];
+// 区分プリセットの編集リスト（区分名・開始・終了・休憩を1行ずつ編集する）
+function presetRowHtml(name, p){
+  p = p || {};
+  return '<div class="row2">' +
+    '<div><label>区分名</label><input type="text" data-pf="name" value="' + esc(name || "") + '" placeholder="例：準夜勤"></div>' +
+    '<div><label>休憩（分）</label><input type="number" data-pf="break" min="0" step="5" value="' + (typeof p.breakMin === "number" ? p.breakMin : "") + '" placeholder="任意"></div>' +
+    "</div>" +
+    '<div class="row2">' +
+    '<div><label>開始</label><input type="time" data-pf="start" value="' + esc(p.start || "") + '"></div>' +
+    '<div><label>終了</label><input type="time" data-pf="end" value="' + esc(p.end || "") + '"></div>' +
+    "</div>" +
+    '<div class="draft-actions"><button type="button" class="small danger" data-del-preset>この区分を削除</button></div>';
+}
 
-// プリセット入力欄に値をセットする
-function fillPresetFields(presets){
-  PRESET_FIELDS.forEach(function(f){
-    const p = (presets && presets[f.category]) || DEFAULT_PRESETS[f.category];
-    document.getElementById(f.startId).value = p.start || "";
-    document.getElementById(f.endId).value = p.end || "";
+// 区分プリセットの編集リストを描画する（presets と並び順から行を作る）
+function renderPresetEditor(presets, categoryOrder){
+  const list = document.getElementById("wfPresetList");
+  if (!list) return;
+  const names = orderedPresetNames(presets || {}, categoryOrder);
+  list.innerHTML = "";
+  names.forEach(function(n){
+    const row = document.createElement("div");
+    row.className = "wf-preset-row";
+    row.innerHTML = presetRowHtml(n, (presets || {})[n]);
+    list.appendChild(row);
   });
 }
 
-// プリセット入力欄の値を読み取る（空欄は初期値で補う）
+// 区分プリセットの編集リストに空の行を1つ追加する
+function addPresetRow(){
+  const list = document.getElementById("wfPresetList");
+  if (!list) return;
+  const row = document.createElement("div");
+  row.className = "wf-preset-row";
+  row.innerHTML = presetRowHtml("", {});
+  list.appendChild(row);
+  const nameInput = row.querySelector('[data-pf="name"]');
+  if (nameInput) nameInput.focus();
+}
+document.getElementById("wfPresetAdd").addEventListener("click", addPresetRow);
+document.getElementById("wfPresetList").addEventListener("click", function(e){
+  const delBtn = e.target.closest("[data-del-preset]");
+  if (!delBtn) return;
+  const row = delBtn.closest(".wf-preset-row");
+  if (row) row.remove();
+});
+
+// 区分プリセットの編集リストを読み取る
+// 戻り値：{presets, categoryOrder}。入力に問題がある場合は alert して null を返す
 function readPresetFields(){
+  const rows = document.querySelectorAll("#wfPresetList .wf-preset-row");
   const presets = {};
-  PRESET_FIELDS.forEach(function(f){
-    presets[f.category] = {
-      start: document.getElementById(f.startId).value || DEFAULT_PRESETS[f.category].start,
-      end: document.getElementById(f.endId).value || DEFAULT_PRESETS[f.category].end
-    };
+  const order = [];
+  let error = "";
+  rows.forEach(function(row){
+    if (error) return;
+    const name = row.querySelector('[data-pf="name"]').value.trim();
+    if (!name) return; // 名前が空の行は無視する
+    if (Object.prototype.hasOwnProperty.call(presets, name)){
+      error = "区分名「" + name + "」が重複しています。名前を変えてください";
+      return;
+    }
+    const start = row.querySelector('[data-pf="start"]').value;
+    const end = row.querySelector('[data-pf="end"]').value;
+    if (!start || !end){
+      error = "区分「" + name + "」の開始・終了を入力してください";
+      return;
+    }
+    const entry = { start: start, end: end };
+    const brkRaw = row.querySelector('[data-pf="break"]').value;
+    if (brkRaw !== ""){
+      const b = Math.floor(Number(brkRaw));
+      if (isFinite(b) && b >= 0) entry.breakMin = b;
+    }
+    presets[name] = entry;
+    order.push(name);
   });
-  return presets;
+  if (error){
+    alert(error);
+    return null;
+  }
+  return { presets: presets, categoryOrder: order };
 }
 
 // 交通費の方式に応じて、バイト先フォームの入力欄の表示を切り替える
@@ -4019,7 +4368,7 @@ document.getElementById("toggleWpForm").addEventListener("click", function(){
   document.getElementById("wfStationFrom").value = "";
   document.getElementById("wfStationTo").value = "";
   updateTransportFields();
-  fillPresetFields(defaultPresets());
+  renderPresetEditor(defaultPresets(), SHIFT_CATEGORIES.slice());
   document.getElementById("wfSubmit").textContent = "保存する";
   wpForm.classList.remove("hidden");
 });
@@ -4029,6 +4378,9 @@ document.getElementById("wfCancel").addEventListener("click", function(){
 });
 wpForm.addEventListener("submit", function(e){
   e.preventDefault();
+  // 区分プリセット（入力に問題があれば保存しない）
+  const presetData = readPresetFields();
+  if (!presetData) return;
   const trainingWageRaw = document.getElementById("wfTrainingWage").value;
   let trainingWage = null;
   if (trainingWageRaw !== ""){
@@ -4063,7 +4415,8 @@ wpForm.addEventListener("submit", function(e){
     transportPassMonths: Number(document.getElementById("wfTransportPassMonths").value) || 1,
     stationFrom: document.getElementById("wfStationFrom").value.trim(),
     stationTo: document.getElementById("wfStationTo").value.trim(),
-    presets: readPresetFields()
+    presets: presetData.presets,
+    categoryOrder: presetData.categoryOrder
   };
   if (!data.name){
     alert("バイト先の名前を入力してください");
@@ -4120,7 +4473,7 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     document.getElementById("wfStationFrom").value = w.stationFrom || "";
     document.getElementById("wfStationTo").value = w.stationTo || "";
     updateTransportFields();
-    fillPresetFields(w.presets);
+    renderPresetEditor(w.presets, categoriesOf(w));
     document.getElementById("wfSubmit").textContent = "更新する";
     wpForm.classList.remove("hidden");
     wpForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4267,6 +4620,8 @@ function renderTemplates(){
       return '<option value="' + w.id + '">' + esc(w.name) + "</option>";
     }).join("");
     if (findWp(current)) sel.value = current;
+    // 区分セレクトも、選択中のバイト先の区分一覧に合わせて作り直す
+    fillCategoryOptions(document.getElementById("tplCategory"), findWp(sel.value));
   }
 }
 
@@ -4322,10 +4677,14 @@ function applyTplCategoryPreset(){
   document.getElementById("tplStart").value = p.start;
   document.getElementById("tplEnd").value = p.end;
   document.getElementById("tplEndOffset").value = "0"; // プリセットは当日〜翌日の範囲なので日オフセットは付けない
+  if (typeof p.breakMin === "number") document.getElementById("tplBreak").value = p.breakMin;
   syncAllTimeSliders();
 }
 document.getElementById("tplCategory").addEventListener("change", applyTplCategoryPreset);
 document.getElementById("tplWorkplace").addEventListener("change", function(){
+  // バイト先が変わったら、区分セレクトをそのバイト先の区分一覧で作り直す
+  fillCategoryOptions(document.getElementById("tplCategory"),
+    findWp(document.getElementById("tplWorkplace").value));
   if (document.getElementById("tplCategory").value) applyTplCategoryPreset();
 });
 
@@ -4419,7 +4778,7 @@ document.getElementById("tplList").addEventListener("click", function(e){
     document.getElementById("tplName").value = t.name;
     renderTemplates();
     document.getElementById("tplWorkplace").value = t.workplaceId;
-    document.getElementById("tplCategory").value = t.category || "";
+    fillCategoryOptions(document.getElementById("tplCategory"), findWp(t.workplaceId), t.category || "", true);
     document.getElementById("tplStart").value = t.start;
     document.getElementById("tplEnd").value = t.end;
     document.getElementById("tplEndOffset").value = String(Number(t.endDayOffset) || 0);
@@ -4482,7 +4841,20 @@ function normalizeDrafts(list){
       breakMin: Number(d.breakMin) || 0,
       category: d.category || ""
     };
-    if (d.estimated) out.estimated = true; // 最頻ペアで推定補正した行の目印
+    if (d.estimated) out.estimated = true; // 推定で補正した行の目印
+    // 推測で直した内容（元の読み取り値→推測後の値）と、登録前の確認状態を保持する
+    if (Array.isArray(d.repairs) && d.repairs.length > 0){
+      const reps = d.repairs.filter(function(r){
+        return r && typeof r.from === "string" && typeof r.to === "string";
+      }).map(function(r){
+        return { field: String(r.field || ""), from: r.from, to: r.to };
+      });
+      if (reps.length > 0){
+        out.repairs = reps;
+        out.needsConfirm = true; // 推測で直した行は、利用者の確認が済むまで登録対象にしない
+        out.confirmed = d.confirmed === true;
+      }
+    }
     return out;
   });
 }
@@ -4623,17 +4995,21 @@ function extractTimePatterns(text){
   }
   const drafts = [];
   let discarded = 0;
+  // 連番補修のために、行ごとの情報（日付が読めた行＝アンカー／読めなかった行＝候補）を集める
+  const rowInfos = [];
   lines.forEach(function(rawLine, li){
     const line = rawLine.trim();
     if (!line) return;
     const info = lineInfos[li];
     const items = info.ranges.concat(info.pairs);
+    const weekday = weekdayKanjiInLine(line);
     if (items.length > 0){
       // 日付の特定では、範囲とペアの原文（数字列）を取り除いてから探す
       const raws = [];
       info.ranges.forEach(function(r){ raws.push({ raw: r.raw }); });
       info.pairs.forEach(function(p){ raws.push({ raw: p.startRaw }); raws.push({ raw: p.endRaw }); });
       const fd = findDayStrict(line, raws, daysInMonth);
+      if (fd.skip) return; // 対象外の月の行は、表の行として数えない
       if (fd.day){
         items.forEach(function(r){
           drafts.push({
@@ -4645,20 +5021,149 @@ function extractTimePatterns(text){
             category: ""
           });
         });
+        if (info.leftover > 0) discarded += 1;
+        rowInfos.push({ day: fd.day, items: items, weekday: weekday, anchor: true, line: line, leftover: 0 });
       } else {
-        // 日付と対応づけられない範囲・ペアは、間違った行を作らず破棄して数える
-        discarded += items.length;
+        // 日付が特定できない行は、連番補修の候補として取っておく（この時点では破棄しない）
+        rowInfos.push({
+          day: null, items: items, weekday: weekday, anchor: false, line: line,
+          leftover: info.leftover, dateRaw: leadingDateToken(line)
+        });
       }
-      if (info.leftover > 0) discarded += 1;
-    } else if (info.leftover > 0 || looksLikeFragment(line)){
-      discarded += 1;
+    } else {
+      // 時刻の無い行（休みの日など）も、日付が読めれば連番補修のアンカーになる
+      const fd = findDayStrict(line, [], daysInMonth);
+      const looksRow = !!weekday || /出勤|休み|勤務/.test(line);
+      if (fd.day && !fd.skip && looksRow){
+        rowInfos.push({ day: fd.day, items: [], weekday: weekday, anchor: true, line: line, leftover: 0 });
+      } else if (isSequenceCandidateLine(line, weekday)){
+        rowInfos.push({
+          day: null, items: [], weekday: weekday, anchor: false, line: line,
+          leftover: 0, dateRaw: leadingDateToken(line)
+        });
+      } else if (info.leftover > 0 || looksLikeFragment(line)){
+        discarded += 1;
+      }
     }
+  });
+  // 日付が文字化けした行を、前後の正しく読めた日付（連番）から推定して補う
+  repairDateSequence(rowInfos, daysInMonth).forEach(function(d){ drafts.push(d); });
+  // 補修できなかった候補行の時刻は、間違った行を作らず破棄として数える
+  rowInfos.forEach(function(r){
+    if (r.anchor || r.repaired) return;
+    if (r.items.length > 0) discarded += r.items.length;
+    if (r.leftover > 0) discarded += 1;
   });
   drafts.sort(function(a, b){
     if (a.date !== b.date) return a.date < b.date ? -1 : 1;
     return a.start < b.start ? -1 : (a.start > b.start ? 1 : 0);
   });
   return { drafts: drafts, discarded: discarded };
+}
+
+// 行の中の「曜日」欄らしい漢字1文字（月〜日）を返す。無ければ ""
+// 「日付」「曜日」のような単語の一部は拾わないよう、前後が区切り文字の場合だけを対象にする
+function weekdayKanjiInLine(line){
+  const m = /(?:^|[\s|｜（(])\s*([月火水木金土日])\s*(?:[\s|｜）)]|$)/.exec(line);
+  return m ? m[1] : "";
+}
+
+// 行頭の日付らしい数字トークン（3〜4桁）を返す。無ければ ""
+// 日付のスラッシュが落ちて数字が結合した誤読（例："12/21"→"221"）の「元の読み取り値」の表示にも使う
+function leadingDateToken(line){
+  const m = /^\s*[|｜]?\s*(\d{3,4})(?=[\s|｜]|$)/.exec(line);
+  return m ? m[1] : "";
+}
+
+// 日付が読めなかった行が、表の1行らしいかどうか
+// （行頭に日付らしい数字があり、曜日か勤務・休みの語がある行だけを連番補修の対象にする）
+function isSequenceCandidateLine(line, weekday){
+  if (!leadingDateToken(line)) return false;
+  return !!weekday || /出勤|休み|勤務/.test(line);
+}
+
+// 候補行について、行頭の日付トークンを除いて時刻ペアを取り直す
+// （日付トークンが時刻候補に混ざってペアがずれるのを防ぐ。取り直せなければ null）
+function itemsWithoutLeadDateToken(line){
+  const m = /^\s*[|｜]?\s*(\d{3,4})(?=[\s|｜])/.exec(line);
+  if (!m) return null;
+  const rest = line.slice(m[0].length);
+  const ranges = findRangesInLine(rest);
+  const cp = findColonlessPairsInLine(rest, ranges);
+  const items = ranges.concat(cp.pairs);
+  return items.length > 0 ? items : null;
+}
+
+// 日付の連番補修：行が日付の昇順に並んでいる表で、日付が文字化けした行（候補行）を、
+// 正しく読めた日付（アンカー）との位置関係から推定して下書きにする
+// ・アンカーが2件未満、または昇順でない場合は補修しない
+// ・アンカー間の候補行は、間の日数と行数がちょうど一致する場合だけ補う
+// ・先頭より前・末尾より後の候補行は、月の範囲に収まる場合だけ補う
+// ・行に曜日が読めている場合は、その日の実際の曜日と一致しない行を含む区間は補修しない
+// 補った行には estimated / needsConfirm と、元の読み取り値→推測後の値（repairs）を付ける
+// 戻り値：補った下書きの配列（rowInfos の候補行には day と repaired が書き込まれる）
+function repairDateSequence(rowInfos, daysInMonth){
+  const out = [];
+  const anchors = rowInfos.filter(function(r){ return r.anchor; });
+  if (anchors.length < 2) return out;
+  for (let i = 1; i < anchors.length; i++){
+    if (anchors[i].day <= anchors[i - 1].day) return out; // 昇順でない・同じ日が重なる表は補修しない
+  }
+  function dateStrOf(day){
+    return viewYear + "-" + String(viewMonth + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+  }
+  // run（候補行の並び）に startDay から連番を割り当てる。全行そろって割り当てられる場合だけ実行する
+  function assignRun(run, startDay){
+    if (run.length === 0) return;
+    for (let k = 0; k < run.length; k++){
+      const day = startDay + k;
+      if (day < 1 || day > daysInMonth) return;
+      if (run[k].weekday && weekdayKanjiForDate(dateStrOf(day)) !== run[k].weekday) return;
+    }
+    run.forEach(function(r, k){
+      const day = startDay + k;
+      r.day = day;
+      r.repaired = true;
+      if (r.items.length === 0) return; // 休みの日などは日付だけ確定し、下書きは作らない
+      const items = itemsWithoutLeadDateToken(r.line) || r.items;
+      items.forEach(function(it){
+        out.push({
+          date: dateStrOf(day),
+          start: it.start,
+          end: it.end,
+          workplaceId: workplaces.length > 0 ? workplaces[0].id : "",
+          breakMin: 0,
+          category: "",
+          estimated: true,
+          needsConfirm: true,
+          confirmed: false,
+          repairs: [{ field: "date", from: r.dateRaw || "（日付の読み取りなし）", to: (viewMonth + 1) + "/" + day }]
+        });
+      });
+    });
+  }
+  let run = [];
+  let prevAnchorDay = null;
+  rowInfos.forEach(function(r){
+    if (!r.anchor){
+      run.push(r);
+      return;
+    }
+    if (prevAnchorDay === null){
+      // 先頭のアンカーより前の候補行：アンカー日から逆向きに連番を割り当てる
+      assignRun(run, r.day - run.length);
+    } else if (run.length > 0 && run.length === r.day - prevAnchorDay - 1){
+      // アンカー間：間の日数と候補行の数が一致する場合だけ割り当てる
+      assignRun(run, prevAnchorDay + 1);
+    }
+    run = [];
+    prevAnchorDay = r.day;
+  });
+  // 末尾のアンカーより後の候補行：翌日からの連番（月の範囲に収まる場合だけ）
+  if (prevAnchorDay !== null && run.length > 0){
+    assignRun(run, prevAnchorDay + 1);
+  }
+  return out;
 }
 
 // 1行から時刻の範囲（H:MM-H:MM、H-H.5 など）を全て取り出す
@@ -4899,6 +5404,58 @@ function mostFrequentTimePair(drafts){
   return { start: parts[0], end: parts[1], count: best.count };
 }
 
+// "HH:MM" を分に変換する（不正な形式は null）
+function timeStrToMinutes(t){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || ""));
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+// 分を "HH:MM" に変換する
+function minutesToTimeStr(min){
+  return String(Math.floor(min / 60)).padStart(2, "0") + ":" + String(min % 60).padStart(2, "0");
+}
+
+// 終了時刻の推測補修
+// コロンなし数字（例："700"）は機械的に 7:00 と決めず、行の開始時刻と表全体の傾向から推測する。
+// 終了が開始以下で、日をまたいだ解釈でも12時間を超える（勤務として不自然な）行だけを対象にし、
+// 補修候補（先頭に「1」を補う＝17:00／12時間後＝19:00）のうち、表の中で実際に現れる
+// 終了時刻（開始より後で自然な行の終了）と一致するものがちょうど1つだけある場合に、その値に直す。
+// 一晩の夜勤として自然な行（日をまたいで12時間以内）は壊さないよう、対象にしない。
+// 直した行には estimated / needsConfirm と repairs（元の値→推測後の値）を付ける
+function applyEndTimeInference(drafts){
+  const list = (drafts || []).slice();
+  // 信頼できる終了時刻の頻度（終了が開始より後で、同日勤務として自然な行だけを数える）
+  const endCounts = {};
+  list.forEach(function(d){
+    if (!d.start || !d.end) return;
+    const s = timeStrToMinutes(d.start), e = timeStrToMinutes(d.end);
+    if (s === null || e === null) return;
+    if (e > s && e - s <= 16 * 60) endCounts[d.end] = (endCounts[d.end] || 0) + 1;
+  });
+  return list.map(function(d){
+    if (!d.start || !d.end) return d;
+    const s = timeStrToMinutes(d.start), e = timeStrToMinutes(d.end);
+    if (s === null || e === null || e > s) return d;
+    if (e + 1440 - s <= 12 * 60) return d; // 日をまたぐ夜勤として自然なら触らない
+    const cands = [];
+    const eh = Math.floor(e / 60), em = e % 60;
+    if (eh < 10) cands.push(minutesToTimeStr((eh + 10) * 60 + em)); // 先頭の「1」落ち（7:00→17:00）
+    cands.push(minutesToTimeStr((e + 720) % 1440));                 // 12時間後（7:00→19:00）
+    const valid = cands.filter(function(c){
+      const cm = timeStrToMinutes(c);
+      return cm > s && cm - s <= 16 * 60 && (endCounts[c] || 0) >= 2;
+    });
+    if (valid.length !== 1) return d; // 候補が無い・複数ある場合は推測しない
+    const copy = Object.assign({}, d);
+    copy.end = valid[0];
+    copy.estimated = true;
+    copy.needsConfirm = true;
+    copy.confirmed = false;
+    copy.repairs = (d.repairs || []).concat([{ field: "end", from: d.end, to: valid[0] }]);
+    return copy;
+  });
+}
+
 // 最頻ペアによる時刻の推定補正
 // 片方が最頻と一致し、もう片方が最頻の「桁落ち」である行（例：終了が 7:00 と読まれたが最頻は 17:00）だけを
 // 最頻ペアに合わせて直し、estimated=true の目印を付ける。大きく違う行は補正しない。
@@ -4920,6 +5477,12 @@ function applyFrequentPairCorrection(drafts){
     copy.start = mode.start;
     copy.end = mode.end;
     copy.estimated = true;
+    copy.needsConfirm = true;
+    copy.confirmed = false;
+    const reps = (d.repairs || []).slice();
+    if (d.start !== mode.start) reps.push({ field: "start", from: d.start, to: mode.start });
+    if (d.end !== mode.end) reps.push({ field: "end", from: d.end, to: mode.end });
+    copy.repairs = reps;
     return copy;
   });
 }
@@ -4950,8 +5513,9 @@ function buildDraftsFromText(text){
     if (a.date !== b.date) return a.date < b.date ? -1 : 1;
     return a.start < b.start ? -1 : (a.start > b.start ? 1 : 0);
   });
-  // 最頻の開始・終了ペアで、桁落ちしたらしい行を推定補正する（目印付き）
-  return { drafts: applyFrequentPairCorrection(drafts), discarded: timeResult.discarded };
+  // 終了時刻の推測補修（開始時刻と表全体の傾向から判断する）→ 最頻ペアによる桁落ち補正の順に適用する
+  // どちらで直した行にも、登録前の確認が必要な目印（needsConfirm）と補修内容（repairs）が付く
+  return { drafts: applyFrequentPairCorrection(applyEndTimeInference(drafts)), discarded: timeResult.discarded };
 }
 // === OCR TEXT LOGIC END ===
 
@@ -5981,6 +6545,9 @@ function syncDraftsFromDom(){
     ocrDrafts[i].end = row.querySelector('[data-df="end"]').value;
     ocrDrafts[i].breakMin = Number(row.querySelector('[data-df="breakMin"]').value) || 0;
     ocrDrafts[i].category = row.querySelector('[data-df="category"]').value;
+    // 推測で直した行の「合っています」チェックを同期する
+    const cf = row.querySelector('[data-df="confirm"]');
+    if (cf && ocrDrafts[i].needsConfirm) ocrDrafts[i].confirmed = !!cf.checked;
   });
   saveDrafts();
 }
@@ -5999,9 +6566,12 @@ function renderDrafts(){
     const wpOptions = workplaces.map(function(w){
       return '<option value="' + w.id + '"' + (w.id === d.workplaceId ? " selected" : "") + ">" + esc(w.name) + "</option>";
     }).join("");
-    const catOptions = ["", "早番", "日勤", "遅番", "夜勤"].map(function(c){
+    const catNames = categoriesOf(findWp(d.workplaceId)).slice();
+    // 現在の区分がそのバイト先の区分一覧に無い（削除済み等）場合も、値が消えないよう選択肢に残す
+    if (d.category && catNames.indexOf(d.category) < 0) catNames.push(d.category);
+    const catOptions = [""].concat(catNames).map(function(c){
       const label = c === "" ? "未設定" : c;
-      return '<option value="' + c + '"' + (c === (d.category || "") ? " selected" : "") + ">" + label + "</option>";
+      return '<option value="' + esc(c) + '"' + (c === (d.category || "") ? " selected" : "") + ">" + esc(label) + "</option>";
     }).join("");
     const wdKanji = weekdayKanjiForDate(d.date);
     return '<div class="draft-row">' +
@@ -6017,7 +6587,16 @@ function renderDrafts(){
       '<div><label>区分</label><select data-df="category">' + catOptions + "</select></div>" +
       '<div><label>休憩（分）</label><input type="number" data-df="breakMin" min="0" step="5" value="' + (d.breakMin || 0) + '"></div>' +
       "</div>" +
-      (d.estimated ? '<p class="draft-estimated-note">時刻を推定で補正しました（表で最も多い開始・終了の組に合わせています）。違っていたら直してください</p>' : "") +
+      (d.repairs && d.repairs.length ?
+        '<div class="draft-repair-box">' +
+        d.repairs.map(function(r){
+          const label = r.field === "date" ? "日付" : (r.field === "start" ? "開始" : (r.field === "end" ? "終了" : "時刻"));
+          return '<p class="draft-estimated-note">' + label + "：読み取り「" + esc(r.from) + "」→「" + esc(r.to) + "」と推測しました</p>";
+        }).join("") +
+        '<label class="draft-confirm-label"><input type="checkbox" data-df="confirm"' + (d.confirmed ? " checked" : "") + '> 推測が合っています</label>' +
+        (d.confirmed ? "" : '<p class="draft-missing-note">確認するまで、この行は登録されません。違っていたら上の欄を直してください（直すと確認は不要になります）</p>') +
+        "</div>" :
+        (d.estimated ? '<p class="draft-estimated-note">時刻を推定で補正しました。違っていたら直してください</p>' : "")) +
       '<p class="draft-missing-note hidden">未入力の項目があります（赤い枠の欄を入力してください）</p>' +
       '<div class="draft-actions"><button class="small danger" data-del-draft="' + i + '">この行を削除</button></div>' +
       "</div>";
@@ -6079,9 +6658,13 @@ function registerAllDrafts(){
   const ready = [];
   const remaining = [];
   ocrDrafts.forEach(function(d){
-    if (d.date && d.start && d.end && d.workplaceId) ready.push(d);
+    // 推測で直した行は、利用者の確認（「推測が合っています」）が済むまで登録対象にしない
+    const unconfirmed = d.needsConfirm && !d.confirmed;
+    if (d.date && d.start && d.end && d.workplaceId && !unconfirmed) ready.push(d);
     else remaining.push(d);
   });
+  const unconfirmedCount = remaining.filter(function(d){ return d.needsConfirm && !d.confirmed; }).length;
+  const missingCount = remaining.length - unconfirmedCount;
   let added = 0;
   let skipped = 0;
   const addedIds = [];
@@ -6123,14 +6706,20 @@ function registerAllDrafts(){
   const statusEl = document.getElementById("ocrRegisterStatus");
   if (statusEl){
     const skipMsg = skipped > 0 ? "同じシフトが既にあるため" + skipped + "件スキップしました。" : "";
+    const confirmMsg = unconfirmedCount > 0 ?
+      "推測で直した行が" + unconfirmedCount + "件、確認待ちで残っています（各行の「推測が合っています」にチェックするか、欄を直すと登録できます）。" : "";
+    const missingMsg = missingCount > 0 ?
+      "未入力の行が" + missingCount + "件残っています。赤い枠の欄を入力してから、もう一度「まとめて登録」を押してください。" : "";
     if (added > 0 && remaining.length > 0){
-      statusEl.textContent = added + "件を登録しました。" + skipMsg + "未入力の行が" + remaining.length + "件残っています。赤い枠の欄を入力してから、もう一度「まとめて登録」を押してください。";
+      statusEl.textContent = added + "件を登録しました。" + skipMsg + confirmMsg + missingMsg;
     } else if (added > 0){
       statusEl.textContent = added + "件を登録しました。" + skipMsg;
     } else if (skipped > 0 && remaining.length > 0){
-      statusEl.textContent = skipMsg + "未入力の行が" + remaining.length + "件残っています。赤い枠の欄を入力してから、もう一度「まとめて登録」を押してください。";
+      statusEl.textContent = skipMsg + confirmMsg + missingMsg;
     } else if (skipped > 0){
       statusEl.textContent = skipMsg;
+    } else if (unconfirmedCount > 0){
+      statusEl.textContent = confirmMsg + missingMsg;
     } else {
       statusEl.textContent = "登録できる行がありませんでした。未入力の行が" + remaining.length + "件あります。赤い枠の欄を入力してください。";
     }
@@ -6406,7 +6995,7 @@ document.getElementById("ocrBuildDrafts").addEventListener("click", function(){
   }
   const correctedCount = ocrDrafts.filter(function(d){ return d.estimated; }).length;
   if (correctedCount > 0){
-    builtNote += (builtNote ? " " : "") + correctedCount + "件の行は、時刻を推定で補正しました（行に目印が付いています）。";
+    builtNote += (builtNote ? " " : "") + correctedCount + "件の行は、日付や時刻を推定で補正しました（元の読み取り値と推測後の値を各行に表示しています）。登録前に、各行で「推測が合っています」の確認をしてください。";
   }
   if (noteEl) noteEl.textContent = builtNote;
   document.getElementById("ocrRegisterStatus").textContent = "";
@@ -6440,12 +7029,21 @@ document.getElementById("ocrRegisterAll").addEventListener("click", registerAllD
 // 下書き行でバイト先や区分を変えたら、そのバイト先のプリセット時刻を反映する
 document.getElementById("ocrDrafts").addEventListener("change", function(e){
   const field = e.target.getAttribute("data-df");
-  if (field === "start" || field === "end"){
-    // 時刻を手で直したら、推定補正の目印は外す
+  if (field === "start" || field === "end" || field === "date"){
+    // 日付・時刻を手で直したら、その行は利用者が直したものとして扱い、
+    // 推定補正の目印と「登録前の確認」は外す
     const rowEl = e.target.closest(".draft-row");
     const rows = document.querySelectorAll("#ocrDrafts .draft-row");
     const idx = Array.prototype.indexOf.call(rows, rowEl);
-    if (rowEl && idx >= 0 && ocrDrafts[idx] && ocrDrafts[idx].estimated){
+    if (rowEl && idx >= 0 && ocrDrafts[idx] && ocrDrafts[idx].needsConfirm){
+      ocrDrafts[idx].estimated = false;
+      ocrDrafts[idx].needsConfirm = false;
+      ocrDrafts[idx].confirmed = false;
+      delete ocrDrafts[idx].repairs;
+      const box = rowEl.querySelector(".draft-repair-box");
+      if (box) box.remove();
+      saveDrafts();
+    } else if (rowEl && idx >= 0 && ocrDrafts[idx] && ocrDrafts[idx].estimated && field !== "date"){
       ocrDrafts[idx].estimated = false;
       const note = rowEl.querySelector(".draft-estimated-note");
       if (note) note.remove();
@@ -6461,6 +7059,7 @@ document.getElementById("ocrDrafts").addEventListener("change", function(e){
   if (p){
     row.querySelector('[data-df="start"]').value = p.start;
     row.querySelector('[data-df="end"]').value = p.end;
+    if (typeof p.breakMin === "number") row.querySelector('[data-df="breakMin"]').value = p.breakMin;
   }
 });
 
@@ -6513,7 +7112,7 @@ applySkin();
 // ---------- 表示設定（文字の大きさ・フォント） ----------
 // html[data-font-size] / html[data-font] で切り替える。選択は settings に保存し、バックアップにも含まれる
 const FONT_SIZES = ["small", "standard", "large"];
-const FONT_FAMILIES = ["system", "gothic", "round", "mincho"];
+const FONT_FAMILIES = ["system", "gothic", "noto", "zenkaku", "round", "zenmaru", "kosugi", "yomogi", "mincho"];
 function getFontSize(){
   const s = settings && settings.fontSize;
   return FONT_SIZES.indexOf(s) >= 0 ? s : "standard";
@@ -6711,11 +7310,11 @@ const HELP_TEXTS = {
   },
   drafts: {
     title: "シフトの下書き",
-    body: "読み取った内容は、まず下書きとして並びます。日付や時刻が違うところは、その場で直せます。\n「まとめて登録」を押すと、入力がそろった行だけが登録され、足りない行は下書きに残ります。\n登録したくない行は、行ごとの削除ボタンで消せます。下書きは保存されるので、ページを開き直しても残ります。"
+    body: "読み取った内容は、まず下書きとして並びます。日付や時刻が違うところは、その場で直せます。\n日付や時刻がうまく読めず推測で直した行には、元の読み取り値と推測後の値が表示されます。その行は「推測が合っています」にチェックするか、自分で欄を直すまで登録されません。\n「まとめて登録」を押すと、入力がそろった行だけが登録され、足りない行は下書きに残ります。\n登録したくない行は、行ごとの削除ボタンで消せます。下書きは保存されるので、ページを開き直しても残ります。"
   },
   category: {
     title: "区分",
-    body: "早番・日勤・遅番・夜勤といった、シフトの種類のことです。\n区分を選ぶと、バイト先ごとに決めた時刻（プリセット）が開始・終了に自動で入ります。時刻は後から変えられます。\n区分ごとの件数は、月のサマリーで確認できます。"
+    body: "早番・日勤・遅番・夜勤といった、シフトの種類のことです。\n区分はバイト先ごとに自由に作れます（バイト先の編集画面で、名前・開始・終了・休憩を追加・変更・削除できます）。\n区分を選ぶと、そのバイト先で決めた時刻と休憩（プリセット）が自動で入ります。時刻は後から変えられます。\n区分ごとの件数は、月のサマリーで確認できます。"
   },
   timeInput: {
     title: "時刻の入力方法",
@@ -6723,7 +7322,7 @@ const HELP_TEXTS = {
   },
   calendar: {
     title: "カレンダー表示",
-    body: "シフト一覧は「リスト」と「カレンダー」を切り替えて見られます。\nカレンダーでは、シフトのある日にバイト先の色の印が付き、今日の日付が目立ちます。\n日をタップすると、その日のシフトの詳細（時刻・区分・金額）が出て、そのまま追加もできます。メモを書いた日には✎の印が付きます。"
+    body: "シフト一覧は「リスト」と「カレンダー」を切り替えて見られます。\nカレンダーでは、シフトのある日にバイト先の色の印が付き、今日の日付が目立ちます。\n日をタップすると、その日のシフトの詳細（時刻・区分・金額）が出て、そのまま追加もできます。メモを書いた日には✎の印が付きます。\n「範囲を選んでまとめて登録」を押すと、日を2つタップして期間を選び、バイト先・区分・時刻を1回指定するだけで、その期間の各日に同じシフトをまとめて登録できます。同じシフトが既にある日は、二重登録を防ぐためスキップされます。"
   },
   skin: {
     title: "スキン（見た目のテーマ）",
@@ -6731,7 +7330,7 @@ const HELP_TEXTS = {
   },
   display: {
     title: "表示設定（文字の大きさ・フォント）",
-    body: "文字の大きさは「小・標準・大」から選べ、画面全体の文字サイズに反映されます。\nフォントは「標準（システム）・ゴシック系・丸ゴシック系・明朝系」から選べます。端末に入っている書体の中から近いものが使われるため、端末によっては見た目が変わらない場合があります。\n選んだ内容は保存され、バックアップにも含まれます。"
+    body: "文字の大きさは「小・標準・大」から選べ、画面全体の文字サイズに反映されます。\nフォントは、ゴシック系・丸ゴシック系・手書き風・明朝系など、性格の違う書体から選べます。端末に入っている書体の中から近いものが使われるため、端末によっては見た目が変わらない場合があります。一部の書体はWebフォントを使うため、ネットから読み込めない環境では標準に近い書体で表示されます。\n選んだ内容は保存され、バックアップにも含まれます。"
   },
   simple: {
     title: "かんたんモード",
