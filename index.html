@@ -100,6 +100,13 @@
     font-size:14px;font-weight:700;color:var(--blue-dark);
     min-width:46px;text-align:right;font-variant-numeric:tabular-nums;
   }
+  .time-dial{display:flex;justify-content:center;margin-top:8px;}
+  .time-dial svg{
+    width:100%;max-width:180px;height:auto;display:block;
+    touch-action:none;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+  .time-dial svg:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:50%;}
+  .time-dial .dial-time{font-variant-numeric:tabular-nums;}
   input[type="color"]{padding:4px;height:44px;}
   .form-actions{display:flex;gap:8px;margin-top:14px;}
   .form-actions .primary{flex:1;}
@@ -392,6 +399,7 @@
             <input type="range" id="sfStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
             <span class="time-slider-val" id="sfStartSliderVal">--:--</span>
           </div>
+          <div class="time-dial" id="sfStartDial"></div>
         </div>
         <div>
           <label for="sfEnd">終了時刻</label>
@@ -400,9 +408,10 @@
             <input type="range" id="sfEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
             <span class="time-slider-val" id="sfEndSliderVal">--:--</span>
           </div>
+          <div class="time-dial" id="sfEndDial"></div>
         </div>
       </div>
-      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻はスライダー（15分刻み）でも入力できます。</p>
+      <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻はスライダー（15分刻み）や時計型ダイヤル（リングをなぞると時刻が変わります）でも入力できます。</p>
       <label for="sfCategory">区分</label>
       <select id="sfCategory">
         <option value="">未設定</option>
@@ -449,6 +458,7 @@
             <input type="range" id="tplStartSlider" min="0" max="1425" step="15" value="0" aria-label="開始時刻をスライダーで入力">
             <span class="time-slider-val" id="tplStartSliderVal">--:--</span>
           </div>
+          <div class="time-dial" id="tplStartDial"></div>
         </div>
         <div>
           <label for="tplEnd">終了時刻</label>
@@ -457,6 +467,7 @@
             <input type="range" id="tplEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
             <span class="time-slider-val" id="tplEndSliderVal">--:--</span>
           </div>
+          <div class="time-dial" id="tplEndDial"></div>
         </div>
       </div>
       <label for="tplBreak">休憩時間（分）</label>
@@ -652,6 +663,31 @@ function sliderValueToTime(v){
   if (!isFinite(min)) min = 0;
   min = Math.max(0, Math.min(1425, min));
   return String(Math.floor(min / 60)).padStart(2, "0") + ":" + String(min % 60).padStart(2, "0");
+}
+
+// ダイヤル（リング型入力）の角度を時刻の分に変換する。
+// 真上=0度で時計回り、1周=24時間、15分刻み（96ステップ=1ステップ3.75度）。
+// 戻り値は 0〜1425（分）。359度台は 0:00 に丸める。
+function angleToTimeValue(deg){
+  let d = Number(deg) % 360;
+  if (!isFinite(d)) d = 0;
+  if (d < 0) d += 360;
+  const step = Math.round(d / 3.75) % 96;
+  return step * 15;
+}
+
+// 時刻の分（0〜1425）をダイヤルの角度（真上=0度、時計回り）に変換する
+function timeValueToAngle(min){
+  let m = Number(min);
+  if (!isFinite(m)) m = 0;
+  m = Math.max(0, Math.min(1425, m));
+  return (m / 1440) * 360;
+}
+
+// ダイヤル中心からの相対座標 (dx, dy) を角度（真上=0度、時計回り、0〜360未満）に変換する
+function dialPointToAngle(dx, dy){
+  const d = Math.atan2(Number(dx) || 0, -(Number(dy) || 0)) * 180 / Math.PI;
+  return (d + 360) % 360;
 }
 // === PURE LOGIC END ===
 
@@ -1370,9 +1406,10 @@ function bindTimeSlider(timeId, sliderId, valId){
     const t = sliderValueToTime(Number(sliderEl.value));
     timeEl.value = t;
     if (valEl) valEl.textContent = t;
+    syncAllTimeSliders();
   });
-  timeEl.addEventListener("input", syncFromTime);
-  timeEl.addEventListener("change", syncFromTime);
+  timeEl.addEventListener("input", function(){ syncAllTimeSliders(); });
+  timeEl.addEventListener("change", function(){ syncAllTimeSliders(); });
   syncFromTime();
   timeSliderSyncs.push(syncFromTime);
 }
@@ -1383,6 +1420,124 @@ bindTimeSlider("sfStart", "sfStartSlider", "sfStartSliderVal");
 bindTimeSlider("sfEnd", "sfEndSlider", "sfEndSliderVal");
 bindTimeSlider("tplStart", "tplStartSlider", "tplStartSliderVal");
 bindTimeSlider("tplEnd", "tplEndSlider", "tplEndSliderVal");
+
+// ---------- 時刻ダイヤル（リング型） ----------
+// 時計のような円形ダイヤル。1周=24時間、15分刻み（96ステップ）。
+// リング上をタップ／ドラッグすると、角度に応じた時刻が時刻欄に入る。
+// 時刻欄・直線スライダー・ダイヤルは相互に連動し、プログラム側で時刻が
+// 変わったときは syncAllTimeSliders() 経由でダイヤルも追随する。
+const DIAL_CENTER = 100;
+const DIAL_R = 82;
+function dialPolar(angleDeg, r){
+  const rad = angleDeg * Math.PI / 180;
+  return { x: DIAL_CENTER + r * Math.sin(rad), y: DIAL_CENTER - r * Math.cos(rad) };
+}
+function dialArcD(angleDeg){
+  if (!(angleDeg > 0)) return "";
+  const end = dialPolar(angleDeg, DIAL_R);
+  const large = angleDeg > 180 ? 1 : 0;
+  return "M " + DIAL_CENTER + " " + (DIAL_CENTER - DIAL_R) +
+    " A " + DIAL_R + " " + DIAL_R + " 0 " + large + " 1 " +
+    end.x.toFixed(2) + " " + end.y.toFixed(2);
+}
+function buildDialSvg(label){
+  let ticks = "";
+  for (let h = 0; h < 24; h++){
+    const major = h % 6 === 0;
+    const a = dialPolar(h * 15, major ? 62 : 66);
+    const b = dialPolar(h * 15, 71);
+    ticks += '<line x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1) +
+      '" x2="' + b.x.toFixed(1) + '" y2="' + b.y.toFixed(1) +
+      '" stroke="#9ca3af" stroke-width="' + (major ? 2.5 : 1.5) + '"/>';
+  }
+  let labels = "";
+  [0, 6, 12, 18].forEach(function(h){
+    const p = dialPolar(h * 15, 50);
+    labels += '<text x="' + p.x.toFixed(1) + '" y="' + p.y.toFixed(1) +
+      '" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#6b7280">' + h + "</text>";
+  });
+  return '<svg viewBox="0 0 200 200" role="slider" tabindex="0" aria-label="' + label + '"' +
+    ' aria-valuemin="0" aria-valuemax="1425" aria-valuestep="15">' +
+    '<circle cx="100" cy="100" r="' + DIAL_R + '" fill="none" stroke="#e5e7eb" stroke-width="20"/>' +
+    '<path class="dial-arc" fill="none" stroke="#2563eb" stroke-width="20" stroke-linecap="round" d=""/>' +
+    ticks + labels +
+    '<circle class="dial-knob" r="13" fill="#2563eb" stroke="#ffffff" stroke-width="3" cx="100" cy="18"/>' +
+    '<text class="dial-time" x="100" y="103" text-anchor="middle" dominant-baseline="central"' +
+    ' font-size="34" font-weight="700" fill="#1f2937">--:--</text>' +
+    "</svg>";
+}
+function bindTimeDial(timeId, dialId, label){
+  const timeEl = document.getElementById(timeId);
+  const host = document.getElementById(dialId);
+  if (!timeEl || !host) return;
+  host.innerHTML = buildDialSvg(label);
+  const svg = host.querySelector("svg");
+  const arc = host.querySelector(".dial-arc");
+  const knob = host.querySelector(".dial-knob");
+  const centerText = host.querySelector(".dial-time");
+  function syncDial(){
+    const v = timeToSliderValue(timeEl.value);
+    if (v === null){
+      arc.setAttribute("d", "");
+      const p0 = dialPolar(0, DIAL_R);
+      knob.setAttribute("cx", p0.x.toFixed(2));
+      knob.setAttribute("cy", p0.y.toFixed(2));
+      centerText.textContent = "--:--";
+      svg.removeAttribute("aria-valuenow");
+      svg.setAttribute("aria-valuetext", "未入力");
+      return;
+    }
+    const angle = timeValueToAngle(v);
+    arc.setAttribute("d", dialArcD(angle));
+    const p = dialPolar(angle, DIAL_R);
+    knob.setAttribute("cx", p.x.toFixed(2));
+    knob.setAttribute("cy", p.y.toFixed(2));
+    centerText.textContent = timeEl.value;
+    svg.setAttribute("aria-valuenow", String(v));
+    svg.setAttribute("aria-valuetext", timeEl.value);
+  }
+  let dragging = false;
+  function setFromPointer(e){
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const dx = e.clientX - (rect.left + rect.width / 2);
+    const dy = e.clientY - (rect.top + rect.height / 2);
+    // 中心付近は角度が不安定なので無視する
+    if (Math.sqrt(dx * dx + dy * dy) < rect.width * 0.12) return;
+    const min = angleToTimeValue(dialPointToAngle(dx, dy));
+    timeEl.value = sliderValueToTime(min);
+    syncAllTimeSliders();
+  }
+  svg.addEventListener("pointerdown", function(e){
+    dragging = true;
+    try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+    setFromPointer(e);
+  });
+  svg.addEventListener("pointermove", function(e){
+    if (dragging) setFromPointer(e);
+  });
+  function endDrag(){ dragging = false; }
+  svg.addEventListener("pointerup", endDrag);
+  svg.addEventListener("pointercancel", endDrag);
+  svg.addEventListener("keydown", function(e){
+    let delta = 0;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") delta = 15;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") delta = -15;
+    else return;
+    e.preventDefault();
+    const cur = timeToSliderValue(timeEl.value);
+    const next = ((cur === null ? 0 : cur) + delta + 1440) % 1440;
+    timeEl.value = sliderValueToTime(next);
+    syncAllTimeSliders();
+  });
+  syncDial();
+  timeSliderSyncs.push(syncDial);
+}
+bindTimeDial("sfStart", "sfStartDial", "開始時刻をダイヤルで入力");
+bindTimeDial("sfEnd", "sfEndDial", "終了時刻をダイヤルで入力");
+bindTimeDial("tplStart", "tplStartDial", "開始時刻をダイヤルで入力");
+bindTimeDial("tplEnd", "tplEndDial", "終了時刻をダイヤルで入力");
 
 // 区分を選ぶと、そのバイト先のプリセット時刻を開始・終了に自動入力する
 function applyCategoryPreset(){
