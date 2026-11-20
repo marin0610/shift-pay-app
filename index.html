@@ -320,6 +320,69 @@
     padding:8px 12px;margin-bottom:10px;
     font-size:14px;font-weight:700;color:var(--blue-dark);
   }
+  /* 収入まとめ */
+  .income-big{text-align:center;font-size:32px;font-weight:800;color:var(--blue-dark);margin:6px 0 2px;}
+  .income-big-label{text-align:center;color:var(--muted);font-size:13px;}
+  .income-meta{text-align:center;font-size:14px;margin-top:6px;}
+  .income-compare{
+    margin-top:10px;text-align:center;font-size:14px;line-height:1.6;
+    background:var(--fill);border:1px solid var(--line);border-radius:10px;padding:8px 10px;
+  }
+  .income-compare .diff{font-weight:800;white-space:nowrap;}
+  .income-compare .diff.up{color:var(--blue-dark);}
+  .income-compare .diff.down{color:var(--danger);}
+  .income-received{display:flex;gap:8px;margin-top:10px;}
+  .income-received .box{
+    flex:1;border:1px solid var(--line);border-radius:10px;padding:8px 10px;
+    text-align:center;background:var(--surface);
+  }
+  .income-received .box .lbl{font-size:12px;color:var(--muted);}
+  .income-received .box .amt{font-size:18px;font-weight:800;margin-top:2px;}
+  .income-received .box.done{background:var(--blue-light);}
+  .income-received .box.done .amt{color:var(--blue-dark);}
+  .income-wp-row{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+    padding:8px 0;border-top:1px dashed var(--line);font-size:14px;
+  }
+  .income-wp-main{min-width:0;}
+  .income-wp-sub{color:var(--muted);font-size:12px;margin-top:2px;}
+  .income-wp-right{text-align:right;white-space:nowrap;}
+  .income-wp-pay{font-weight:800;font-size:16px;}
+  .income-wp-row.is-received .income-wp-pay{color:var(--blue-dark);}
+  .received-badge{
+    display:inline-block;font-size:11px;font-weight:700;color:var(--blue-dark);
+    background:var(--blue-light);border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:middle;
+  }
+  .received-check{
+    display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;
+    color:var(--muted);margin-top:4px;min-height:28px;
+  }
+  .received-check input{width:18px;height:18px;accent-color:var(--blue);margin:0;}
+  /* ヘルプ（？ボタンとポップアップ） */
+  .help-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;min-height:22px;padding:0;margin-left:6px;
+    border-radius:50%;border:1px solid var(--line);
+    background:var(--blue-light);color:var(--blue-dark);
+    font-size:13px;font-weight:700;line-height:1;vertical-align:middle;cursor:pointer;
+  }
+  .help-modal-backdrop{
+    position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;
+    display:flex;align-items:center;justify-content:center;padding:16px;
+  }
+  .help-modal{
+    background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:14px;
+    max-width:420px;width:100%;max-height:80vh;overflow:auto;padding:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+  }
+  .help-modal-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;}
+  .help-modal-title{font-size:16px;font-weight:700;}
+  .help-modal-close{width:34px;height:34px;min-height:34px;padding:0;font-size:16px;border-radius:50%;flex:none;}
+  .help-modal-body{font-size:14px;line-height:1.7;white-space:pre-line;}
+  .help-modal-backdrop.hidden{display:none;}
+  html[data-skin="cute"] .income-compare,
+  html[data-skin="cute"] .income-received .box{border-radius:16px;}
+  html[data-skin="cute"] .help-modal{border-radius:22px;}
   /* 日付メモ */
   .cal-memo-mark{font-size:10px;font-weight:700;color:var(--blue-dark);line-height:1;}
   .day-memo-box{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;}
@@ -433,6 +496,12 @@
     </div>
   </section>
 
+  <!-- 収入まとめ -->
+  <section class="card">
+    <h2><span id="incomeSummaryTitle">収入まとめ</span><button type="button" class="help-btn" data-help="income" aria-label="収入まとめの説明を表示">？</button></h2>
+    <div id="incomeSummary"></div>
+  </section>
+
   <!-- シフト表の画像 -->
   <section class="card">
     <h2>シフト表の画像<span class="image-count" id="imageCount"></span></h2>
@@ -445,7 +514,7 @@
 
   <!-- 写真から読み取り（OCR・実験） -->
   <section class="card">
-    <h2>写真から読み取り（実験）</h2>
+    <h2>写真から読み取り（実験）<button type="button" class="help-btn" data-help="ocr" aria-label="写真から読み取りの説明を表示">？</button></h2>
     <p class="note" style="margin-top:0;">シフト表の写真から文字を読み取り、シフトの下書きを作る実験機能です。</p>
     <p class="note warn-note">実験機能です。読み取り間違いがあるので、必ず確認・修正してから登録してください。</p>
     <p class="note">画像はブラウザの中で処理され、外部に送信されません（読み取りライブラリと言語データのダウンロードのみ通信します）。</p>
@@ -459,7 +528,7 @@
     <img id="ocrPreview" class="ocr-preview hidden" alt="読み取り対象の画像">
     <p class="note hidden" id="ocrPdfName"></p>
     <div id="ocrCropArea" class="hidden">
-      <label class="ocr-label">切り取り（任意・写真のみ）</label>
+      <label class="ocr-label">切り取り（任意・写真のみ）<button type="button" class="help-btn" data-help="crop" aria-label="切り取りの説明を表示">？</button></label>
       <p class="note">画像の上をドラッグすると、読み取る範囲を選べます。自分の名前の列だけを切り取ると、文字が大きくなるため読み取りやすくなります。選んだ範囲は、四隅の丸をドラッグすると大きさを変えられ、中をドラッグすると移動できます。</p>
       <div class="crop-mode">
         <label class="ocr-check"><input type="radio" name="ocrCropMode" value="single" checked> 1か所だけ切り取る</label>
@@ -494,7 +563,7 @@
       </div>
       <p class="note">切り取りを設定した状態で「読み取る」を押すと、切り取った範囲だけを読み取ります。全体を読み取りたいときは「切り取りをリセット」してから「読み取る」を押してください。</p>
     </div>
-    <label class="ocr-label" for="ocrPreprocessLevel">画像の前処理（写真の読み取り時のみ）</label>
+    <label class="ocr-label" for="ocrPreprocessLevel">画像の前処理（写真の読み取り時のみ）</label><button type="button" class="help-btn" data-help="preprocess" aria-label="画像の前処理の説明を表示">？</button>
     <select id="ocrPreprocessLevel" class="ocr-select">
       <option value="none">なし</option>
       <option value="weak">弱め（白黒化＋コントラストのみ）</option>
@@ -511,7 +580,7 @@
     <p class="note" id="ocrDraftNote"></p>
 
     <div id="ocrDraftArea" class="hidden">
-      <h3 class="ocr-draft-title">シフトの下書き</h3>
+      <h3 class="ocr-draft-title">シフトの下書き<button type="button" class="help-btn" data-help="drafts" aria-label="シフトの下書きの説明を表示">？</button></h3>
       <p class="note">内容を確認し、間違いを直してから登録してください。「まとめて登録」では、入力が揃っている行だけが登録され、未入力の行は登録されずに残ります。足りない欄は赤い枠で表示されます。</p>
       <div id="ocrDrafts"></div>
       <button class="primary" id="ocrRegisterAll">まとめて登録</button>
@@ -525,7 +594,7 @@
 
   <!-- シフト一覧 -->
   <section class="card">
-    <h2>シフト一覧</h2>
+    <h2>シフト一覧<button type="button" class="help-btn" data-help="calendar" aria-label="カレンダー表示の説明を表示">？</button></h2>
     <div id="stickyTotal" class="sticky-total"></div>
     <div class="seg-control" role="group" aria-label="一覧の表示方法" style="margin-top:0;">
       <button type="button" data-view-mode-btn="list" class="active">リスト</button>
@@ -572,7 +641,7 @@
       </div>
       <label for="sfWorkplace">バイト先</label>
       <select id="sfWorkplace"></select>
-      <p class="seg-label">時刻の入力方法</p>
+      <p class="seg-label">時刻の入力方法<button type="button" class="help-btn" data-help="timeInput" aria-label="時刻の入力方法の説明を表示">？</button></p>
       <div class="seg-control" role="group" aria-label="時刻の入力方法" style="margin-top:4px;">
         <button type="button" data-time-mode-btn="type" class="active">打ち込み</button>
         <button type="button" data-time-mode-btn="slider">スライダー</button>
@@ -599,7 +668,7 @@
       <input type="hidden" id="sfEndOffset" value="0">
       <div class="time-dial time-dial-range" id="sfRangeDial"></div>
       <p class="note">終了時刻が開始時刻より早い場合は、翌日まで働いたものとして計算します（例：22:00〜2:00）。時刻の入力方法は上の切り替えで選べます（打ち込み／スライダー（15分刻み）／ダイヤル（1つのリングで開始と終了を合わせます。終了のつまみを1周を超えて回すと、24時間以上の勤務も入力できます））。選んだ方法は次回も引き継がれます。</p>
-      <label for="sfCategory">区分</label>
+      <label for="sfCategory">区分</label><button type="button" class="help-btn" data-help="category" aria-label="区分の説明を表示">？</button>
       <select id="sfCategory">
         <option value="">未設定</option>
         <option value="早番">早番</option>
@@ -637,7 +706,7 @@
         <option value="遅番">遅番</option>
         <option value="夜勤">夜勤</option>
       </select>
-      <p class="seg-label">時刻の入力方法</p>
+      <p class="seg-label">時刻の入力方法<button type="button" class="help-btn" data-help="timeInput" aria-label="時刻の入力方法の説明を表示">？</button></p>
       <div class="seg-control" role="group" aria-label="時刻の入力方法" style="margin-top:4px;">
         <button type="button" data-time-mode-btn="type" class="active">打ち込み</button>
         <button type="button" data-time-mode-btn="slider">スライダー</button>
@@ -709,7 +778,7 @@
 
   <!-- メモ帳 -->
   <section class="card">
-    <h2>メモ帳</h2>
+    <h2>メモ帳<button type="button" class="help-btn" data-help="memo" aria-label="メモの説明を表示">？</button></h2>
     <div id="noteList"></div>
     <button class="primary" id="toggleNoteForm">＋ メモを追加</button>
     <form id="noteForm" class="hidden">
@@ -732,7 +801,7 @@
     <input type="text" id="myNamesInput" class="text-input" placeholder="例：山田太郎、やまだ">
     <p class="note">カンマ（、）区切りで複数の表記を登録できます。シフト表を読み取るとき、登録した名前の列（または行）に属するシフトだけを抽出対象にします。未登録の場合は全体が対象です。</p>
 
-    <label class="field-label" for="skinSelect" style="margin-top:16px;">スキン（見た目のテーマ）</label>
+    <label class="field-label" for="skinSelect" style="margin-top:16px;">スキン（見た目のテーマ）</label><button type="button" class="help-btn" data-help="skin" aria-label="スキンの説明を表示">？</button>
     <select id="skinSelect" class="text-input">
       <option value="standard">標準（青）</option>
       <option value="pink">ピンク</option>
@@ -743,13 +812,13 @@
     </select>
     <p class="note">アプリ全体の色合いを変えます。選んだスキンは保存され、次回も同じスキンで開きます。バックアップ（自分の設定）にも含まれます。区分バッジやバイト先の色は、スキンによらずそのまま表示されます。</p>
 
-    <label class="field-label" style="margin-top:16px;">データのバックアップ</label>
+    <label class="field-label" style="margin-top:16px;">データのバックアップ</label><button type="button" class="help-btn" data-help="backup" aria-label="バックアップの説明を表示">？</button>
     <div class="crop-btns" style="margin-top:0;">
       <button id="exportDataBtn">データを書き出し（JSON）</button>
       <button id="importDataBtn">データを読み込み（JSON）</button>
     </div>
     <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
-    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターン・日付メモ・メモ帳をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。</p>
+    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターン・日付メモ・メモ帳・受け取り確認をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。</p>
     <p class="note">データはこのブラウザの中に保存されます。LINEなどのアプリ内ブラウザで開くと、データが消えやすくなります。Safariで開いて「ホーム画面に追加」しておくと、データが残りやすくなります。別のブラウザで開くと、別のデータになります。大事なデータは、ときどき書き出してバックアップしてください。</p>
     <p class="note register-status" id="backupStatus"></p>
   </section>
@@ -829,6 +898,17 @@
 <!-- 画像の拡大表示 -->
 <div class="lightbox hidden" id="lightbox">
   <img id="lightboxImg" alt="シフト表の画像（拡大）">
+</div>
+
+<!-- ヘルプのポップアップ -->
+<div class="help-modal-backdrop hidden" id="helpModal">
+  <div class="help-modal" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
+    <div class="help-modal-head">
+      <div class="help-modal-title" id="helpModalTitle"></div>
+      <button type="button" class="help-modal-close" id="helpModalClose" aria-label="ヘルプを閉じる">×</button>
+    </div>
+    <div class="help-modal-body" id="helpModalBody"></div>
+  </div>
 </div>
 
 <script>
@@ -1239,6 +1319,7 @@ const LS_DRAFTS = "shiftPayApp.ocrDrafts";
 const LS_TPL = "shiftPayApp.templates";
 const LS_DAYMEMO = "shiftPayApp.dayMemos";
 const LS_NOTES = "shiftPayApp.notes";
+const LS_RECEIVED = "shiftPayApp.received";
 const MAX_IMAGES_PER_MONTH = 3;
 const MAX_IMAGE_WIDTH = 1200;
 
@@ -1264,6 +1345,7 @@ let settings = loadJSON(LS_SET, { myNames: "" }); // { myNames: "" }
 let templates = normalizeTemplates(loadJSON(LS_TPL, [])); // いつものパターン
 let dayMemos = normalizeDayMemos(loadJSON(LS_DAYMEMO, {})); // 日付メモ { "YYYY-MM-DD": "本文" }
 let notes = normalizeNotes(loadJSON(LS_NOTES, [])); // メモ帳 [{ id, title, body, updatedAt }]
+let receivedMap = normalizeReceived(loadJSON(LS_RECEIVED, {})); // 受け取り確認 { "YYYY-MM": { workplaceId: true } }
 
 function saveDayMemos(){
   try {
@@ -1273,6 +1355,11 @@ function saveDayMemos(){
 function saveNotes(){
   try {
     localStorage.setItem(LS_NOTES, JSON.stringify(notes));
+  } catch (e) { /* 保存できなくても動作は続ける */ }
+}
+function saveReceived(){
+  try {
+    localStorage.setItem(LS_RECEIVED, JSON.stringify(receivedMap));
   } catch (e) { /* 保存できなくても動作は続ける */ }
 }
 
@@ -1351,6 +1438,159 @@ function esc(s){
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
+
+// ---------- 収入まとめ・受け取り確認 ----------
+// 年と月（0〜11）から "YYYY-MM" の文字列を作る
+function monthPrefixOf(year, month){
+  return year + "-" + String(month + 1).padStart(2, "0");
+}
+
+// 指定した月の収入まとめを集計する（金額は shiftResult の給料計算が正）
+// 戻り値：{ totalPay, totalMin, count, perWorkplace: [{ id, name, color, pay, min, count }] }
+function summarizeMonth(year, month){
+  const prefix = monthPrefixOf(year, month);
+  const per = {}; // workplaceId -> { pay, min, count }
+  let totalPay = 0, totalMin = 0, count = 0;
+  shifts.forEach(function(s){
+    if (!s.date || s.date.indexOf(prefix) !== 0) return;
+    const r = shiftResult(s);
+    totalPay += r.pay;
+    totalMin += r.workedMin;
+    count++;
+    if (!per[s.workplaceId]) per[s.workplaceId] = { pay: 0, min: 0, count: 0 };
+    per[s.workplaceId].pay += r.pay;
+    per[s.workplaceId].min += r.workedMin;
+    per[s.workplaceId].count++;
+  });
+  const perWorkplace = Object.keys(per).map(function(id){
+    const wp = findWp(id);
+    return {
+      id: id,
+      name: wp ? wp.name : "（削除済みのバイト先）",
+      color: wp ? wp.color : "#9ca3af",
+      pay: per[id].pay, min: per[id].min, count: per[id].count
+    };
+  }).sort(function(a, b){
+    if (b.pay !== a.pay) return b.pay - a.pay;
+    return a.name < b.name ? -1 : 1;
+  });
+  return { totalPay: totalPay, totalMin: totalMin, count: count, perWorkplace: perWorkplace };
+}
+
+// 受け取り確認の状態を正規化する（{ "YYYY-MM": { workplaceId: true } } の形以外は捨てる）
+function normalizeReceived(v){
+  const out = {};
+  if (!v || typeof v !== "object" || Array.isArray(v)) return out;
+  Object.keys(v).forEach(function(mk){
+    const m = v[mk];
+    if (!m || typeof m !== "object" || Array.isArray(m)) return;
+    const mm = {};
+    Object.keys(m).forEach(function(id){ if (m[id]) mm[id] = true; });
+    if (Object.keys(mm).length > 0) out[mk] = mm;
+  });
+  return out;
+}
+function isReceived(mk, workplaceId){
+  return !!(receivedMap[mk] && receivedMap[mk][workplaceId]);
+}
+function setReceived(mk, workplaceId, on){
+  if (on){
+    if (!receivedMap[mk]) receivedMap[mk] = {};
+    receivedMap[mk][workplaceId] = true;
+  } else if (receivedMap[mk]){
+    delete receivedMap[mk][workplaceId];
+    if (Object.keys(receivedMap[mk]).length === 0) delete receivedMap[mk];
+  }
+}
+// まとめから、受け取り済み・未受取の金額を分けて返す（表示専用。給料計算には影響しない）
+function receivedTotals(summary, mk){
+  let receivedPay = 0;
+  summary.perWorkplace.forEach(function(w){
+    if (isReceived(mk, w.id)) receivedPay += w.pay;
+  });
+  return { receivedPay: receivedPay, unreceivedPay: summary.totalPay - receivedPay };
+}
+
+// 収入まとめのHTMLを作る（summary: 表示中の月、prevSummary: 先月、year/month: 表示中の年月）
+function buildIncomeSummaryHtml(summary, prevSummary, year, month){
+  const mk = monthPrefixOf(year, month);
+  let pm = month - 1, py = year;
+  if (pm < 0){ pm = 11; py--; }
+  const prevLabel = py + "年" + (pm + 1) + "月";
+
+  // 先月との比較（先月に収入があるときだけ差を表示する）
+  let compareHtml = "";
+  if (prevSummary.count > 0){
+    if (summary.count === 0){
+      compareHtml = '<div class="income-compare">先月（' + prevLabel + '）の収入は ' + fmtYen(prevSummary.totalPay) + " でした</div>";
+    } else {
+      const diff = summary.totalPay - prevSummary.totalPay;
+      let diffHtml;
+      if (diff > 0){
+        const pct = prevSummary.totalPay > 0 ? "（+" + Math.round(diff / prevSummary.totalPay * 100) + "%）" : "";
+        diffHtml = '<span class="diff up">▲ +' + fmtYen(diff) + pct + "</span> 多いです";
+      } else if (diff < 0){
+        const pct = prevSummary.totalPay > 0 ? "（-" + Math.round(Math.abs(diff) / prevSummary.totalPay * 100) + "%）" : "";
+        diffHtml = '<span class="diff down">▼ -' + fmtYen(Math.abs(diff)) + pct + "</span> 少ないです";
+      } else {
+        diffHtml = "同じ金額です";
+      }
+      compareHtml = '<div class="income-compare">先月（' + prevLabel + "）の収入 " + fmtYen(prevSummary.totalPay) + " と比べて、" + diffHtml + "</div>";
+    }
+  } else if (summary.count > 0){
+    compareHtml = '<div class="income-compare">先月（' + prevLabel + "）の収入はありませんでした</div>";
+  }
+
+  if (summary.count === 0){
+    return '<div class="empty">この月のシフトはまだ登録されていません</div>' + compareHtml;
+  }
+
+  const rt = receivedTotals(summary, mk);
+  let html = '<div class="income-big">' + fmtYen(summary.totalPay) + "</div>" +
+    '<div class="income-big-label">収入合計（給料見込み）</div>' +
+    '<div class="income-meta">労働時間 合計 ' + fmtDuration(summary.totalMin) + " ・ シフト " + summary.count + "件</div>" +
+    compareHtml +
+    '<div class="income-received">' +
+      '<div class="box done"><div class="lbl">受け取り済み</div><div class="amt">' + fmtYen(rt.receivedPay) + "</div></div>" +
+      '<div class="box"><div class="lbl">まだ受け取っていない</div><div class="amt">' + fmtYen(rt.unreceivedPay) + "</div></div>" +
+    "</div>" +
+    '<p class="note">実際に給料が振り込まれたら、下のバイト先ごとの「もらえた」にチェックを入れてください。チェックは金額の計算には影響しません。</p>' +
+    '<div style="margin-top:6px;">';
+  html += summary.perWorkplace.map(function(w){
+    const received = isReceived(mk, w.id);
+    return '<div class="income-wp-row' + (received ? " is-received" : "") + '">' +
+      '<div class="income-wp-main">' +
+        '<span><span class="dot" style="background:' + esc(w.color) + '"></span>' + esc(w.name) +
+        (received ? '<span class="received-badge">受取済み</span>' : "") + "</span>" +
+        '<div class="income-wp-sub">' + w.count + "件 ・ " + fmtDuration(w.min) + "</div>" +
+        '<label class="received-check"><input type="checkbox" data-received-wp="' + esc(w.id) + '"' + (received ? " checked" : "") + "> もらえた</label>" +
+      "</div>" +
+      '<div class="income-wp-right"><span class="income-wp-pay">' + fmtYen(w.pay) + "</span></div>" +
+    "</div>";
+  }).join("");
+  html += "</div>";
+  return html;
+}
+
+// 収入まとめを描画する（月の切り替えに連動）
+function renderIncomeSummary(){
+  const titleEl = document.getElementById("incomeSummaryTitle");
+  if (titleEl) titleEl.textContent = viewYear + "年" + (viewMonth + 1) + "月の収入まとめ";
+  const el = document.getElementById("incomeSummary");
+  if (!el) return;
+  let py = viewYear, pm = viewMonth - 1;
+  if (pm < 0){ pm = 11; py--; }
+  el.innerHTML = buildIncomeSummaryHtml(summarizeMonth(viewYear, viewMonth), summarizeMonth(py, pm), viewYear, viewMonth);
+}
+
+// 「もらえた」チェックの付け外し（状態の保存だけ。金額計算は変えない）
+document.getElementById("incomeSummary").addEventListener("change", function(e){
+  const t = e.target;
+  if (!t || !t.hasAttribute || !t.hasAttribute("data-received-wp")) return;
+  setReceived(monthPrefixOf(viewYear, viewMonth), t.getAttribute("data-received-wp"), !!t.checked);
+  saveReceived();
+  render();
+});
 
 // ---------- シフト表の画像 ----------
 function monthKey(){
@@ -1538,6 +1778,9 @@ function render(){
       return '<div class="subtotal-row"><span><span class="cat-badge ' + (CATEGORY_CLASS[c] || "cat-none") + '">' + c + '</span></span><span>' + catCounts[c] + "件</span></div>";
     }).join("");
   }
+
+  // 収入まとめ（受け取り確認つき）
+  renderIncomeSummary();
 
   // シフト一覧（リスト／カレンダー表示）
   renderShiftListArea(monthShifts);
@@ -4909,6 +5152,75 @@ document.getElementById("noteList").addEventListener("click", function(e){
   }
 });
 
+// ---------- ヘルプ（？ボタンとポップアップ） ----------
+const HELP_TEXTS = {
+  ocr: {
+    title: "写真から読み取り",
+    body: "シフト表の写真やPDFから文字を読み取って、シフトの下書きを作る機能です。\n読み取りは実験中なので、間違いが混ざることがあります。下書きの内容をよく確認してから登録してください。\n画像は外部に送信されず、このブラウザの中だけで処理されます。"
+  },
+  preprocess: {
+    title: "画像の前処理",
+    body: "写真の文字を読み取りやすくするための調整です。\n「強め」は、色のついたマスの中の文字も消えにくくなります。「なし」だと文字が薄くなって読めないことがあるので、うまく読めないときは「強め」を試してください。\n切り替えたら、もう一度「読み取る」を押してください。"
+  },
+  crop: {
+    title: "切り取り",
+    body: "読み取る範囲を絞る機能です。自分の名前の列だけを切り取ると、文字が大きくなって読み取りやすくなります。\n「2か所切り取る」では、日付の列と自分の列を別々に選んで、横につなげて読み取ります。\n切り取りを設定すると、「読み取る」は切り取った範囲だけを読むようになります。全体を読みたいときは「切り取りをリセット」してください。"
+  },
+  drafts: {
+    title: "シフトの下書き",
+    body: "読み取った内容は、まず下書きとして並びます。日付や時刻が違うところは、その場で直せます。\n「まとめて登録」を押すと、入力がそろった行だけが登録され、足りない行は下書きに残ります。\n登録したくない行は、行ごとの削除ボタンで消せます。下書きは保存されるので、ページを開き直しても残ります。"
+  },
+  category: {
+    title: "区分",
+    body: "早番・日勤・遅番・夜勤といった、シフトの種類のことです。\n区分を選ぶと、バイト先ごとに決めた時刻（プリセット）が開始・終了に自動で入ります。時刻は後から変えられます。\n区分ごとの件数は、月のサマリーで確認できます。"
+  },
+  timeInput: {
+    title: "時刻の入力方法",
+    body: "時刻の入れ方は3通りあります。\n打ち込み：キーボードで直接入力します。\nスライダー：横のバーを動かして、15分刻みで調整します。\nダイヤル：時計のような輪の上で、開始（始）と終了（終）のつまみを動かします。終了のつまみを1周を超えて回すと、24時間以上の勤務も入力できます。弧は12時間ごとに色が変わるので、長い勤務も読みやすいです。\n選んだ方法は次回も引き継がれます。"
+  },
+  calendar: {
+    title: "カレンダー表示",
+    body: "シフト一覧は「リスト」と「カレンダー」を切り替えて見られます。\nカレンダーでは、シフトのある日にバイト先の色の印が付き、今日の日付が目立ちます。\n日をタップすると、その日のシフトの詳細（時刻・区分・金額）が出て、そのまま追加もできます。メモを書いた日には✎の印が付きます。"
+  },
+  skin: {
+    title: "スキン（見た目のテーマ）",
+    body: "アプリ全体の色合いを変えられます。標準（青）・ピンク・紫・緑・ダーク・キュートの6種類です。\nキュートでは、スライダーやダイヤルのつまみと、カレンダーの印がハートになります。\n選んだスキンは保存されて、次回も同じ見た目で開きます。"
+  },
+  memo: {
+    title: "メモ",
+    body: "メモには2種類あります。\nメモ帳：タイトルと本文を自由に書けるメモです。大事なことの控えなどに使えます。\n日付メモ：カレンダー表示で日を選ぶと書ける、その日専用のメモです。メモのある日はカレンダーに✎の印が付きます。\nどちらもこのブラウザに保存され、バックアップにも含まれます。"
+  },
+  income: {
+    title: "収入まとめ・もらえたチェック",
+    body: "表示中の月の収入を、バイト先ごとにまとめたものです。先月の収入との差も分かります。\n金額はシフトから計算した「見込み」です。実際に給料が振り込まれたら、バイト先ごとの「もらえた」にチェックを入れてください。\nチェックを入れると、「受け取り済み」と「まだ受け取っていない」の金額が分かれて表示されます。チェックは金額の計算には影響しません。"
+  },
+  backup: {
+    title: "バックアップ",
+    body: "データはこのブラウザの中に保存されています。\n「データを書き出し」で、バイト先・シフト・設定・メモ・受け取り確認などを1つのファイルに保存できます。\n機種変更やブラウザを変えるときは、そのファイルを「データを読み込み」で読み込むと元に戻せます。大事なデータは、ときどき書き出しておくと安心です。"
+  }
+};
+function showHelp(key){
+  const h = HELP_TEXTS[key];
+  if (!h) return;
+  document.getElementById("helpModalTitle").textContent = h.title;
+  document.getElementById("helpModalBody").textContent = h.body;
+  document.getElementById("helpModal").classList.remove("hidden");
+}
+function closeHelp(){
+  document.getElementById("helpModal").classList.add("hidden");
+}
+document.addEventListener("click", function(e){
+  const btn = (e.target && e.target.closest) ? e.target.closest("[data-help]") : null;
+  if (btn) showHelp(btn.getAttribute("data-help"));
+});
+document.getElementById("helpModalClose").addEventListener("click", closeHelp);
+document.getElementById("helpModal").addEventListener("click", function(e){
+  if (e.target === this) closeHelp();
+});
+document.addEventListener("keydown", function(e){
+  if (e.key === "Escape") closeHelp();
+});
+
 // ---- データのバックアップ（書き出し／読み込み） ----
 function buildBackupData(){
   return {
@@ -4922,7 +5234,8 @@ function buildBackupData(){
     ocrDrafts: ocrDrafts,
     templates: templates,
     dayMemos: dayMemos,
-    notes: notes
+    notes: notes,
+    received: receivedMap
   };
 }
 document.getElementById("exportDataBtn").addEventListener("click", function(){
@@ -4962,7 +5275,7 @@ importFileInput.addEventListener("change", function(){
       statusEl.textContent = "読み込めませんでした。このアプリのバックアップファイル（JSON）を選んでください。";
       return;
     }
-    if (!window.confirm("現在のデータ（バイト先・シフト・画像・設定・下書き・パターン・日付メモ・メモ帳）を、読み込んだ内容で置き換えます。よろしいですか？")){
+    if (!window.confirm("現在のデータ（バイト先・シフト・画像・設定・下書き・パターン・日付メモ・メモ帳・受け取り確認）を、読み込んだ内容で置き換えます。よろしいですか？")){
       statusEl.textContent = "読み込みをやめました。現在のデータはそのままです。";
       return;
     }
@@ -4975,6 +5288,7 @@ importFileInput.addEventListener("change", function(){
     templates = normalizeTemplates(data.templates || []);
     dayMemos = normalizeDayMemos((data.dayMemos && typeof data.dayMemos === "object" && !Array.isArray(data.dayMemos)) ? data.dayMemos : {});
     notes = normalizeNotes(Array.isArray(data.notes) ? data.notes : []);
+    receivedMap = normalizeReceived((data.received && typeof data.received === "object" && !Array.isArray(data.received)) ? data.received : {});
     saveAll();
     saveSettings();
     saveImages();
@@ -4982,6 +5296,7 @@ importFileInput.addEventListener("change", function(){
     saveTemplates();
     saveDayMemos();
     saveNotes();
+    saveReceived();
     myNamesInput.value = settings.myNames || "";
     setOcrImage(null);
     renderOcrSources();
