@@ -870,9 +870,11 @@
     <div class="crop-btns" style="margin-top:0;">
       <button id="exportDataBtn">データを書き出し（JSON）</button>
       <button id="importDataBtn">データを読み込み（JSON）</button>
+      <button id="importWpOnlyBtn">バイト先だけを読み込み（JSON）</button>
     </div>
     <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
-    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターン・日付メモ・メモ帳・受け取り確認・実際の金額・その他収入をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。</p>
+    <input type="file" id="importWpFileInput" accept=".json,application/json" class="hidden">
+    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターン・日付メモ・メモ帳・受け取り確認・実際の金額・その他収入をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。「バイト先だけを読み込み」は、バックアップファイルの中のバイト先だけを取り込むもので、同じバイト先は読み込んだ内容で上書きし、新しいバイト先は追加します。シフトや他のデータは変わりません。</p>
     <p class="note">データはこのブラウザの中に保存されます。LINEなどのアプリ内ブラウザで開くと、データが消えやすくなります。Safariで開いて「ホーム画面に追加」しておくと、データが残りやすくなります。別のブラウザで開くと、別のデータになります。大事なデータは、ときどき書き出してバックアップしてください。</p>
     <p class="note register-status" id="backupStatus"></p>
   </section>
@@ -886,16 +888,107 @@
     <form id="wpForm" class="hidden">
       <label for="wfName">名前</label>
       <input type="text" id="wfName" placeholder="例：カフェA" required>
-      <div class="row2">
+      <label for="wfPayType">給与形態</label><button type="button" class="help-btn" data-help="paytype" aria-label="給与形態の説明を表示">？</button>
+      <select id="wfPayType">
+        <option value="hourly">時給</option>
+        <option value="daily">日給</option>
+        <option value="monthly">月給</option>
+      </select>
+      <div class="row2" id="wfHourlyWrap">
         <div>
           <label for="wfWage">時給（円）</label>
-          <input type="number" id="wfWage" min="0" step="1" inputmode="numeric" required>
+          <input type="number" id="wfWage" min="0" step="1" inputmode="numeric">
         </div>
         <div>
           <label for="wfPremium">深夜割増率（%）</label>
-          <input type="number" id="wfPremium" min="0" step="1" value="25" inputmode="numeric" required>
+          <input type="number" id="wfPremium" min="0" step="1" value="25" inputmode="numeric">
         </div>
       </div>
+      <div id="wfDailyWrap" class="hidden">
+        <label for="wfDailyWage">日給（円）</label>
+        <input type="number" id="wfDailyWage" min="0" step="1" value="0" inputmode="numeric">
+        <p class="note">1シフトあたりの日給額です。勤務時間の長さや深夜帯に関係なく、この金額で計算します（深夜割増は付けません）。</p>
+      </div>
+      <div id="wfMonthlyWrap" class="hidden">
+        <label for="wfMonthlySalary">月給（円）</label>
+        <input type="number" id="wfMonthlySalary" min="0" step="1" value="0" inputmode="numeric">
+        <p class="note">シフトは出勤記録として登録でき、収入まとめにはこの月額をそのまま計上します（その月にシフトが1件以上ある月だけ計上します）。</p>
+      </div>
+      <div id="wfWageHistoryWrap">
+        <label>期間別時給</label>
+        <div id="wfWageHistoryList"></div>
+        <div class="form-actions" style="margin-top:8px;">
+          <button type="button" id="wfAddWageHistory">＋ 期間を追加</button>
+        </div>
+        <p class="note">開始日ごとに時給を設定できます（例：2026-11-01から¥1,240）。開始日より前の日は、上の基本の時給で計算します。</p>
+      </div>
+      <div id="wfTrainingWrap">
+        <label>研修期間</label>
+        <div class="row2">
+          <div>
+            <label for="wfTrainingWage">研修中の時給（円）</label>
+            <input type="number" id="wfTrainingWage" min="0" step="1" inputmode="numeric" placeholder="未設定">
+          </div>
+          <div>
+            <label for="wfTrainingDays">期間（開始日から◯日間）</label>
+            <input type="number" id="wfTrainingDays" min="0" step="1" inputmode="numeric" placeholder="例：30">
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="wfTrainingStart">研修 開始日</label>
+            <input type="date" id="wfTrainingStart">
+          </div>
+          <div>
+            <label for="wfTrainingEnd">研修 終了日</label>
+            <input type="date" id="wfTrainingEnd">
+          </div>
+        </div>
+        <p class="note">研修期間内のシフトは研修時給で計算します（期間別時給より優先されます）。終了日か日数のどちらかを入力してください。両方とも空の場合は、開始日からずっと研修扱いになります。</p>
+      </div>
+      <label for="wfGenre">ジャンル</label>
+      <input type="text" id="wfGenre" list="wfGenreList" placeholder="例：飲食">
+      <datalist id="wfGenreList">
+        <option value="飲食"></option>
+        <option value="接客"></option>
+        <option value="販売"></option>
+        <option value="事務"></option>
+        <option value="軽作業"></option>
+        <option value="工場"></option>
+        <option value="医療・介護"></option>
+        <option value="教育"></option>
+        <option value="配送"></option>
+        <option value="その他"></option>
+      </datalist>
+      <label for="wfPlace">場所</label>
+      <input type="text" id="wfPlace" placeholder="例：難波">
+      <div class="row2">
+        <div>
+          <label for="wfClosingDay">締日</label>
+          <input type="text" id="wfClosingDay" list="wfClosingList" placeholder="例：月末">
+        </div>
+        <div>
+          <label for="wfPayDay">給料日</label>
+          <input type="text" id="wfPayDay" list="wfPayDayList" placeholder="例：翌月25日">
+        </div>
+      </div>
+      <datalist id="wfClosingList">
+        <option value="月末"></option>
+        <option value="5日"></option>
+        <option value="10日"></option>
+        <option value="15日"></option>
+        <option value="20日"></option>
+        <option value="25日"></option>
+      </datalist>
+      <datalist id="wfPayDayList">
+        <option value="翌月25日"></option>
+        <option value="翌月末"></option>
+        <option value="翌月10日"></option>
+        <option value="翌月15日"></option>
+        <option value="翌月20日"></option>
+        <option value="当月末"></option>
+        <option value="当月25日"></option>
+      </datalist>
       <label for="wfColor">色</label>
       <input type="color" id="wfColor" value="#2563eb">
       <label for="wfTransportMode">交通費の方式</label><button type="button" class="help-btn" data-help="transport" aria-label="交通費の説明を表示">？</button>
@@ -1137,6 +1230,83 @@ function dialPointToAngle(dx, dy){
   const d = Math.atan2(Number(dx) || 0, -(Number(dy) || 0)) * 180 / Math.PI;
   return (d + 360) % 360;
 }
+
+// ---------- 給与形態・時給の解決（純粋関数） ----------
+// 勤務先の給与形態（"hourly" 時給／"daily" 日給／"monthly" 月給）。無い・不正な場合は "hourly"（既存データ互換）
+function payTypeOf(wp){
+  const t = wp && wp.payType;
+  return (t === "daily" || t === "monthly") ? t : "hourly";
+}
+
+// "YYYY-MM-DD" が実在する日付かどうか
+function isValidDateStr(s){
+  return typeof s === "string" && addDaysToDateStr(s, 0) === s;
+}
+
+// "YYYY-MM-DD" に n 日を加えた日付文字列（不正な日付は null）
+function addDaysToDateStr(dateStr, n){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ""));
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + (Number(n) || 0));
+  if (isNaN(d.getTime())) return null;
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+// 日給額（円）。未設定・不正な場合は 0
+function dailyWageOf(wp){
+  const n = Math.floor(Number(wp && wp.dailyWage) || 0);
+  return n > 0 ? n : 0;
+}
+
+// 月給額（円）。未設定・不正な場合は 0
+function monthlySalaryOf(wp){
+  const n = Math.floor(Number(wp && wp.monthlySalary) || 0);
+  return n > 0 ? n : 0;
+}
+
+// 研修期間の終了日（"YYYY-MM-DD"）を求める。
+// 終了日の設定があればそれを、無ければ「開始日から◯日間」（開始日を含む）から求める。
+// どちらも無ければ null（終了日なし＝開始日からずっと研修扱い）。
+function trainingEndDateStr(wp){
+  if (!wp) return null;
+  if (isValidDateStr(wp.trainingEnd)) return wp.trainingEnd;
+  const days = Math.floor(Number(wp.trainingDays) || 0);
+  if (days > 0 && isValidDateStr(wp.trainingStart)) return addDaysToDateStr(wp.trainingStart, days - 1);
+  return null;
+}
+
+// その日が研修期間内かどうか。
+// 研修時給と開始日が両方設定されている場合だけ有効。終了日が開始日より前の場合は常に期間外になる。
+function isTrainingDate(wp, dateStr){
+  if (!wp || !isValidDateStr(dateStr)) return false;
+  if (wp.trainingWage === null || wp.trainingWage === undefined || wp.trainingWage === "") return false;
+  if (!isFinite(Number(wp.trainingWage))) return false;
+  if (!isValidDateStr(wp.trainingStart)) return false;
+  if (dateStr < wp.trainingStart) return false;
+  const end = trainingEndDateStr(wp);
+  if (end !== null && dateStr > end) return false;
+  return true;
+}
+
+// その日付に適用される時給を求める。
+// 優先順位：研修時給（研修期間内）＞ 期間別時給（開始日がその日以前で最も新しいもの）＞ 基本の時給。
+// 期間別時給の開始日より前の日は、基本の時給になる。
+function wageForDate(wp, dateStr){
+  if (!wp) return 0;
+  if (isTrainingDate(wp, dateStr)) return Math.max(0, Math.floor(Number(wp.trainingWage) || 0));
+  let wage = Math.max(0, Math.floor(Number(wp.wage) || 0));
+  if (!isValidDateStr(dateStr)) return wage;
+  const hist = Array.isArray(wp.wageHistory) ? wp.wageHistory : [];
+  let bestFrom = null;
+  hist.forEach(function(h){
+    if (!h || !isValidDateStr(h.from)) return;
+    if (h.from > dateStr) return;
+    const w = Math.floor(Number(h.wage));
+    if (!isFinite(w) || w < 0) return;
+    if (bestFrom === null || h.from >= bestFrom){ bestFrom = h.from; wage = w; }
+  });
+  return wage;
+}
 // === PURE LOGIC END ===
 
 // === CATEGORY LOGIC START ===
@@ -1178,6 +1348,69 @@ function getPreset(workplace, category){
     return workplace.presets[category];
   }
   return DEFAULT_PRESETS[category];
+}
+
+// 期間別時給の配列を正規化する（不正な行は捨て、開始日の昇順に並べ、同じ開始日は後のものを優先する）
+function normalizeWageHistory(v){
+  if (!Array.isArray(v)) return [];
+  const byFrom = {};
+  v.forEach(function(h){
+    if (!h || !isValidDateStr(h.from)) return;
+    const w = Math.floor(Number(h.wage));
+    if (!isFinite(w) || w < 0) return;
+    byFrom[h.from] = w;
+  });
+  return Object.keys(byFrom).sort().map(function(from){
+    return { from: from, wage: byFrom[from] };
+  });
+}
+
+// 勤務先の新項目（給与形態・ジャンル・場所・締日・給料日・期間別時給・研修期間）を正規化する。
+// 新項目が無い既存データは、従来通りの単一時給として扱われる値に揃える（互換用）。
+function normalizeWorkplace(w){
+  if (!w || typeof w !== "object") return w;
+  w.payType = payTypeOf(w);
+  w.dailyWage = dailyWageOf(w);
+  w.monthlySalary = monthlySalaryOf(w);
+  w.wageHistory = normalizeWageHistory(w.wageHistory);
+  w.genre = typeof w.genre === "string" ? w.genre : "";
+  w.place = typeof w.place === "string" ? w.place : "";
+  w.closingDay = typeof w.closingDay === "string" ? w.closingDay : "";
+  w.payDay = typeof w.payDay === "string" ? w.payDay : "";
+  w.trainingStart = isValidDateStr(w.trainingStart) ? w.trainingStart : "";
+  w.trainingEnd = isValidDateStr(w.trainingEnd) ? w.trainingEnd : "";
+  const td = Math.floor(Number(w.trainingDays) || 0);
+  w.trainingDays = td > 0 ? td : 0;
+  if (w.trainingWage === null || w.trainingWage === undefined || w.trainingWage === ""){
+    w.trainingWage = null;
+  } else {
+    const tw = Math.floor(Number(w.trainingWage));
+    w.trainingWage = (isFinite(tw) && tw >= 0) ? tw : null;
+  }
+  return w;
+}
+
+// バイト先一覧に出す給与の短い説明
+function paySummaryText(w){
+  const t = payTypeOf(w);
+  if (t === "daily") return "日給 " + fmtYen(dailyWageOf(w));
+  if (t === "monthly") return "月給 " + fmtYen(monthlySalaryOf(w));
+  let s = "時給 " + fmtYen(w.wage) + "・深夜割増 " + esc(w.premium) + "%";
+  if (Array.isArray(w.wageHistory) && w.wageHistory.length > 0) s += "・期間別時給あり";
+  if (w.trainingWage !== null && w.trainingWage !== undefined && isValidDateStr(w.trainingStart)){
+    s += "・研修時給 " + fmtYen(w.trainingWage);
+  }
+  return s;
+}
+
+// バイト先一覧に出す、ジャンル・場所・締日・給料日の短い説明（未設定なら空文字）
+function workplaceMetaText(w){
+  const parts = [];
+  if (w.genre) parts.push(esc(w.genre));
+  if (w.place) parts.push(esc(w.place));
+  if (w.closingDay) parts.push("締日 " + esc(w.closingDay));
+  if (w.payDay) parts.push("給料日 " + esc(w.payDay));
+  return parts.join("・");
 }
 
 // シフトの区分ラベル（区分なしの既存シフトは「未設定」）
@@ -1444,7 +1677,7 @@ function saveAll(){
 let workplaces = loadJSON(LS_WP, []);
 let shifts = loadJSON(LS_SH, []);
 // 既存のバイト先データに区分プリセットの初期値を持たせて移行する
-workplaces.forEach(function(w){ ensurePresets(w); });
+workplaces.forEach(function(w){ ensurePresets(w); normalizeWorkplace(w); });
 let monthImages = loadJSON(LS_IMG, {}); // { "YYYY-MM": [ {id, dataUrl}, ... ] }
 let settings = loadJSON(LS_SET, { myNames: "" }); // { myNames: "" }
 let templates = normalizeTemplates(loadJSON(LS_TPL, [])); // いつものパターン
@@ -1547,8 +1780,42 @@ function endTimeLabel(end, endDayOffset){
 }
 function shiftResult(shift){
   const wp = findWp(shift.workplaceId);
-  if (!wp) return { pay: 0, workedMin: 0, nightMin: 0 };
-  return computePay(timeToMin(shift.start), timeToMin(shift.end), Number(shift.breakMin) || 0, Number(wp.wage) || 0, Number(wp.premium) || 0, Number(shift.endDayOffset) || 0);
+  if (!wp) return { pay: 0, workedMin: 0, nightMin: 0, payType: "hourly" };
+  const type = payTypeOf(wp);
+  const startMin = timeToMin(shift.start);
+  const endMin = timeToMin(shift.end);
+  const breakMin = Number(shift.breakMin) || 0;
+  const endDayOffset = Number(shift.endDayOffset) || 0;
+  if (type === "daily"){
+    // 日給：勤務時間によらず1シフト＝日給額（深夜割増は付けない）。実働時間だけは時間数として数える
+    const r = computePay(startMin, endMin, breakMin, 0, 0, endDayOffset);
+    return { pay: dailyWageOf(wp), workedMin: r.workedMin, nightMin: 0, payType: "daily" };
+  }
+  if (type === "monthly"){
+    // 月給：シフトは出勤記録として扱い、金額は収入まとめ側で月額を計上する（ここでは0円）
+    const r = computePay(startMin, endMin, breakMin, 0, 0, endDayOffset);
+    return { pay: 0, workedMin: r.workedMin, nightMin: 0, payType: "monthly" };
+  }
+  // 時給：勤務日の時点の時給（研修時給＞期間別時給＞基本時給）を適用する
+  const wage = wageForDate(wp, shift.date);
+  const r = computePay(startMin, endMin, breakMin, wage, Number(wp.premium) || 0, endDayOffset);
+  return { pay: r.pay, workedMin: r.workedMin, nightMin: r.nightMin, payType: "hourly" };
+}
+
+// その月にシフトのある月給の勤務先について { workplaceId: 月額 } を返す。
+// 月給は「その月にシフトが1件以上ある月」だけ計上する（交通費の月固定額と同じ扱い）。
+function monthlySalaryAdjustments(monthShifts){
+  const seen = {};
+  (monthShifts || []).forEach(function(s){ seen[s.workplaceId] = true; });
+  const out = {};
+  Object.keys(seen).forEach(function(id){
+    const wp = findWp(id);
+    if (wp && payTypeOf(wp) === "monthly"){
+      const amt = monthlySalaryOf(wp);
+      if (amt > 0) out[id] = amt;
+    }
+  });
+  return out;
 }
 function esc(s){
   return String(s == null ? "" : s)
@@ -1568,6 +1835,7 @@ function monthPrefixOf(year, month){
 function summarizeMonth(year, month){
   const prefix = monthPrefixOf(year, month);
   const per = {}; // workplaceId -> { pay, min, count, list }
+  const monthList = [];
   let totalPay = 0, totalMin = 0, count = 0;
   shifts.forEach(function(s){
     if (!s.date || s.date.indexOf(prefix) !== 0) return;
@@ -1575,11 +1843,20 @@ function summarizeMonth(year, month){
     totalPay += r.pay;
     totalMin += r.workedMin;
     count++;
+    monthList.push(s);
     if (!per[s.workplaceId]) per[s.workplaceId] = { pay: 0, min: 0, count: 0, list: [] };
     per[s.workplaceId].pay += r.pay;
     per[s.workplaceId].min += r.workedMin;
     per[s.workplaceId].count++;
     per[s.workplaceId].list.push(s);
+  });
+  // 月給の勤務先は、シフト単位では0円なので、ここで月額をその勤務先の月収として計上する
+  const monthlyAdj = monthlySalaryAdjustments(monthList);
+  Object.keys(monthlyAdj).forEach(function(id){
+    if (per[id]){
+      per[id].pay += monthlyAdj[id];
+      totalPay += monthlyAdj[id];
+    }
   });
   let totalTransport = 0;
   const perWorkplace = Object.keys(per).map(function(id){
@@ -1591,6 +1868,7 @@ function summarizeMonth(year, month){
       name: wp ? wp.name : "（削除済みのバイト先）",
       color: wp ? wp.color : "#9ca3af",
       pay: per[id].pay, min: per[id].min, count: per[id].count,
+      payType: wp ? payTypeOf(wp) : "hourly",
       transport: transport,
       transportLabel: wp ? transportModeLabel(wp) : "交通費"
     };
@@ -1882,6 +2160,8 @@ function buildIncomeSummaryHtml(summary, prevSummary, year, month){
         '<span><span class="dot" style="background:' + esc(w.color) + '"></span>' + esc(w.name) +
         (received ? '<span class="received-badge">受取済み</span>' : "") + "</span>" +
         '<div class="income-wp-sub">' + w.count + "件 ・ " + fmtDuration(w.min) + "</div>" +
+        (w.payType === "monthly" ? '<div class="income-wp-sub">月給（時間数によらず固定・シフトは出勤記録）</div>' : "") +
+        (w.payType === "daily" ? '<div class="income-wp-sub">日給（1シフトごとの金額）</div>' : "") +
         (w.transport > 0 ? '<div class="income-wp-sub">' + esc(w.transportLabel) + " " + fmtYen(w.transport) + "</div>" : "") +
         '<label class="received-check"><input type="checkbox" data-received-wp="' + esc(w.id) + '"' + (received ? " checked" : "") + "> もらえた</label>" +
         actualPayRowHtml(mk, w) +
@@ -2172,6 +2452,13 @@ function render(){
     subtotal[s.workplaceId].pay += r.pay;
     subtotal[s.workplaceId].min += r.workedMin;
   });
+  // 月給の勤務先は月額を合計と小計に加える（収入まとめと金額を一致させる）
+  const monthlyAdj = monthlySalaryAdjustments(monthShifts);
+  Object.keys(monthlyAdj).forEach(function(id){
+    totalPay += monthlyAdj[id];
+    if (!subtotal[id]) subtotal[id] = { pay: 0, min: 0 };
+    subtotal[id].pay += monthlyAdj[id];
+  });
   document.getElementById("totalPay").textContent = fmtYen(totalPay);
   document.getElementById("totalHours").textContent = "労働時間 合計 " + fmtDuration(totalMin);
   const stickyEl = document.getElementById("stickyTotal");
@@ -2225,9 +2512,12 @@ function render(){
     wpEl.innerHTML = '<div class="empty">バイト先がまだ登録されていません。下のボタンから追加してください</div>';
   } else {
     wpEl.innerHTML = workplaces.map(function(w){
+      const meta = workplaceMetaText(w);
       return '<div class="wp-item"><div><span class="dot" style="background:' + esc(w.color) + '"></span>' +
-        '<span class="wp-name">' + esc(w.name) + '</span><div class="wp-detail">時給 ' + fmtYen(w.wage) +
-        "・深夜割増 " + esc(w.premium) + "%" + transportSummaryText(w) + "</div></div>" +
+        '<span class="wp-name">' + esc(w.name) + '</span><div class="wp-detail">' + paySummaryText(w) +
+        transportSummaryText(w) + "</div>" +
+        (meta ? '<div class="wp-detail">' + meta + "</div>" : "") +
+        "</div>" +
         '<div class="wp-actions">' +
         '<button class="small" data-edit-wp="' + w.id + '">編集</button>' +
         '<button class="small danger" data-del-wp="' + w.id + '">削除</button>' +
@@ -2285,12 +2575,14 @@ function shiftItemHtml(s){
   const color = wp ? wp.color : "#9ca3af";
   const wpName = wp ? wp.name : "（削除済みのバイト先）";
   const nightNote = r.nightMin > 0 ? "・深夜 " + fmtDuration(r.nightMin) : "";
+  const payNote = r.payType === "daily" ? "・日給" : (r.payType === "monthly" ? "・月給の勤務先（出勤記録）" : "");
+  const payLabel = r.payType === "monthly" ? "月給" : fmtYen(r.pay);
   const memo = s.memo ? '<div class="shift-memo">' + esc(s.memo) + "</div>" : "";
   return '<div class="shift-item">' +
     '<div class="shift-top"><span class="shift-date"><span class="dot" style="background:' + esc(color) + '"></span>' +
-    fmtDateLabel(s.date) + '</span><span class="shift-pay">' + fmtYen(r.pay) + "</span></div>" +
+    fmtDateLabel(s.date) + '</span><span class="shift-pay">' + payLabel + "</span></div>" +
     '<div class="shift-detail">' + categoryBadge(s) + " " + esc(wpName) + " " + esc(s.start) + "〜" + esc(endTimeLabel(s.end, s.endDayOffset)) +
-    "（実働 " + fmtDuration(r.workedMin) + nightNote + "）</div>" + memo +
+    "（実働 " + fmtDuration(r.workedMin) + nightNote + "）" + payNote + "</div>" + memo +
     '<div class="shift-actions">' +
     '<button class="small" data-edit-shift="' + s.id + '">編集</button>' +
     '<button class="small" data-dup-shift="' + s.id + '">複製</button>' +
@@ -3132,6 +3424,49 @@ function updateTransportFields(){
   document.getElementById("wfTransPassWrap").classList.toggle("hidden", mode !== "pass");
 }
 document.getElementById("wfTransportMode").addEventListener("change", updateTransportFields);
+
+// 給与形態に応じて、バイト先フォームの金額欄の表示を切り替える
+function updatePayTypeFields(){
+  const t = document.getElementById("wfPayType").value;
+  document.getElementById("wfHourlyWrap").classList.toggle("hidden", t !== "hourly");
+  document.getElementById("wfDailyWrap").classList.toggle("hidden", t !== "daily");
+  document.getElementById("wfMonthlyWrap").classList.toggle("hidden", t !== "monthly");
+  document.getElementById("wfWageHistoryWrap").classList.toggle("hidden", t !== "hourly");
+  document.getElementById("wfTrainingWrap").classList.toggle("hidden", t !== "hourly");
+}
+document.getElementById("wfPayType").addEventListener("change", updatePayTypeFields);
+
+// 期間別時給の入力行を1つ追加する
+function addWageHistoryRow(from, wage){
+  const list = document.getElementById("wfWageHistoryList");
+  const row = document.createElement("div");
+  row.className = "wf-wh-row";
+  row.style.cssText = "display:flex;gap:8px;align-items:flex-end;margin-top:8px;";
+  row.innerHTML =
+    '<div style="flex:1;"><label>開始日</label><input type="date" class="wf-wh-from"></div>' +
+    '<div style="flex:1;"><label>時給（円）</label><input type="number" class="wf-wh-wage" min="0" step="1" inputmode="numeric"></div>' +
+    '<button type="button" class="small danger wf-wh-del">削除</button>';
+  if (from) row.querySelector(".wf-wh-from").value = from;
+  if (wage !== undefined && wage !== null && wage !== "") row.querySelector(".wf-wh-wage").value = wage;
+  row.querySelector(".wf-wh-del").addEventListener("click", function(){ row.remove(); });
+  list.appendChild(row);
+}
+document.getElementById("wfAddWageHistory").addEventListener("click", function(){
+  addWageHistoryRow("", "");
+});
+
+// 期間別時給の入力行をすべて読み取る（開始日と時給がそろった行だけを対象にし、正規化して返す）
+function readWageHistoryFields(){
+  const rows = document.querySelectorAll("#wfWageHistoryList .wf-wh-row");
+  const list = [];
+  rows.forEach(function(row){
+    const from = row.querySelector(".wf-wh-from").value;
+    const wageRaw = row.querySelector(".wf-wh-wage").value;
+    if (!from || wageRaw === "") return;
+    list.push({ from: from, wage: Number(wageRaw) });
+  });
+  return normalizeWageHistory(list);
+}
 // 定期代を調べる：駅名だけのURLで Yahoo!路線情報 の検索結果を新しいタブで開く（金額は自動入力されない）
 document.getElementById("wfPassSearchBtn").addEventListener("click", function(){
   const from = document.getElementById("wfStationFrom").value.trim();
@@ -3149,6 +3484,15 @@ document.getElementById("toggleWpForm").addEventListener("click", function(){
   editingWpId = null;
   wpForm.reset();
   document.getElementById("wfPremium").value = 25;
+  document.getElementById("wfPayType").value = "hourly";
+  document.getElementById("wfDailyWage").value = 0;
+  document.getElementById("wfMonthlySalary").value = 0;
+  document.getElementById("wfWageHistoryList").innerHTML = "";
+  document.getElementById("wfTrainingWage").value = "";
+  document.getElementById("wfTrainingDays").value = "";
+  document.getElementById("wfTrainingStart").value = "";
+  document.getElementById("wfTrainingEnd").value = "";
+  updatePayTypeFields();
   document.getElementById("wfColor").value = "#2563eb";
   document.getElementById("wfTransportMode").value = "daily";
   document.getElementById("wfTransportDaily").value = 0;
@@ -3169,10 +3513,28 @@ document.getElementById("wfCancel").addEventListener("click", function(){
 });
 wpForm.addEventListener("submit", function(e){
   e.preventDefault();
+  const trainingWageRaw = document.getElementById("wfTrainingWage").value;
+  let trainingWage = null;
+  if (trainingWageRaw !== ""){
+    const tw = Math.floor(Number(trainingWageRaw));
+    trainingWage = (isFinite(tw) && tw >= 0) ? tw : null;
+  }
   const data = {
     name: document.getElementById("wfName").value.trim(),
     wage: Number(document.getElementById("wfWage").value) || 0,
     premium: Number(document.getElementById("wfPremium").value) || 0,
+    payType: document.getElementById("wfPayType").value,
+    dailyWage: Math.max(0, Math.floor(Number(document.getElementById("wfDailyWage").value) || 0)),
+    monthlySalary: Math.max(0, Math.floor(Number(document.getElementById("wfMonthlySalary").value) || 0)),
+    wageHistory: readWageHistoryFields(),
+    trainingWage: trainingWage,
+    trainingStart: document.getElementById("wfTrainingStart").value || "",
+    trainingEnd: document.getElementById("wfTrainingEnd").value || "",
+    trainingDays: Math.max(0, Math.floor(Number(document.getElementById("wfTrainingDays").value) || 0)),
+    genre: document.getElementById("wfGenre").value.trim(),
+    place: document.getElementById("wfPlace").value.trim(),
+    closingDay: document.getElementById("wfClosingDay").value.trim(),
+    payDay: document.getElementById("wfPayDay").value.trim(),
     color: document.getElementById("wfColor").value || "#2563eb",
     transportMode: document.getElementById("wfTransportMode").value,
     transportDaily: Math.max(0, Math.floor(Number(document.getElementById("wfTransportDaily").value) || 0)),
@@ -3188,6 +3550,7 @@ wpForm.addEventListener("submit", function(e){
     alert("バイト先の名前を入力してください");
     return;
   }
+  normalizeWorkplace(data);
   if (editingWpId){
     const w = findWp(editingWpId);
     if (w) Object.assign(w, data);
@@ -3210,6 +3573,20 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     document.getElementById("wfName").value = w.name;
     document.getElementById("wfWage").value = w.wage;
     document.getElementById("wfPremium").value = w.premium;
+    document.getElementById("wfPayType").value = payTypeOf(w);
+    document.getElementById("wfDailyWage").value = dailyWageOf(w);
+    document.getElementById("wfMonthlySalary").value = monthlySalaryOf(w);
+    document.getElementById("wfWageHistoryList").innerHTML = "";
+    normalizeWageHistory(w.wageHistory).forEach(function(h){ addWageHistoryRow(h.from, h.wage); });
+    document.getElementById("wfTrainingWage").value = (w.trainingWage === null || w.trainingWage === undefined) ? "" : w.trainingWage;
+    document.getElementById("wfTrainingDays").value = Number(w.trainingDays) > 0 ? w.trainingDays : "";
+    document.getElementById("wfTrainingStart").value = w.trainingStart || "";
+    document.getElementById("wfTrainingEnd").value = w.trainingEnd || "";
+    document.getElementById("wfGenre").value = w.genre || "";
+    document.getElementById("wfPlace").value = w.place || "";
+    document.getElementById("wfClosingDay").value = w.closingDay || "";
+    document.getElementById("wfPayDay").value = w.payDay || "";
+    updatePayTypeFields();
     document.getElementById("wfColor").value = w.color || "#2563eb";
     document.getElementById("wfTransportMode").value = transportModeOf(w);
     document.getElementById("wfTransportDaily").value = Number(w.transportDaily) || 0;
@@ -5704,7 +6081,11 @@ const HELP_TEXTS = {
   },
   income: {
     title: "収入まとめ・もらえたチェック",
-    body: "表示中の月の収入を、バイト先ごとにまとめたものです。先月の収入との差も分かります。\n金額はシフトから計算した「見込み」です。実際に給料が振り込まれたら、バイト先ごとの「もらえた」にチェックを入れてください。\nチェックを入れると、「受け取り済み」と「まだ受け取っていない」の金額が分かれて表示されます。チェックは金額の計算には影響しません。\n「実際の金額」に給与明細の金額を入れると、計算との差が分かります。差の基準は、給料見込みに交通費を加えた金額です（明細は交通費込みのことが多いため）。実際の金額を入れると「もらえた」も自動でチェックされます。\n交通費とその他収入がある月は、内訳と総合計（給料＋交通費＋その他収入）も表示されます。なお、「受け取り済み／まだ受け取っていない」の金額は給料見込みだけが対象です。"
+    body: "表示中の月の収入を、バイト先ごとにまとめたものです。先月の収入との差も分かります。\n金額はシフトから計算した「見込み」です。実際に給料が振り込まれたら、バイト先ごとの「もらえた」にチェックを入れてください。\nチェックを入れると、「受け取り済み」と「まだ受け取っていない」の金額が分かれて表示されます。チェックは金額の計算には影響しません。\n「実際の金額」に給与明細の金額を入れると、計算との差が分かります。差の基準は、給料見込みに交通費を加えた金額です（明細は交通費込みのことが多いため）。実際の金額を入れると「もらえた」も自動でチェックされます。\n月給のバイト先は、シフトの時間数によらず、設定した月額がそのまま計上されます（シフトは出勤記録で、その月に1件以上ある月だけ計上します）。日給のバイト先は、1シフトごとの日給額で計算されます。\n交通費とその他収入がある月は、内訳と総合計（給料＋交通費＋その他収入）も表示されます。なお、「受け取り済み／まだ受け取っていない」の金額は給料見込みだけが対象です。"
+  },
+  paytype: {
+    title: "給与形態・期間別時給・研修時給",
+    body: "バイト先ごとに、給与形態を時給・日給・月給から選べます。\n時給：働いた時間で計算します（深夜割増あり）。\n日給：1シフト＝日給額で計算します。時間の長さや深夜帯は関係ありません。\n月給：シフトは出勤記録として登録し、収入まとめには設定した月額をそのまま計上します（その月にシフトが1件以上ある月だけ計上します）。\n期間別時給：開始日ごとに時給を設定でき、その日以降はその時給で計算します。開始日より前の日は、基本の時給です。\n研修時給：研修期間（開始日と、終了日または日数）を設定すると、期間内のシフトは研修時給で計算します。終了日も日数も空の場合は、開始日からずっと研修扱いになります。\n時給の優先順位は、研修時給 ＞ 期間別時給 ＞ 基本の時給です。"
   },
   transport: {
     title: "交通費",
@@ -5716,7 +6097,7 @@ const HELP_TEXTS = {
   },
   backup: {
     title: "バックアップ",
-    body: "データはこのブラウザの中に保存されています。\n「データを書き出し」で、バイト先・シフト・設定・メモ・受け取り確認などを1つのファイルに保存できます。\n機種変更やブラウザを変えるときは、そのファイルを「データを読み込み」で読み込むと元に戻せます。大事なデータは、ときどき書き出しておくと安心です。"
+    body: "データはこのブラウザの中に保存されています。\n「データを書き出し」で、バイト先・シフト・設定・メモ・受け取り確認などを1つのファイルに保存できます。\n機種変更やブラウザを変えるときは、そのファイルを「データを読み込み」で読み込むと元に戻せます。\n「バイト先だけを読み込み」は、ファイルの中のバイト先だけを取り込む方法です。同じバイト先は上書き、新しいバイト先は追加になり、シフトや他のデータは変わりません。\n大事なデータは、ときどき書き出しておくと安心です。"
   }
 };
 function showHelp(key){
@@ -5802,7 +6183,7 @@ importFileInput.addEventListener("change", function(){
       return;
     }
     workplaces = data.workplaces;
-    workplaces.forEach(function(w){ ensurePresets(w); });
+    workplaces.forEach(function(w){ ensurePresets(w); normalizeWorkplace(w); });
     shifts = data.shifts;
     settings = (data.settings && typeof data.settings === "object") ? data.settings : { myNames: "" };
     monthImages = (data.images && typeof data.images === "object" && !Array.isArray(data.images)) ? data.images : {};
@@ -5832,6 +6213,56 @@ importFileInput.addEventListener("change", function(){
     applySkin();
     render();
     statusEl.textContent = "データを読み込みました（バイト先" + workplaces.length + "件・シフト" + shifts.length + "件）。";
+  }).catch(function(){
+    statusEl.textContent = "ファイルの読み込みに失敗しました。";
+  });
+});
+
+// バイト先だけを読み込む（部分インポート）。同じIDのバイト先は上書きし、新しいバイト先は追加する。
+// シフト・設定・メモなど他のデータには一切触れない。
+const importWpFileInput = document.getElementById("importWpFileInput");
+document.getElementById("importWpOnlyBtn").addEventListener("click", function(){
+  importWpFileInput.click();
+});
+importWpFileInput.addEventListener("change", function(){
+  const f = importWpFileInput.files && importWpFileInput.files[0];
+  importWpFileInput.value = "";
+  if (!f) return;
+  const statusEl = document.getElementById("backupStatus");
+  readFileAsText(f).then(function(text){
+    let data = null;
+    try { data = JSON.parse(text); } catch (e) { data = null; }
+    if (!data || !Array.isArray(data.workplaces)){
+      statusEl.textContent = "読み込めませんでした。このアプリのバックアップファイル（JSON）を選んでください。";
+      return;
+    }
+    if (!window.confirm("バックアップファイルの中のバイト先 " + data.workplaces.length + " 件を取り込みます。同じバイト先は読み込んだ内容で上書きし、新しいバイト先は追加します。シフトや他のデータは変わりません。よろしいですか？")){
+      statusEl.textContent = "バイト先の読み込みをやめました。現在のデータはそのままです。";
+      return;
+    }
+    let added = 0, updated = 0;
+    data.workplaces.forEach(function(nw){
+      if (!nw || typeof nw !== "object") return;
+      ensurePresets(nw);
+      normalizeWorkplace(nw);
+      if (!nw.id){
+        nw.id = newId();
+        workplaces.push(nw);
+        added++;
+        return;
+      }
+      const idx = workplaces.findIndex(function(x){ return x.id === nw.id; });
+      if (idx >= 0){
+        workplaces[idx] = nw;
+        updated++;
+      } else {
+        workplaces.push(nw);
+        added++;
+      }
+    });
+    saveAll();
+    render();
+    statusEl.textContent = "バイト先を読み込みました（追加 " + added + " 件・上書き " + updated + " 件）。シフトや他のデータは変更していません。";
   }).catch(function(){
     statusEl.textContent = "ファイルの読み込みに失敗しました。";
   });
