@@ -359,6 +359,7 @@
   }
   .draft-missing-note{color:var(--danger);font-weight:600;font-size:12px;margin:6px 0 0;}
   .draft-estimated-note{color:var(--blue-dark);font-weight:600;font-size:12px;margin:6px 0 0;}
+  .draft-closing-note{color:var(--blue-dark);font-weight:600;font-size:12px;margin:6px 0 0;}
   /* 推測で補正した下書き行の確認ボックス（元の読み取り値と推測後の値を並べて見せる） */
   .draft-repair-box{
     margin-top:8px;padding:8px 10px;border:1px solid var(--blue);border-radius:8px;
@@ -716,6 +717,7 @@
             <input type="range" id="sfEndSlider" min="0" max="1425" step="15" value="0" aria-label="終了時刻をスライダーで入力">
             <span class="time-slider-val" id="sfEndSliderVal">--:--</span>
           </div>
+          <button type="button" class="small hidden" id="sfClosingBtn" style="margin-top:6px;">閉店時間にする</button>
         </div>
       </div>
       <input type="hidden" id="sfEndOffset" value="0">
@@ -1172,6 +1174,9 @@
       </datalist>
       <label for="wfPlace">場所</label>
       <input type="text" id="wfPlace" placeholder="例：難波">
+      <label for="wfClosingTime">閉店時間（任意）</label>
+      <input type="time" id="wfClosingTime">
+      <p class="note">「17」のように開始時刻だけが書かれたシフト表のバイト先向けです。読み取りの下書きで、終了が空欄の行にこの時刻を終了として自動で入れます（ラスト＝閉店まで働く想定）。0:00や翌1:00など日をまたぐ時刻も、そのまま入力してください。</p>
       <div class="row2">
         <div>
           <label for="wfClosingDay">締日</label>
@@ -1766,6 +1771,8 @@ function normalizeWorkplace(w){
   w.wageHistory = normalizeWageHistory(w.wageHistory);
   w.genre = typeof w.genre === "string" ? w.genre : "";
   w.place = typeof w.place === "string" ? w.place : "";
+  // 閉店時間（"HH:MM"）：未設定・不正な値（既存データ含む）は "" に揃える
+  w.closingTime = closingTimeOf(w);
   w.closingDay = typeof w.closingDay === "string" ? w.closingDay : "";
   w.payDay = typeof w.payDay === "string" ? w.payDay : "";
   // 給料日の種類： "date"＝日付で指定（payDay文字列を使う）、"lastday"＝勤務最終日（最終日が終わったら支給）。
@@ -1824,11 +1831,24 @@ function paymentMethodLabel(w){
   return paymentMethodOf(w) === "cash" ? "手渡し" : "振り込み";
 }
 
+// 閉店時間（"HH:MM"）を返す。未設定・不正な値は ""（開始のみの下書きへの補完はしない）
+// 0:00・1:00 のような日をまたぐ閉店も "HH:MM" のまま保持し、
+// 終了として使われたときは計算側の「終了<=開始は翌日扱い」のルールで翌日として扱われる
+function closingTimeOf(w){
+  if (!w || typeof w.closingTime !== "string") return "";
+  const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(w.closingTime);
+  if (!m) return "";
+  // "0:00" のような1桁の時も "00:00" にそろえる（時刻欄にそのまま入れられる形式）
+  return String(Number(m[1])).padStart(2, "0") + ":" + m[2];
+}
+
 // バイト先一覧に出す、ジャンル・場所・締日・給料日の短い説明（未設定なら空文字）
 function workplaceMetaText(w){
   const parts = [];
   if (w.genre) parts.push(esc(w.genre));
   if (w.place) parts.push(esc(w.place));
+  const ct = closingTimeOf(w);
+  if (ct) parts.push("閉店 " + esc(ct));
   if (w.closingDay) parts.push("締日 " + esc(w.closingDay));
   const pd = payDayLabel(w);
   if (pd) parts.push("給料日 " + esc(pd));
@@ -3652,6 +3672,7 @@ document.getElementById("toggleShiftForm").addEventListener("click", function(){
   fillCategoryOptions(document.getElementById("sfCategory"),
     findWp(document.getElementById("sfWorkplace").value), settings.lastCategory || "");
   syncShiftTransportField(true);
+  updateClosingTimeBtn();
   document.getElementById("sfEndOffset").value = "0";
   syncAllTimeSliders();
   document.getElementById("sfBulkArea").classList.remove("hidden");
@@ -4090,6 +4111,27 @@ function applyCategoryPreset(){
   syncAllTimeSliders();
 }
 document.getElementById("sfCategory").addEventListener("change", applyCategoryPreset);
+
+// バイト先に閉店時間が設定されているときだけ「閉店時間にする」ボタンを出す
+function updateClosingTimeBtn(){
+  const btn = document.getElementById("sfClosingBtn");
+  if (!btn) return;
+  const ct = closingTimeOf(findWp(document.getElementById("sfWorkplace").value));
+  btn.classList.toggle("hidden", !ct);
+  if (ct) btn.textContent = "閉店時間（" + ct + "）にする";
+}
+document.getElementById("sfWorkplace").addEventListener("change", updateClosingTimeBtn);
+// 終了時刻をそのバイト先の閉店時間にする（閉店が開始以下なら翌日扱いのオフセットを付ける）
+document.getElementById("sfClosingBtn").addEventListener("click", function(){
+  const ct = closingTimeOf(findWp(document.getElementById("sfWorkplace").value));
+  if (!ct) return;
+  document.getElementById("sfEnd").value = ct;
+  const sv = document.getElementById("sfStart").value;
+  document.getElementById("sfEndOffset").value =
+    (sv && timeToMin(ct) <= timeToMin(sv)) ? "1" : "0";
+  syncAllTimeSliders();
+});
+
 document.getElementById("sfWorkplace").addEventListener("change", function(){
   // バイト先が変わったら、区分セレクトをそのバイト先の区分一覧で作り直す
   fillCategoryOptions(document.getElementById("sfCategory"),
@@ -4203,6 +4245,7 @@ function handleShiftItemClick(e){
     document.getElementById("sfMemo").value = s.memo || "";
     document.getElementById("sfTransport").value = shiftTransportFee(s);
     syncShiftTransportField(false);
+    updateClosingTimeBtn();
     syncAllTimeSliders();
     document.getElementById("sfSubmit").textContent = "更新する";
     shiftForm.classList.remove("hidden");
@@ -4226,6 +4269,7 @@ function handleShiftItemClick(e){
     document.getElementById("sfMemo").value = s.memo || "";
     document.getElementById("sfTransport").value = shiftTransportFee(s);
     syncShiftTransportField(false);
+    updateClosingTimeBtn();
     syncAllTimeSliders();
     document.getElementById("sfSubmit").textContent = "複製を保存";
     shiftForm.classList.remove("hidden");
@@ -4489,6 +4533,7 @@ wpForm.addEventListener("submit", function(e){
     trainingDays: Math.max(0, Math.floor(Number(document.getElementById("wfTrainingDays").value) || 0)),
     genre: document.getElementById("wfGenre").value.trim(),
     place: document.getElementById("wfPlace").value.trim(),
+    closingTime: document.getElementById("wfClosingTime").value || "",
     closingDay: document.getElementById("wfClosingDay").value.trim(),
     payDay: document.getElementById("wfPayDay").value.trim(),
     payDayType: document.getElementById("wfPayDayType").value,
@@ -4544,6 +4589,7 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     document.getElementById("wfTrainingEnd").value = w.trainingEnd || "";
     document.getElementById("wfGenre").value = w.genre || "";
     document.getElementById("wfPlace").value = w.place || "";
+    document.getElementById("wfClosingTime").value = closingTimeOf(w);
     document.getElementById("wfClosingDay").value = w.closingDay || "";
     document.getElementById("wfPayDay").value = w.payDay || "";
     document.getElementById("wfPayDayType").value = (w.payDayType === "lastday") ? "lastday" : "date";
@@ -5031,6 +5077,7 @@ function normalizeDrafts(list){
       category: d.category || ""
     };
     if (d.estimated) out.estimated = true; // 推定で補正した行の目印
+    if (d.endFromClosing && out.end) out.endFromClosing = true; // 閉店時間で補完した終了の目印
     // 推測で直した内容（元の読み取り値→推測後の値）と、登録前の確認状態を保持する
     if (Array.isArray(d.repairs) && d.repairs.length > 0){
       const reps = d.repairs.filter(function(r){
@@ -5679,6 +5726,25 @@ function applyFrequentPairCorrection(drafts){
   });
 }
 
+// 開始のみ・終了が空欄の下書き行に、そのバイト先の閉店時間を終了として補完する
+// （「17」のように開始だけ書かれたシフト表では、終了＝閉店（ラスト）までが前提のため）
+// 補完した行には endFromClosing の目印を付け、下書き上で分かるように表示する。
+// 閉店時間が未設定のバイト先では、従来どおり終了は空欄のまま。
+// 0:00・翌1:00など日をまたぐ閉店時間もそのまま入れ、計算側の
+// 「終了<=開始は翌日扱い」のルールで翌日として扱われる。
+// 元の配列・行は変更せず、補完した行だけコピーを返す
+function applyClosingTimeFill(drafts){
+  return (drafts || []).map(function(d){
+    if (!d || !d.start || d.end) return d;
+    const ct = closingTimeOf(findWp(d.workplaceId));
+    if (!ct) return d;
+    const copy = Object.assign({}, d);
+    copy.end = ct;
+    copy.endFromClosing = true;
+    return copy;
+  });
+}
+
 // 認識テキストからシフトの下書き候補を生成する
 // （時間パターンと漢字パターンを統合する。同じ日に複数の時間帯があっても全て残す）
 // 戻り値：{drafts, discarded}（discarded は下書きにできなかった断片の件数）
@@ -5707,7 +5773,8 @@ function buildDraftsFromText(text){
   });
   // 終了時刻の推測補修（開始時刻と表全体の傾向から判断する）→ 最頻ペアによる桁落ち補正の順に適用する
   // どちらで直した行にも、登録前の確認が必要な目印（needsConfirm）と補修内容（repairs）が付く
-  return { drafts: applyFrequentPairCorrection(applyEndTimeInference(drafts)), discarded: timeResult.discarded };
+  // 最後に、開始のみで終了が空欄のまま残った行へ、バイト先の閉店時間を補完する
+  return { drafts: applyClosingTimeFill(applyFrequentPairCorrection(applyEndTimeInference(drafts))), discarded: timeResult.discarded };
 }
 // === OCR TEXT LOGIC END ===
 
@@ -7218,6 +7285,25 @@ function syncDraftsFromDom(){
   saveDrafts();
 }
 
+// 下書き行の「閉店時間で補完」注記を取り除く（再描画せずに行を書き換える場面用）
+function removeClosingNote(row){
+  const n = row ? row.querySelector("[data-closing-note]") : null;
+  if (n) n.remove();
+}
+
+// 下書き行に「閉店時間で補完」注記を付ける（renderDrafts の表示と同じ文言・位置）
+function showClosingNote(row, endVal){
+  if (!row) return;
+  removeClosingNote(row);
+  const p = document.createElement("p");
+  p.className = "draft-closing-note";
+  p.setAttribute("data-closing-note", "");
+  p.textContent = "終了は閉店時間（" + endVal + "）で補完しました。違っていたら直してください";
+  const anchor = row.querySelector(".draft-missing-note");
+  if (anchor) row.insertBefore(p, anchor);
+  else row.appendChild(p);
+}
+
 // 下書き候補を編集可能な行として描画する
 function renderDrafts(){
   const wrap = document.getElementById("ocrDrafts");
@@ -7263,6 +7349,7 @@ function renderDrafts(){
         (d.confirmed ? "" : '<p class="draft-missing-note">確認するまで、この行は登録されません。違っていたら上の欄を直してください（直すと確認は不要になります）</p>') +
         "</div>" :
         (d.estimated ? '<p class="draft-estimated-note">時刻を推定で補正しました。違っていたら直してください</p>' : "")) +
+      (d.endFromClosing ? '<p class="draft-closing-note" data-closing-note>終了は閉店時間（' + esc(d.end) + '）で補完しました。違っていたら直してください</p>' : "") +
       '<p class="draft-missing-note hidden">未入力の項目があります（赤い枠の欄を入力してください）</p>' +
       '<div class="draft-actions"><button class="small danger" data-del-draft="' + i + '">この行を削除</button></div>' +
       "</div>";
@@ -7638,11 +7725,11 @@ document.getElementById("ocrBuildDrafts").addEventListener("click", function(){
   let builtNote = "";
   if (ocrPdfPositionDrafts && ocrPdfPositionDrafts.length > 0){
     // 時間割形式のPDFは、テキストではなく列の位置から作った下書きを使う
-    ocrDrafts = applyFrequentPairCorrection(ocrPdfPositionDrafts.map(function(d){
+    ocrDrafts = applyClosingTimeFill(applyFrequentPairCorrection(ocrPdfPositionDrafts.map(function(d){
       const copy = Object.assign({}, d);
       if (!copy.workplaceId) copy.workplaceId = workplaces[0].id;
       return copy;
-    }));
+    })));
     builtNote = "表の列の位置から下書きを作りました。";
   } else {
     const built = buildDraftsFromText(document.getElementById("ocrText").value);
@@ -7693,6 +7780,12 @@ document.getElementById("ocrDrafts").addEventListener("change", function(e){
     const rowEl = e.target.closest(".draft-row");
     const rows = document.querySelectorAll("#ocrDrafts .draft-row");
     const idx = Array.prototype.indexOf.call(rows, rowEl);
+    // 終了を手で直したら、閉店時間で補完した目印と注記は外す（利用者の入力を優先する）
+    if (field === "end" && rowEl && idx >= 0 && ocrDrafts[idx] && ocrDrafts[idx].endFromClosing){
+      ocrDrafts[idx].endFromClosing = false;
+      removeClosingNote(rowEl);
+      saveDrafts();
+    }
     if (rowEl && idx >= 0 && ocrDrafts[idx] && ocrDrafts[idx].needsConfirm){
       ocrDrafts[idx].estimated = false;
       ocrDrafts[idx].needsConfirm = false;
@@ -7712,12 +7805,36 @@ document.getElementById("ocrDrafts").addEventListener("change", function(e){
   if (field !== "category" && field !== "workplaceId") return;
   const row = e.target.closest(".draft-row");
   if (!row) return;
+  const allRows = document.querySelectorAll("#ocrDrafts .draft-row");
+  const didx = Array.prototype.indexOf.call(allRows, row);
+  const draft = (didx >= 0 && ocrDrafts[didx]) ? ocrDrafts[didx] : null;
   const wp = findWp(row.querySelector('[data-df="workplaceId"]').value);
+  // バイト先が変わったら、前のバイト先の閉店時間で補完した終了はいったん外してから選び直す
+  if (field === "workplaceId" && draft && draft.endFromClosing){
+    draft.endFromClosing = false;
+    row.querySelector('[data-df="end"]').value = "";
+    removeClosingNote(row);
+  }
   const p = getPreset(wp, row.querySelector('[data-df="category"]').value);
   if (p){
     row.querySelector('[data-df="start"]').value = p.start;
     row.querySelector('[data-df="end"]').value = p.end;
     if (typeof p.breakMin === "number") row.querySelector('[data-df="breakMin"]').value = p.breakMin;
+    // プリセットで終了が入ったので、閉店時間の補完扱いは外す
+    if (draft && draft.endFromClosing){
+      draft.endFromClosing = false;
+      removeClosingNote(row);
+    }
+  } else if (field === "workplaceId"){
+    // プリセットが無い場合は、新しいバイト先の閉店時間で補完し直す（開始のみ・終了が空欄の行だけ）
+    const ct = closingTimeOf(wp);
+    const endEl = row.querySelector('[data-df="end"]');
+    const startEl = row.querySelector('[data-df="start"]');
+    if (ct && endEl && startEl && startEl.value && !endEl.value){
+      endEl.value = ct;
+      if (draft) draft.endFromClosing = true;
+      showClosingNote(row, ct);
+    }
   }
 });
 
