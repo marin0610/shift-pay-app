@@ -846,12 +846,12 @@
     <div class="image-grid" id="imageGrid"></div>
     <button class="primary" id="addImageBtn">＋ 画像を追加</button>
     <input type="file" id="imageFileInput" accept="image/*" multiple class="hidden">
-    <p class="note">表示中の月に、シフト表の画像を最大3枚まで保存できます。PCではコピーした画像をこのページに貼り付け（Ctrl+V）ても追加できます。画像は自動で縮小・圧縮して保存されます。読み取りに使うときは、各画像の「この画像で読み取る」ボタンを押してください。</p>
+    <p class="note">読み取りに使うときは、各画像の「この画像で読み取る」ボタンを押してください。</p>
     <h3 class="sub-h">PDF<span class="image-count" id="pdfCount"></span></h3>
     <div id="pdfList"></div>
     <button id="addPdfBtn">＋ PDFを追加</button>
     <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" class="hidden">
-    <p class="note">PDFはそのままの形で保存します。圧縮されないため、大きなファイル（目安：1ファイル2MBを超えるもの）は、ブラウザの保存容量の都合で保存できないことがあります。その場合は、保存できなかった旨の案内が出ます。読み取りに使うときは、各PDFの「このPDFで読み取る」ボタンを押してください（文字データの入ったPDFは、写真よりずっと正確に読み取れます）。</p>
+    <p class="note">読み取りに使うときは、各PDFの「このPDFで読み取る」ボタンを押してください。</p>
     <h3 class="sub-h">リンク</h3>
     <div id="monthLinkList"></div>
     <label class="field-label" for="linkUrlInput">URL</label>
@@ -861,20 +861,15 @@
     <div class="form-actions">
       <button type="button" class="primary" id="addLinkBtn">リンクを追加</button>
     </div>
-    <p class="note">シフト表のページなどのURLを、表示中の月に登録できます。タップすると新しいタブで開きます。複数登録できます。</p>
+    <p class="note">タップすると新しいタブで開きます。複数登録できます。</p>
   </section>
   <!-- 写真から読み取り（OCR・実験） -->
   <section class="card" id="ocrSection" data-simple-hide>
     <h2>写真から読み取り（実験）<button type="button" class="help-btn" data-help="ocr" aria-label="写真から読み取りの説明を表示">？</button></h2>
-    <p class="note" style="margin-top:0;">シフト表のファイルや写真から文字を読み取り、シフトの下書きを作る実験機能です。いちばん正確に読めるのは、文字データの入ったPDFファイルからの読み取りです。写真からの読み取りは補助的な位置づけで、誤読が多くなります。</p>
-    <p class="note warn-note">実験機能です。読み取り間違いがあるので、必ず確認・修正してから登録してください。</p>
-    <p class="note">画像はブラウザの中で処理され、外部に送信されません（読み取りライブラリと言語データのダウンロードのみ通信します）。</p>
-    <p class="note">【推奨】シフト表をPDFファイルでもらえる場合は、そのPDFから読み取るのがおすすめです。文字データが入っているPDFは、写真とは比べものにならないほど正確に読み取れます。文字データが入っていないPDF（スキャン画像など）は画像として読み取るため、写真と同じくらいの精度になります。</p>
-
+    <p class="note warn-note" style="margin-top:0;">実験機能です。読み取り間違いがあるので、必ず確認・修正してから登録してください。</p>
     <p class="note" id="ocrTargetInfo" style="font-weight:700;color:var(--ink);"></p>
     <label class="ocr-label">または、手元のファイルを選ぶ（推奨：PDFファイル）</label>
     <button id="ocrFileBtn">ファイルを選ぶ（PDF推奨）</button>
-    <p class="note">読み取りに使う画像とPDFは、上の「シフト表の画像・PDF・リンク」の欄に追加して、各項目の「読み取る」ボタンで選びます。ここのボタンでは、手元にあるPDFファイルを、保存せずにそのまま読み取りに使えます（選べるのはPDFファイルだけです）。写真しかない場合は、下の「帯に分けて読み取る」や切り取りを使うと読み取りやすくなります。</p>
     <input type="file" id="ocrFileInput" accept="application/pdf,.pdf" class="hidden">
     <img id="ocrPreview" class="ocr-preview hidden" alt="読み取り対象の画像">
     <p class="note hidden" id="ocrPdfName"></p>
@@ -7766,7 +7761,7 @@ const HELP_TEXTS = {
   },
   attach: {
     title: "シフト表の画像・PDF・リンク",
-    body: "表示中の月に、シフト表の画像（最大3枚）・PDF（最大3件）・リンクを付けておけます。画像・ファイル・リンクの追加と表示は、すべてこの欄で行います。\n画像は自動で縮小・圧縮して保存されます。PDFはそのままの形で保存するので、大きなファイル（目安：2MB超）はブラウザの保存容量の都合で保存できないことがあります。\n読み取りに使うときは、画像の「この画像で読み取る」ボタン、PDFの「このPDFで読み取る」ボタンを押してください。その項目が読み取り（写真から読み取り）の対象にセットされ、読み取りの欄へ移動します。選ばれた項目には「選択中」と表示されます。文字データの入ったPDFは、写真よりずっと正確に読み取れます。\nリンクは、シフト表のページなどのURLです。表示名は任意で、タップすると新しいタブで開きます。複数登録できます。\n画像・PDF・リンクはすべてバックアップに含まれます。"
+    body: "表示中の月に、シフト表の画像（最大3枚）・PDF（最大3件）・リンクを付けておけます。画像・ファイル・リンクの追加と表示は、すべてこの欄で行います。\n画像は自動で縮小・圧縮して保存されます。PCでは、コピーした画像をページに貼り付け（Ctrl+V）しても追加できます。PDFはそのままの形で保存するので、大きなファイル（目安：2MB超）はブラウザの保存容量の都合で保存できないことがあります（保存できない場合は、その旨の案内が出ます）。\n読み取りに使うときは、画像の「この画像で読み取る」ボタン、PDFの「このPDFで読み取る」ボタンを押してください。その項目が読み取り（写真から読み取り）の対象にセットされ、読み取りの欄へ移動します。選ばれた項目には「選択中」と表示されます。文字データの入ったPDFは、写真よりずっと正確に読み取れます。\nリンクは、シフト表のページなどのURLです。表示名は任意で、タップすると新しいタブで開きます。複数登録できます。\n画像・PDF・リンクはすべてバックアップに含まれます。"
   },
   preprocess: {
     title: "画像の前処理",
