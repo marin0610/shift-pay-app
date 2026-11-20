@@ -880,7 +880,7 @@
         <label class="ocr-check"><input type="radio" name="ocrCropMode" value="single" checked> 1か所だけ切り取る</label>
         <label class="ocr-check"><input type="radio" name="ocrCropMode" value="double"> 2か所切り取る（日付の列＋自分の列）</label>
       </div>
-      <p class="note hidden" id="ocrCropDoubleNote">日付の列と自分の名前の列を別々に切り取って、横につなげて読み取ります（1か所だけだと日付と対応づけられないため）。まず「① 日付の列」をドラッグで選び、次に「② 自分の列」を選んでください。2つとも選ぶと「この範囲で読み取る」が押せます。</p>
+      <p class="note hidden" id="ocrCropDoubleNote">日付の列と自分の名前の列を別々に切り取って、それぞれ読み取り、行をそろえて対応づけます（1か所だけだと日付と対応づけられないため）。まず「① 日付の列」をドラッグで選び、次に「② 自分の列」を選んでください。2つとも選ぶと「この範囲で読み取る」が押せます。</p>
       <div class="crop-btns hidden" id="ocrCropSlotBtns" style="margin:0 0 8px;">
         <button id="ocrCropSlotABtn" class="slot-btn active">① 日付の列を選ぶ</button>
         <button id="ocrCropSlotBBtn" class="slot-btn">② 自分の列を選ぶ</button>
@@ -5527,8 +5527,11 @@ function extractKanjiDrafts(text){
     let m;
     let matched = false;
     while ((m = re.exec(line)) !== null){
-      // 「◯日」だけの一致は日付の表記であって日勤の略ではないので除く
-      if (m[3] === "日" && /^\d{1,2}日$/.test(m[0])) continue;
+      // 「◯日」だけの一致は日付・曜日の表記であって日勤の略ではないので除く
+      // （"20日" のほか、空白や括弧つきの "20 日"・"20 （日）" も同じ扱いにする。
+      //   曜日列のある表では日付の横の「日」は日曜日を表すだけなので、これを
+      //   日勤と誤認すると休みの日に下書きができてしまう）
+      if (m[3] === "日" && /^\d{1,2}\s*[（(]?\s*日\s*[）)]?$/.test(m[0])) continue;
       // 曜日文字（m[2]）が読めていても信用しない。曜日は日付から一意に決まるため、
       // 実際のカレンダーと食い違っていても日付の方を採用する（曜日表示は weekdayKanjiForDate で計算する）
       pushDraft(Number(m[1]), m[3]);
@@ -6387,6 +6390,46 @@ function setOcrPdf(buffer, fileName){
 }
 
 // 位置情報つきアイテム（{str,x0,x1,cy,h,page}）から、行ごとに並べたテキストを組み立てる
+// 単語の cy（縦位置）を「行の中心」にそろえる
+// 別々に読み取った2つの範囲の単語を混ぜると、同じ行でも cy が数pxずれて、
+// buildTextFromItems の行分け（cy の丸め）で別の行に分かれてしまうことがある。
+// cy の近い単語を1行とみなして、その行の平均 cy に寄せてから渡すことで、
+// 日付と自分の列の値が同じ行のテキストとして対応づくようにする
+// 許容幅は単語の高さの中央値から決める（行間より十分小さく、行内のばらつきより大きく）
+function snapItemsToRowCenters(items){
+  if (!items || items.length === 0) return items || [];
+  const hs = items.map(function(i){ return i.h || 0; }).filter(function(h){ return h > 0; })
+    .sort(function(a, b){ return a - b; });
+  const medH = hs.length ? hs[Math.floor(hs.length / 2)] : 20;
+  const tol = Math.max(6, Math.min(14, medH * 0.75));
+  const sorted = items.slice().sort(function(a, b){
+    if (a.cy !== b.cy) return a.cy - b.cy;
+    return a.x0 - b.x0;
+  });
+  const rows = [];
+  sorted.forEach(function(it){
+    const row = rows[rows.length - 1];
+    if (row && it.cy - row.anchorCy <= tol){
+      row.items.push(it);
+    } else {
+      rows.push({ anchorCy: it.cy, items: [it] });
+    }
+  });
+  const out = [];
+  rows.forEach(function(row){
+    let sum = 0;
+    row.items.forEach(function(i){ sum += i.cy; });
+    const mean = sum / row.items.length;
+    row.items.forEach(function(i){
+      const copy = {};
+      Object.keys(i).forEach(function(k){ copy[k] = i[k]; });
+      copy.cy = mean;
+      out.push(copy);
+    });
+  });
+  return out;
+}
+
 function buildTextFromItems(items){
   const linesMap = {};
   (items || []).forEach(function(it){
@@ -6770,22 +6813,33 @@ function runOcr(){
   }
   if (hasCropSelection()){
     // 切り取りが設定されている場合は、元の画像全体ではなく切り取り後の画像だけを読み取る
-    const statusEl = document.getElementById("ocrStatus");
-    statusEl.textContent = "切り取り中…";
-    buildCroppedSourceUrl().then(function(url){
-      statusEl.textContent = "";
-      runOcrForSource(url || ocrImageDataUrl);
-    }).catch(function(err){
-      statusEl.textContent = "";
-      if (err && err.message === "crop-too-small"){
-        alert("切り取り範囲が小さすぎます。もう少し大きく範囲を選ぶか、切り取りをリセットしてください");
-      } else {
-        alert("切り取りに失敗しました");
-      }
-    });
+    if (ocrCropMode === "double"){
+      // 2か所切り取りは、連結画像だと読み取りエンジンがテキストを返せないことが
+      // 実測で分かったため、専用フロー（範囲ごとに読み取り、行で対応づける）を使う
+      runOcrDoubleCrop();
+      return;
+    }
+    runOcrCroppedConcat();
     return;
   }
   runOcrForSource(ocrImageDataUrl);
+}
+
+// 切り取り後の画像（1か所、または2か所を横に連結）を読み取る従来フロー
+function runOcrCroppedConcat(){
+  const statusEl = document.getElementById("ocrStatus");
+  statusEl.textContent = "切り取り中…";
+  buildCroppedSourceUrl().then(function(url){
+    statusEl.textContent = "";
+    runOcrForSource(url || ocrImageDataUrl);
+  }).catch(function(err){
+    statusEl.textContent = "";
+    if (err && err.message === "crop-too-small"){
+      alert("切り取り範囲が小さすぎます。もう少し大きく範囲を選ぶか、切り取りをリセットしてください");
+    } else {
+      alert("切り取りに失敗しました");
+    }
+  });
 }
 
 // 画像の自然サイズ（ピクセル）を返す
@@ -7012,6 +7066,137 @@ function runOcrSingle(sourceUrl){
     runBtn.disabled = false;
     updateCropUi();
     if (worker) worker.terminate();
+  });
+}
+
+// 2か所切り取り（①日付の列＋②自分の列）専用の読み取り
+// 横に連結した画像は幅が狭く丈が長いため、読み取りエンジンのレイアウト解析
+// （PSM 4）がテキストを全く返せないことが実測で分かった（前処理後のプレビューは
+// 読める見た目でも、認識結果が空になる）。そこで2つの範囲を別々に読み取り
+// （狭い1列の画像向けに PSM 6 を使う）、単語の位置（行）で対応づけてから
+// テキストに戻す。「開始時刻だけが書かれた列」（例："17" や "×" だけの列）でも、
+// 日付と同じ行に値が並ぶため、開始のみの下書きを作れるようになる。
+// 名前列の抽出は行わない（自分の列は利用者が自分で選んでいるため、抽出すると
+// 日付の列まで消えてしまう）。帯に分けて読み取る設定はこの経路では使わない。
+// 単語が取れなかった場合は、従来の「連結して読み取る」フローにフォールバックする
+function runOcrDoubleCrop(){
+  const statusEl = document.getElementById("ocrStatus");
+  const runBtn = document.getElementById("ocrRunBtn");
+  const cropRunBtn = document.getElementById("ocrCropRunBtn");
+  if (typeof Tesseract === "undefined"){
+    alert("読み取り用ライブラリを読み込めませんでした。インターネット接続を確認して、ページを再読み込みしてください");
+    return;
+  }
+  runBtn.disabled = true;
+  if (cropRunBtn) cropRunBtn.disabled = true;
+  statusEl.textContent = "切り取り中…";
+  const levelSel = document.getElementById("ocrPreprocessLevel");
+  const preLevel = levelSel ? levelSel.value : "strong";
+  let worker = null;
+  function finish(){
+    runBtn.disabled = false;
+    if (cropRunBtn) cropRunBtn.disabled = false;
+    updateCropUi();
+    if (worker){ worker.terminate(); worker = null; }
+  }
+  function fallback(){
+    if (worker){ worker.terminate(); worker = null; }
+    runBtn.disabled = false;
+    if (cropRunBtn) cropRunBtn.disabled = false;
+    runOcrCroppedConcat();
+  }
+  getImageNaturalSize(ocrImageDataUrl).then(function(size){
+    const natA = cropFracToNatural(ocrCropSel, size.w, size.h);
+    const natB = cropFracToNatural(ocrCropSelB, size.w, size.h);
+    if (!natA || !natB) throw new Error("crop-too-small");
+    return Promise.all([
+      cropImageToDataUrl(ocrImageDataUrl, natA),
+      cropImageToDataUrl(ocrImageDataUrl, natB)
+    ]).then(function(urls){
+      return { natA: natA, natB: natB, urlA: urls[0], urlB: urls[1] };
+    });
+  }).then(function(ctx){
+    // 各範囲を前処理する（「なし」の場合も、拡大だけは行う）
+    function prep(url){
+      if (preLevel === "none") return upscaleImageForOcr(url);
+      return preprocessImageForOcr(url, preLevel).catch(function(){ return url; });
+    }
+    return Promise.all([prep(ctx.urlA), prep(ctx.urlB)]).then(function(pre){
+      ctx.imgA = pre[0];
+      ctx.imgB = pre[1];
+      showPreprocessedPreview(ctx.imgA);
+      return ctx;
+    });
+  }).then(function(ctx){
+    statusEl.textContent = "準備中…";
+    return Tesseract.createWorker("jpn+eng", 1, {
+      logger: function(m){
+        if (m && typeof m.progress === "number" && m.status !== "recognizing text"){
+          statusEl.textContent = "準備中… " + Math.round(m.progress * 100) + "%（初回は言語データをダウンロードするため、少し時間がかかります）";
+        }
+      }
+    }).then(function(w){
+      worker = w;
+      const setParams = (typeof worker.setParameters === "function")
+        ? worker.setParameters({ tessedit_pageseg_mode: "6" }).catch(function(){})
+        : Promise.resolve();
+      return setParams.then(function(){
+        statusEl.textContent = "① 日付の列を読み取り中…";
+        return worker.recognize(ctx.imgA, {}, { text: true, tsv: true }).catch(function(){
+          return worker.recognize(ctx.imgA);
+        });
+      }).then(function(resA){
+        statusEl.textContent = "② 自分の列を読み取り中…";
+        return worker.recognize(ctx.imgB, {}, { text: true, tsv: true }).catch(function(){
+          return worker.recognize(ctx.imgB);
+        }).then(function(resB){
+          return { ctx: ctx, resA: resA, resB: resB };
+        });
+      });
+    });
+  }).then(function(out){
+    const ctx = out.ctx;
+    const wordsA = extractWordsFromResult((out.resA && out.resA.data) || {}, 0);
+    const wordsB = extractWordsFromResult((out.resB && out.resB.data) || {}, 0);
+    if (wordsA.length === 0 || wordsB.length === 0){
+      fallback();
+      return;
+    }
+    // 単語の座標を元画像の座標系に戻し、Bの単語はAの右（連結レイアウトと同じ位置）に置く
+    // 前処理の拡大率は ocrScaleForWidth(範囲の幅) で決まるため、それで割り戻せる
+    const scaleA = ocrScaleForWidth(ctx.natA.w);
+    const scaleB = ocrScaleForWidth(ctx.natB.w);
+    const gap = Math.max(8, Math.round(Math.max(ctx.natA.h, ctx.natB.h) * 0.03));
+    const layout = concatCropLayout(ctx.natA, ctx.natB, gap);
+    const items = [];
+    wordsA.forEach(function(w){
+      items.push({
+        str: w.str,
+        x0: layout.ax + w.x0 / scaleA, x1: layout.ax + w.x1 / scaleA,
+        cy: w.cy / scaleA, h: w.h / scaleA, page: 0
+      });
+    });
+    wordsB.forEach(function(w){
+      items.push({
+        str: w.str,
+        x0: layout.bx + w.x0 / scaleB, x1: layout.bx + w.x1 / scaleB,
+        cy: w.cy / scaleB, h: w.h / scaleB, page: 0
+      });
+    });
+    const text = buildTextFromItems(snapItemsToRowCenters(items));
+    document.getElementById("ocrText").value = text;
+    statusEl.textContent = "読み取りが終わりました。内容を確認して「下書きを作成」を押してください（2か所の切り取りを別々に読み取り、行をそろえました）";
+    finish();
+  }).catch(function(err){
+    if (err && err.message === "crop-too-small"){
+      statusEl.textContent = "";
+      runBtn.disabled = false;
+      if (cropRunBtn) cropRunBtn.disabled = false;
+      alert("切り取り範囲が小さすぎます。もう少し大きく範囲を選ぶか、切り取りをリセットしてください");
+      if (worker){ worker.terminate(); worker = null; }
+      return;
+    }
+    fallback();
   });
 }
 
@@ -7385,6 +7570,11 @@ document.getElementById("ocrRunBtn").addEventListener("click", runOcr);
   document.getElementById("ocrCropRunBtn").addEventListener("click", function(){
     if (!ocrImageDataUrl) return;
     if (!hasCropSelection()) return;
+    if (ocrCropMode === "double"){
+      // 2か所切り取りは「読み取る」ボタンと同じ専用フローで読み取る
+      runOcrDoubleCrop();
+      return;
+    }
     // 「読み取る」ボタンと同じ経路（切り取り後の画像だけを読み取る）に統一する
     const statusEl = document.getElementById("ocrStatus");
     statusEl.textContent = "切り取り中…";
@@ -7773,7 +7963,7 @@ const HELP_TEXTS = {
   },
   crop: {
     title: "切り取り",
-    body: "読み取る範囲を絞る機能です。自分の名前の列だけを切り取ると、文字が大きくなって読み取りやすくなります。\n「2か所切り取る」では、日付の列と自分の列を別々に選んで、横につなげて読み取ります。\n切り取りを設定すると、「読み取る」は切り取った範囲だけを読むようになります。全体を読みたいときは「切り取りをリセット」してください。"
+    body: "読み取る範囲を絞る機能です。自分の名前の列だけを切り取ると、文字が大きくなって読み取りやすくなります。\n「2か所切り取る」では、日付の列と自分の列を別々に選んで、それぞれ読み取り、行をそろえて対応づけます。自分の列に開始時刻だけ（例：17）や「×」だけが書かれた表でも、日付と対応づけて読み取れます。\n切り取りを設定すると、「読み取る」は切り取った範囲だけを読むようになります。全体を読みたいときは「切り取りをリセット」してください。"
   },
   drafts: {
     title: "シフトの下書き",
