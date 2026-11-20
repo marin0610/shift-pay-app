@@ -358,6 +358,30 @@
     color:var(--muted);margin-top:4px;min-height:28px;
   }
   .received-check input{width:18px;height:18px;accent-color:var(--blue);margin:0;}
+  .income-breakdown{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface);}
+  .income-breakdown .bd-row{display:flex;justify-content:space-between;font-size:14px;padding:3px 0;}
+  .income-breakdown .bd-total{border-top:1px solid var(--line);margin-top:4px;padding-top:7px;font-weight:800;font-size:16px;color:var(--blue-dark);}
+  .income-wp-total{font-size:12px;color:var(--muted);margin-top:2px;font-weight:700;}
+  /* その他収入 */
+  .sub-h{font-size:15px;margin:16px 0 6px;}
+  .oi-item{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:8px;background:var(--surface);font-size:14px;
+  }
+  .oi-item .oi-amt{font-weight:800;white-space:nowrap;}
+  .oi-item .oi-wp{color:var(--muted);font-size:12px;}
+  /* 実際の金額（収入まとめ） */
+  .actual-pay-row{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;}
+  .actual-pay-row .lbl{font-size:12px;color:var(--muted);}
+  .actual-input{
+    width:120px;padding:6px 8px;font-size:14px;text-align:right;
+    border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);
+  }
+  .actual-pay-row .yen{font-size:13px;color:var(--muted);}
+  .actual-diff{font-size:12px;font-weight:700;}
+  .actual-diff.up{color:var(--blue-dark);}
+  .actual-diff.down{color:var(--danger);}
+  .actual-diff.same{color:var(--blue-dark);}
   /* ヘルプ（？ボタンとポップアップ） */
   .help-btn{
     display:inline-flex;align-items:center;justify-content:center;
@@ -381,7 +405,10 @@
   .help-modal-body{font-size:14px;line-height:1.7;white-space:pre-line;}
   .help-modal-backdrop.hidden{display:none;}
   html[data-skin="cute"] .income-compare,
+  html[data-skin="cute"] .income-breakdown,
+  html[data-skin="cute"] .oi-item,
   html[data-skin="cute"] .income-received .box{border-radius:16px;}
+  html[data-skin="cute"] .actual-input{border-radius:12px;}
   html[data-skin="cute"] .help-modal{border-radius:22px;}
   /* 日付メモ */
   .cal-memo-mark{font-size:10px;font-weight:700;color:var(--blue-dark);line-height:1;}
@@ -500,6 +527,28 @@
   <section class="card">
     <h2><span id="incomeSummaryTitle">収入まとめ</span><button type="button" class="help-btn" data-help="income" aria-label="収入まとめの説明を表示">？</button></h2>
     <div id="incomeSummary"></div>
+    <div id="otherIncomeArea">
+      <h3 class="sub-h">その他収入（ボーナスなど）<button type="button" class="help-btn" data-help="otherIncome" aria-label="その他収入の説明を表示">？</button></h3>
+      <div id="otherIncomeList"></div>
+      <form id="oiForm">
+        <div class="row2">
+          <div>
+            <label for="oiName">名前</label>
+            <input type="text" id="oiName" placeholder="例：ボーナス">
+          </div>
+          <div>
+            <label for="oiAmount">金額（円）</label>
+            <input type="number" id="oiAmount" min="0" step="1" inputmode="numeric" placeholder="例：10000">
+          </div>
+        </div>
+        <label for="oiWorkplace">バイト先（任意）</label>
+        <select id="oiWorkplace"><option value="">指定なし</option></select>
+        <div class="form-actions">
+          <button type="submit" class="primary">この月に追加する</button>
+        </div>
+      </form>
+      <p class="note">表示中の月に登録されます。給料の計算や「実際の金額」との差には含めず、収入まとめの内訳と総合計にだけ別枠で表示します。</p>
+    </div>
   </section>
 
   <!-- シフト表の画像 -->
@@ -679,6 +728,11 @@
       <p class="note">区分を選ぶと、そのバイト先のプリセット時刻が開始・終了に入ります（後から変更できます）。</p>
       <label for="sfBreak">休憩時間（分）</label>
       <input type="number" id="sfBreak" min="0" step="5" value="0" inputmode="numeric">
+      <div id="sfTransportWrap">
+        <label for="sfTransport">交通費（円・この日）</label>
+        <input type="number" id="sfTransport" min="0" step="1" value="0" inputmode="numeric">
+        <p class="note">初期値はバイト先の1日あたり交通費です。その日だけ違う金額（0円など）にもできます。</p>
+      </div>
       <label for="sfMemo">メモ</label>
       <input type="text" id="sfMemo" placeholder="任意">
       <div class="form-actions">
@@ -818,7 +872,7 @@
       <button id="importDataBtn">データを読み込み（JSON）</button>
     </div>
     <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
-    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターン・日付メモ・メモ帳・受け取り確認をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。</p>
+    <p class="note">書き出しには、バイト先・シフト・区分プリセット・自分の設定・月の画像・OCRの下書き・いつものパターン・日付メモ・メモ帳・受け取り確認・実際の金額・その他収入をすべて含みます。読み込みをすると、現在のデータは読み込んだ内容で置き換えられます（実行前に確認が出ます）。</p>
     <p class="note">データはこのブラウザの中に保存されます。LINEなどのアプリ内ブラウザで開くと、データが消えやすくなります。Safariで開いて「ホーム画面に追加」しておくと、データが残りやすくなります。別のブラウザで開くと、別のデータになります。大事なデータは、ときどき書き出してバックアップしてください。</p>
     <p class="note register-status" id="backupStatus"></p>
   </section>
@@ -844,6 +898,55 @@
       </div>
       <label for="wfColor">色</label>
       <input type="color" id="wfColor" value="#2563eb">
+      <label for="wfTransportMode">交通費の方式</label><button type="button" class="help-btn" data-help="transport" aria-label="交通費の説明を表示">？</button>
+      <select id="wfTransportMode">
+        <option value="daily">1日あたり（出勤日ごと）</option>
+        <option value="cap">1日あたり＋月の上限あり</option>
+        <option value="fixed">月固定額</option>
+        <option value="pass">定期代（月換算）</option>
+      </select>
+      <div id="wfTransDailyWrap">
+        <label for="wfTransportDaily">1日あたり交通費（円）</label>
+        <input type="number" id="wfTransportDaily" min="0" step="1" value="0" inputmode="numeric">
+      </div>
+      <div id="wfTransCapWrap" class="hidden">
+        <label for="wfTransportCap">月の上限額（円）</label>
+        <input type="number" id="wfTransportCap" min="0" step="1" value="0" inputmode="numeric">
+      </div>
+      <div id="wfTransFixedWrap" class="hidden">
+        <label for="wfTransportFixed">月固定額（円）</label>
+        <input type="number" id="wfTransportFixed" min="0" step="1" value="0" inputmode="numeric">
+      </div>
+      <div id="wfTransPassWrap" class="hidden">
+        <div class="row2">
+          <div>
+            <label for="wfTransportPassAmount">定期代（円）</label>
+            <input type="number" id="wfTransportPassAmount" min="0" step="1" value="0" inputmode="numeric">
+          </div>
+          <div>
+            <label for="wfTransportPassMonths">定期の期間</label>
+            <select id="wfTransportPassMonths">
+              <option value="1">1か月</option>
+              <option value="3">3か月</option>
+              <option value="6">6か月</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="wfStationFrom">出発駅</label>
+            <input type="text" id="wfStationFrom" placeholder="例：箕面萱野">
+          </div>
+          <div>
+            <label for="wfStationTo">到着駅</label>
+            <input type="text" id="wfStationTo" placeholder="例：難波">
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top:8px;">
+          <button type="button" id="wfPassSearchBtn">定期代を調べる（Yahoo!路線情報）</button>
+        </div>
+        <p class="note">定期代は自動では入力されません。「定期代を調べる」で路線検索のページを開き、定期代を確認して、上の「定期代」欄に自分で入力してください。収入まとめには、定期代÷期間（月数）の月換算（四捨五入）で計上します。</p>
+      </div>
       <p class="note" style="margin-bottom:0;">区分プリセット（このバイト先用）。シフト登録で区分を選ぶと、この時刻が自動入力されます。</p>
       <div class="row2">
         <div>
@@ -1320,6 +1423,8 @@ const LS_TPL = "shiftPayApp.templates";
 const LS_DAYMEMO = "shiftPayApp.dayMemos";
 const LS_NOTES = "shiftPayApp.notes";
 const LS_RECEIVED = "shiftPayApp.received";
+const LS_ACTUAL = "shiftPayApp.actualPay";
+const LS_OTHER = "shiftPayApp.otherIncome";
 const MAX_IMAGES_PER_MONTH = 3;
 const MAX_IMAGE_WIDTH = 1200;
 
@@ -1346,6 +1451,8 @@ let templates = normalizeTemplates(loadJSON(LS_TPL, [])); // いつものパタ�
 let dayMemos = normalizeDayMemos(loadJSON(LS_DAYMEMO, {})); // 日付メモ { "YYYY-MM-DD": "本文" }
 let notes = normalizeNotes(loadJSON(LS_NOTES, [])); // メモ帳 [{ id, title, body, updatedAt }]
 let receivedMap = normalizeReceived(loadJSON(LS_RECEIVED, {})); // 受け取り確認 { "YYYY-MM": { workplaceId: true } }
+let actualPayMap = normalizeActualPay(loadJSON(LS_ACTUAL, {})); // 実際の金額 { "YYYY-MM": { workplaceId: 金額 } }
+let otherIncomeMap = normalizeOtherIncome(loadJSON(LS_OTHER, {})); // その他収入 { "YYYY-MM": [{ id, name, amount, workplaceId }] }
 
 function saveDayMemos(){
   try {
@@ -1360,6 +1467,16 @@ function saveNotes(){
 function saveReceived(){
   try {
     localStorage.setItem(LS_RECEIVED, JSON.stringify(receivedMap));
+  } catch (e) { /* 保存できなくても動作は続ける */ }
+}
+function saveActualPay(){
+  try {
+    localStorage.setItem(LS_ACTUAL, JSON.stringify(actualPayMap));
+  } catch (e) { /* 保存できなくても動作は続ける */ }
+}
+function saveOtherIncome(){
+  try {
+    localStorage.setItem(LS_OTHER, JSON.stringify(otherIncomeMap));
   } catch (e) { /* 保存できなくても動作は続ける */ }
 }
 
@@ -1446,10 +1563,11 @@ function monthPrefixOf(year, month){
 }
 
 // 指定した月の収入まとめを集計する（金額は shiftResult の給料計算が正）
-// 戻り値：{ totalPay, totalMin, count, perWorkplace: [{ id, name, color, pay, min, count }] }
+// 戻り値：{ totalPay, totalMin, count, totalTransport, perWorkplace: [{ id, name, color, pay, min, count, transport, transportLabel }] }
+// 交通費は給料計算（computePay）には混ぜず、別枠で集計する
 function summarizeMonth(year, month){
   const prefix = monthPrefixOf(year, month);
-  const per = {}; // workplaceId -> { pay, min, count }
+  const per = {}; // workplaceId -> { pay, min, count, list }
   let totalPay = 0, totalMin = 0, count = 0;
   shifts.forEach(function(s){
     if (!s.date || s.date.indexOf(prefix) !== 0) return;
@@ -1457,24 +1575,30 @@ function summarizeMonth(year, month){
     totalPay += r.pay;
     totalMin += r.workedMin;
     count++;
-    if (!per[s.workplaceId]) per[s.workplaceId] = { pay: 0, min: 0, count: 0 };
+    if (!per[s.workplaceId]) per[s.workplaceId] = { pay: 0, min: 0, count: 0, list: [] };
     per[s.workplaceId].pay += r.pay;
     per[s.workplaceId].min += r.workedMin;
     per[s.workplaceId].count++;
+    per[s.workplaceId].list.push(s);
   });
+  let totalTransport = 0;
   const perWorkplace = Object.keys(per).map(function(id){
     const wp = findWp(id);
+    const transport = monthTransportFor(id, per[id].list);
+    totalTransport += transport;
     return {
       id: id,
       name: wp ? wp.name : "（削除済みのバイト先）",
       color: wp ? wp.color : "#9ca3af",
-      pay: per[id].pay, min: per[id].min, count: per[id].count
+      pay: per[id].pay, min: per[id].min, count: per[id].count,
+      transport: transport,
+      transportLabel: wp ? transportModeLabel(wp) : "交通費"
     };
   }).sort(function(a, b){
     if (b.pay !== a.pay) return b.pay - a.pay;
     return a.name < b.name ? -1 : 1;
   });
-  return { totalPay: totalPay, totalMin: totalMin, count: count, perWorkplace: perWorkplace };
+  return { totalPay: totalPay, totalMin: totalMin, count: count, totalTransport: totalTransport, perWorkplace: perWorkplace };
 }
 
 // 受け取り確認の状態を正規化する（{ "YYYY-MM": { workplaceId: true } } の形以外は捨てる）
@@ -1511,6 +1635,179 @@ function receivedTotals(summary, mk){
   return { receivedPay: receivedPay, unreceivedPay: summary.totalPay - receivedPay };
 }
 
+// ---------- 実際の金額（給与明細の金額） ----------
+// { "YYYY-MM": { workplaceId: 金額 } } の形以外は捨てる。金額は0以上の整数にそろえる
+function normalizeActualPay(v){
+  const out = {};
+  if (!v || typeof v !== "object" || Array.isArray(v)) return out;
+  Object.keys(v).forEach(function(mk){
+    const m = v[mk];
+    if (!m || typeof m !== "object" || Array.isArray(m)) return;
+    const mm = {};
+    Object.keys(m).forEach(function(id){
+      const n = Number(m[id]);
+      if (isFinite(n) && n >= 0) mm[id] = Math.floor(n);
+    });
+    if (Object.keys(mm).length > 0) out[mk] = mm;
+  });
+  return out;
+}
+// 実際の金額を返す（未入力なら null）
+function getActualPay(mk, workplaceId){
+  const m = actualPayMap[mk];
+  if (!m) return null;
+  const n = m[workplaceId];
+  return (typeof n === "number" && isFinite(n)) ? n : null;
+}
+function setActualPay(mk, workplaceId, amount){
+  if (amount === null || amount === undefined){
+    if (actualPayMap[mk]){
+      delete actualPayMap[mk][workplaceId];
+      if (Object.keys(actualPayMap[mk]).length === 0) delete actualPayMap[mk];
+    }
+    return;
+  }
+  if (!actualPayMap[mk]) actualPayMap[mk] = {};
+  actualPayMap[mk][workplaceId] = Math.max(0, Math.floor(Number(amount) || 0));
+}
+
+// ---------- その他収入（ボーナスなど） ----------
+// { "YYYY-MM": [{ id, name, amount, workplaceId }] } の形に正規化する（workplaceId は任意）
+function normalizeOtherIncome(v){
+  const out = {};
+  if (!v || typeof v !== "object" || Array.isArray(v)) return out;
+  Object.keys(v).forEach(function(mk){
+    const arr = v[mk];
+    if (!Array.isArray(arr)) return;
+    const list = [];
+    arr.forEach(function(e){
+      if (!e || typeof e !== "object") return;
+      const amount = Number(e.amount);
+      if (!isFinite(amount) || amount < 0) return;
+      list.push({
+        id: e.id ? String(e.id) : newId(),
+        name: String(e.name || "").trim() || "その他収入",
+        amount: Math.floor(amount),
+        workplaceId: e.workplaceId ? String(e.workplaceId) : ""
+      });
+    });
+    if (list.length > 0) out[mk] = list;
+  });
+  return out;
+}
+// 指定した月のその他収入（{ entries, total }）を返す
+function otherIncomeForMonth(mk){
+  const entries = Array.isArray(otherIncomeMap[mk]) ? otherIncomeMap[mk] : [];
+  let total = 0;
+  entries.forEach(function(e){ total += e.amount; });
+  return { entries: entries, total: total };
+}
+function addOtherIncome(mk, entry){
+  if (!otherIncomeMap[mk]) otherIncomeMap[mk] = [];
+  otherIncomeMap[mk].push(entry);
+}
+function removeOtherIncome(mk, id){
+  if (!Array.isArray(otherIncomeMap[mk])) return;
+  otherIncomeMap[mk] = otherIncomeMap[mk].filter(function(e){ return e.id !== id; });
+  if (otherIncomeMap[mk].length === 0) delete otherIncomeMap[mk];
+}
+
+// ---------- 交通費 ----------
+// 方式：daily=1日あたり（シフトごとに変更可）／cap=1日あたり＋月上限／fixed=月固定額／pass=定期代（月換算）
+// 方式が無い・不正なバイト先は daily として扱う（既存データ互換）
+function transportModeOf(wp){
+  const m = wp && wp.transportMode;
+  return (m === "cap" || m === "fixed" || m === "pass") ? m : "daily";
+}
+// バイト先の1日あたり交通費（円）
+function transportDailyRate(wp){
+  const n = Math.floor(Number(wp && wp.transportDaily) || 0);
+  return n > 0 ? n : 0;
+}
+// そのシフト1日分の交通費（円）。シフトに保存された値があればそれを、無ければバイト先の1日あたり金額を使う
+function shiftTransportFee(shift){
+  if (shift && typeof shift.transportFee === "number" && isFinite(shift.transportFee)){
+    return Math.max(0, Math.floor(shift.transportFee));
+  }
+  const wp = shift ? findWp(shift.workplaceId) : null;
+  return wp ? transportDailyRate(wp) : 0;
+}
+// バイト先の、その月の交通費（円）を方式に沿って計算する（給料計算には混ぜない別枠）
+function workplaceMonthTransport(wp, monthShifts){
+  if (!wp) return 0;
+  const mode = transportModeOf(wp);
+  if (mode === "fixed"){
+    const n = Math.floor(Number(wp.transportFixed) || 0);
+    return n > 0 ? n : 0;
+  }
+  if (mode === "pass"){
+    const amt = Math.floor(Number(wp.transportPassAmount) || 0);
+    const monthsRaw = Number(wp.transportPassMonths);
+    const months = (monthsRaw === 3 || monthsRaw === 6) ? monthsRaw : 1;
+    if (amt <= 0) return 0;
+    return Math.round(amt / months); // 月換算は四捨五入
+  }
+  let sum = 0;
+  (monthShifts || []).forEach(function(s){ sum += shiftTransportFee(s); });
+  if (mode === "cap"){
+    const cap = Math.floor(Number(wp.transportCap) || 0);
+    if (cap > 0) sum = Math.min(sum, cap); // 上限が0・未設定のときは上限なしとして扱う
+  }
+  return sum;
+}
+// バイト先×月の交通費。バイト先が削除済みの場合は、シフトに固定された分だけを数える
+function monthTransportFor(workplaceId, monthShifts){
+  const wp = findWp(workplaceId);
+  if (!wp){
+    let sum = 0;
+    (monthShifts || []).forEach(function(s){
+      if (typeof s.transportFee === "number" && isFinite(s.transportFee)) sum += Math.max(0, Math.floor(s.transportFee));
+    });
+    return sum;
+  }
+  return workplaceMonthTransport(wp, monthShifts);
+}
+// バイト先一覧に出す交通費の短い説明（未設定なら空文字）
+function transportSummaryText(w){
+  const mode = transportModeOf(w);
+  if (mode === "cap"){
+    const d = transportDailyRate(w);
+    if (d <= 0) return "";
+    const cap = Math.floor(Number(w.transportCap) || 0);
+    return "・交通費 1日" + fmtYen(d) + (cap > 0 ? "（月上限" + fmtYen(cap) + "）" : "");
+  }
+  if (mode === "fixed"){
+    const f = Math.floor(Number(w.transportFixed) || 0);
+    return f > 0 ? "・交通費 月固定" + fmtYen(f) : "";
+  }
+  if (mode === "pass"){
+    const amt = Math.floor(Number(w.transportPassAmount) || 0);
+    if (amt <= 0) return "";
+    const monthsRaw = Number(w.transportPassMonths);
+    const months = (monthsRaw === 3 || monthsRaw === 6) ? monthsRaw : 1;
+    return "・交通費 定期" + months + "か月" + fmtYen(amt);
+  }
+  const d = transportDailyRate(w);
+  return d > 0 ? "・交通費 1日" + fmtYen(d) : "";
+}
+
+// 収入まとめに出す交通費の方式ラベル
+function transportModeLabel(wp){
+  const mode = transportModeOf(wp);
+  if (mode === "cap"){
+    const cap = Math.floor(Number(wp.transportCap) || 0);
+    return cap > 0 ? "交通費（1日あたり・月上限 " + fmtYen(cap) + "）" : "交通費（1日あたり）";
+  }
+  if (mode === "fixed") return "交通費（月固定）";
+  if (mode === "pass"){
+    const monthsRaw = Number(wp.transportPassMonths);
+    const months = (monthsRaw === 3 || monthsRaw === 6) ? monthsRaw : 1;
+    const amt = Math.floor(Number(wp.transportPassAmount) || 0);
+    return "交通費（定期" + months + "か月 " + fmtYen(amt) + "の月換算）";
+  }
+  return "交通費（1日あたり）";
+}
+
 // 収入まとめのHTMLを作る（summary: 表示中の月、prevSummary: 先月、year/month: 表示中の年月）
 function buildIncomeSummaryHtml(summary, prevSummary, year, month){
   const mk = monthPrefixOf(year, month);
@@ -1542,19 +1839,41 @@ function buildIncomeSummaryHtml(summary, prevSummary, year, month){
   }
 
   if (summary.count === 0){
-    return '<div class="empty">この月のシフトはまだ登録されていません</div>' + compareHtml;
+    // シフトが無くても、その他収入があれば内訳と総合計だけは出す
+    const oi0 = otherIncomeForMonth(mk);
+    let extra = "";
+    if (oi0.total > 0){
+      extra = '<div class="income-breakdown">' +
+        '<div class="bd-row"><span>その他収入</span><span>' + fmtYen(oi0.total) + "</span></div>" +
+        '<div class="bd-row bd-total"><span>総合計</span><span>' + fmtYen(oi0.total) + "</span></div>" +
+      "</div>";
+    }
+    return '<div class="empty">この月のシフトはまだ登録されていません</div>' + compareHtml + extra;
   }
 
   const rt = receivedTotals(summary, mk);
+  const oi = otherIncomeForMonth(mk);
+  // 内訳（給料・交通費・その他収入・総合計）。交通費かその他収入があるときだけ出す
+  let breakdownHtml = "";
+  if (summary.totalTransport > 0 || oi.total > 0){
+    const grand = summary.totalPay + summary.totalTransport + oi.total;
+    breakdownHtml = '<div class="income-breakdown">' +
+      '<div class="bd-row"><span>給料（見込み）</span><span>' + fmtYen(summary.totalPay) + "</span></div>" +
+      (summary.totalTransport > 0 ? '<div class="bd-row"><span>交通費</span><span>' + fmtYen(summary.totalTransport) + "</span></div>" : "") +
+      (oi.total > 0 ? '<div class="bd-row"><span>その他収入</span><span>' + fmtYen(oi.total) + "</span></div>" : "") +
+      '<div class="bd-row bd-total"><span>総合計</span><span>' + fmtYen(grand) + "</span></div>" +
+    "</div>";
+  }
   let html = '<div class="income-big">' + fmtYen(summary.totalPay) + "</div>" +
     '<div class="income-big-label">収入合計（給料見込み）</div>' +
     '<div class="income-meta">労働時間 合計 ' + fmtDuration(summary.totalMin) + " ・ シフト " + summary.count + "件</div>" +
     compareHtml +
+    breakdownHtml +
     '<div class="income-received">' +
       '<div class="box done"><div class="lbl">受け取り済み</div><div class="amt">' + fmtYen(rt.receivedPay) + "</div></div>" +
       '<div class="box"><div class="lbl">まだ受け取っていない</div><div class="amt">' + fmtYen(rt.unreceivedPay) + "</div></div>" +
     "</div>" +
-    '<p class="note">実際に給料が振り込まれたら、下のバイト先ごとの「もらえた」にチェックを入れてください。チェックは金額の計算には影響しません。</p>' +
+    '<p class="note">実際に給料が振り込まれたら、下のバイト先ごとの「もらえた」にチェックを入れてください。明細の金額が分かれば「実際の金額」に入れると、計算との差が分かります。チェックや実際の金額は、金額の計算には影響しません。</p>' +
     '<div style="margin-top:6px;">';
   html += summary.perWorkplace.map(function(w){
     const received = isReceived(mk, w.id);
@@ -1563,13 +1882,34 @@ function buildIncomeSummaryHtml(summary, prevSummary, year, month){
         '<span><span class="dot" style="background:' + esc(w.color) + '"></span>' + esc(w.name) +
         (received ? '<span class="received-badge">受取済み</span>' : "") + "</span>" +
         '<div class="income-wp-sub">' + w.count + "件 ・ " + fmtDuration(w.min) + "</div>" +
+        (w.transport > 0 ? '<div class="income-wp-sub">' + esc(w.transportLabel) + " " + fmtYen(w.transport) + "</div>" : "") +
         '<label class="received-check"><input type="checkbox" data-received-wp="' + esc(w.id) + '"' + (received ? " checked" : "") + "> もらえた</label>" +
+        actualPayRowHtml(mk, w) +
       "</div>" +
-      '<div class="income-wp-right"><span class="income-wp-pay">' + fmtYen(w.pay) + "</span></div>" +
+      '<div class="income-wp-right"><span class="income-wp-pay">' + fmtYen(w.pay) + "</span>" +
+        (w.transport > 0 ? '<div class="income-wp-total">合計 ' + fmtYen(w.pay + w.transport) + "</div>" : "") +
+      "</div>" +
     "</div>";
   }).join("");
   html += "</div>";
   return html;
+}
+
+// バイト先行の「実際の金額」入力欄と、計算との差額表示のHTMLを作る
+// 差額の基準は「給料見込み＋交通費」（給与明細は交通費込みで振り込まれることが多いため）
+function actualPayRowHtml(mk, w){
+  const actual = getActualPay(mk, w.id);
+  let html = '<div class="actual-pay-row"><span class="lbl">実際の金額</span>' +
+    '<input type="text" class="actual-input" data-actual-wp="' + esc(w.id) + '" inputmode="numeric" autocomplete="off" placeholder="' + (w.pay + w.transport).toLocaleString("ja-JP") + '" value="' + (actual !== null ? actual : "") + '" aria-label="実際に受け取った金額（円）"><span class="yen">円</span>';
+  if (actual !== null){
+    const base = w.pay + w.transport;
+    const d = actual - base;
+    const baseLabel = w.transport > 0 ? "給料＋交通費の計算より" : "計算より";
+    if (d === 0) html += '<span class="actual-diff same">計算通りです</span>';
+    else if (d > 0) html += '<span class="actual-diff up">' + baseLabel + " +" + fmtYen(d) + "</span>";
+    else html += '<span class="actual-diff down">' + baseLabel + " −" + fmtYen(Math.abs(d)) + "</span>";
+  }
+  return html + "</div>";
 }
 
 // 収入まとめを描画する（月の切り替えに連動）
@@ -1581,16 +1921,110 @@ function renderIncomeSummary(){
   let py = viewYear, pm = viewMonth - 1;
   if (pm < 0){ pm = 11; py--; }
   el.innerHTML = buildIncomeSummaryHtml(summarizeMonth(viewYear, viewMonth), summarizeMonth(py, pm), viewYear, viewMonth);
+  renderOtherIncome();
 }
 
-// 「もらえた」チェックの付け外し（状態の保存だけ。金額計算は変えない）
+// 「もらえた」チェックの付け外しと、「実際の金額」の入力（どちらも状態の保存だけ。金額計算は変えない）
 document.getElementById("incomeSummary").addEventListener("change", function(e){
   const t = e.target;
-  if (!t || !t.hasAttribute || !t.hasAttribute("data-received-wp")) return;
-  setReceived(monthPrefixOf(viewYear, viewMonth), t.getAttribute("data-received-wp"), !!t.checked);
-  saveReceived();
-  render();
+  if (!t || !t.hasAttribute) return;
+  const mk = monthPrefixOf(viewYear, viewMonth);
+  if (t.hasAttribute("data-received-wp")){
+    setReceived(mk, t.getAttribute("data-received-wp"), !!t.checked);
+    saveReceived();
+    render();
+    return;
+  }
+  if (t.hasAttribute("data-actual-wp")){
+    const id = t.getAttribute("data-actual-wp");
+    const rawTrim = String(t.value || "").trim();
+    if (rawTrim === ""){
+      // 空にしたら入力を取り消す（「もらえた」チェックはそのまま残す）
+      setActualPay(mk, id, null);
+      saveActualPay();
+      render();
+      return;
+    }
+    const digits = rawTrim.replace(/[^\d]/g, "");
+    if (digits === ""){
+      render(); // 数字でない入力は保存せず、表示を元に戻す
+      return;
+    }
+    setActualPay(mk, id, parseInt(digits, 10));
+    saveActualPay();
+    // 実際の金額を入れたら、「もらえた」も自動でチェックする
+    if (!isReceived(mk, id)){
+      setReceived(mk, id, true);
+      saveReceived();
+    }
+    render();
+  }
 });
+
+// ---------- その他収入のUI ----------
+// その他収入の一覧と、入力欄のバイト先セレクトを、表示中の月に合わせて描画する
+function renderOtherIncome(){
+  const listEl = document.getElementById("otherIncomeList");
+  if (!listEl) return;
+  const mk = monthPrefixOf(viewYear, viewMonth);
+  const data = otherIncomeForMonth(mk);
+  if (data.entries.length === 0){
+    listEl.innerHTML = '<div class="empty">この月のその他収入はまだ登録されていません</div>';
+  } else {
+    listEl.innerHTML = data.entries.map(function(e){
+      const wp = e.workplaceId ? findWp(e.workplaceId) : null;
+      return '<div class="oi-item"><div><div>' + esc(e.name) + "</div>" +
+        (wp ? '<div class="oi-wp">' + esc(wp.name) + "</div>" : "") + "</div>" +
+        '<div style="display:flex;align-items:center;gap:8px;"><span class="oi-amt">' + fmtYen(e.amount) + "</span>" +
+        '<button type="button" class="small danger" data-del-oi="' + esc(e.id) + '">削除</button></div></div>';
+    }).join("");
+  }
+  const sel = document.getElementById("oiWorkplace");
+  if (sel){
+    const current = sel.value;
+    sel.innerHTML = '<option value="">指定なし</option>' + workplaces.map(function(w){
+      return '<option value="' + w.id + '">' + esc(w.name) + "</option>";
+    }).join("");
+    if (findWp(current)) sel.value = current;
+  }
+}
+const oiForm = document.getElementById("oiForm");
+if (oiForm){
+  oiForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    const name = document.getElementById("oiName").value.trim();
+    const amountDigits = String(document.getElementById("oiAmount").value || "").replace(/[^\d]/g, "");
+    if (!name){
+      alert("その他収入の名前を入力してください（例：ボーナス）");
+      return;
+    }
+    if (amountDigits === ""){
+      alert("金額を入力してください");
+      return;
+    }
+    addOtherIncome(monthPrefixOf(viewYear, viewMonth), {
+      id: newId(),
+      name: name,
+      amount: parseInt(amountDigits, 10),
+      workplaceId: document.getElementById("oiWorkplace").value || ""
+    });
+    saveOtherIncome();
+    document.getElementById("oiName").value = "";
+    document.getElementById("oiAmount").value = "";
+    render();
+  });
+}
+const oiListEl = document.getElementById("otherIncomeList");
+if (oiListEl){
+  oiListEl.addEventListener("click", function(e){
+    const btn = e.target.closest("[data-del-oi]");
+    if (!btn) return;
+    if (!confirm("このその他収入を削除しますか？")) return;
+    removeOtherIncome(monthPrefixOf(viewYear, viewMonth), btn.getAttribute("data-del-oi"));
+    saveOtherIncome();
+    render();
+  });
+}
 
 // ---------- シフト表の画像 ----------
 function monthKey(){
@@ -1793,7 +2227,7 @@ function render(){
     wpEl.innerHTML = workplaces.map(function(w){
       return '<div class="wp-item"><div><span class="dot" style="background:' + esc(w.color) + '"></span>' +
         '<span class="wp-name">' + esc(w.name) + '</span><div class="wp-detail">時給 ' + fmtYen(w.wage) +
-        "・深夜割増 " + esc(w.premium) + '%</div></div>' +
+        "・深夜割増 " + esc(w.premium) + "%" + transportSummaryText(w) + "</div></div>" +
         '<div class="wp-actions">' +
         '<button class="small" data-edit-wp="' + w.id + '">編集</button>' +
         '<button class="small danger" data-del-wp="' + w.id + '">削除</button>' +
@@ -2070,6 +2504,7 @@ document.getElementById("toggleShiftForm").addEventListener("click", function(){
   if (settings.lastCategory){
     document.getElementById("sfCategory").value = settings.lastCategory;
   }
+  syncShiftTransportField(true);
   document.getElementById("sfEndOffset").value = "0";
   syncAllTimeSliders();
   document.getElementById("sfBulkArea").classList.remove("hidden");
@@ -2096,6 +2531,13 @@ shiftForm.addEventListener("submit", function(e){
     category: document.getElementById("sfCategory").value,
     memo: document.getElementById("sfMemo").value.trim()
   };
+  // 交通費：方式が「1日あたり／上限」のときだけ、この日の金額をシフトに保存する（月固定・定期代では保存しない）
+  const submitWp = findWp(data.workplaceId);
+  const submitMode = submitWp ? transportModeOf(submitWp) : "daily";
+  if (submitMode === "daily" || submitMode === "cap"){
+    const tf = Math.floor(Number(document.getElementById("sfTransport").value) || 0);
+    data.transportFee = tf > 0 ? tf : 0;
+  }
   if (!data.start || !data.end || !data.workplaceId){
     alert("バイト先・開始時刻・終了時刻を入力してください");
     return;
@@ -2109,7 +2551,10 @@ shiftForm.addEventListener("submit", function(e){
   let bulkCreated = 0;
   if (editingShiftId){
     const s = shifts.find(function(x){ return x.id === editingShiftId; });
-    if (s) Object.assign(s, data);
+    if (s){
+      Object.assign(s, data);
+      if (!("transportFee" in data)) delete s.transportFee;
+    }
   } else if (bulkOn){
     // 一括作成：期間内の指定曜日の日に、同じ内容でシフトを作る
     const dates = expandBulkDates(
@@ -2501,6 +2946,22 @@ document.getElementById("sfWorkplace").addEventListener("change", function(){
   if (document.getElementById("sfCategory").value) applyCategoryPreset();
 });
 
+// シフトフォームの交通費欄：バイト先の方式が「1日あたり／上限」のときだけ出し、
+// resetToDefault=true のときはバイト先の1日あたり金額を初期値として入れる
+function syncShiftTransportField(resetToDefault){
+  const wrap = document.getElementById("sfTransportWrap");
+  const input = document.getElementById("sfTransport");
+  if (!wrap || !input) return;
+  const wp = findWp(document.getElementById("sfWorkplace").value);
+  const mode = wp ? transportModeOf(wp) : "daily";
+  const perDay = (mode === "daily" || mode === "cap");
+  wrap.classList.toggle("hidden", !perDay);
+  if (perDay && resetToDefault) input.value = wp ? transportDailyRate(wp) : 0;
+}
+document.getElementById("sfWorkplace").addEventListener("change", function(){
+  syncShiftTransportField(true);
+});
+
 // ---------- 一括作成（期間＋曜日）と曜日ショートカット ----------
 // 曜日チェック群（containerId で指定）の選択中曜日を数値配列で返す
 function readWeekdayChecks(containerId){
@@ -2589,6 +3050,8 @@ function handleShiftItemClick(e){
     document.getElementById("sfBreak").value = s.breakMin || 0;
     document.getElementById("sfCategory").value = s.category || "";
     document.getElementById("sfMemo").value = s.memo || "";
+    document.getElementById("sfTransport").value = shiftTransportFee(s);
+    syncShiftTransportField(false);
     syncAllTimeSliders();
     document.getElementById("sfSubmit").textContent = "更新する";
     shiftForm.classList.remove("hidden");
@@ -2610,6 +3073,8 @@ function handleShiftItemClick(e){
     document.getElementById("sfBreak").value = s.breakMin || 0;
     document.getElementById("sfCategory").value = s.category || "";
     document.getElementById("sfMemo").value = s.memo || "";
+    document.getElementById("sfTransport").value = shiftTransportFee(s);
+    syncShiftTransportField(false);
     syncAllTimeSliders();
     document.getElementById("sfSubmit").textContent = "複製を保存";
     shiftForm.classList.remove("hidden");
@@ -2658,12 +3123,42 @@ function readPresetFields(){
   return presets;
 }
 
+// 交通費の方式に応じて、バイト先フォームの入力欄の表示を切り替える
+function updateTransportFields(){
+  const mode = document.getElementById("wfTransportMode").value;
+  document.getElementById("wfTransDailyWrap").classList.toggle("hidden", !(mode === "daily" || mode === "cap"));
+  document.getElementById("wfTransCapWrap").classList.toggle("hidden", mode !== "cap");
+  document.getElementById("wfTransFixedWrap").classList.toggle("hidden", mode !== "fixed");
+  document.getElementById("wfTransPassWrap").classList.toggle("hidden", mode !== "pass");
+}
+document.getElementById("wfTransportMode").addEventListener("change", updateTransportFields);
+// 定期代を調べる：駅名だけのURLで Yahoo!路線情報 の検索結果を新しいタブで開く（金額は自動入力されない）
+document.getElementById("wfPassSearchBtn").addEventListener("click", function(){
+  const from = document.getElementById("wfStationFrom").value.trim();
+  const to = document.getElementById("wfStationTo").value.trim();
+  if (!from || !to){
+    alert("出発駅と到着駅を入力してください");
+    return;
+  }
+  const url = "https://transit.yahoo.co.jp/search/result?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to);
+  window.open(url, "_blank");
+});
+
 const wpForm = document.getElementById("wpForm");
 document.getElementById("toggleWpForm").addEventListener("click", function(){
   editingWpId = null;
   wpForm.reset();
   document.getElementById("wfPremium").value = 25;
   document.getElementById("wfColor").value = "#2563eb";
+  document.getElementById("wfTransportMode").value = "daily";
+  document.getElementById("wfTransportDaily").value = 0;
+  document.getElementById("wfTransportCap").value = 0;
+  document.getElementById("wfTransportFixed").value = 0;
+  document.getElementById("wfTransportPassAmount").value = 0;
+  document.getElementById("wfTransportPassMonths").value = "1";
+  document.getElementById("wfStationFrom").value = "";
+  document.getElementById("wfStationTo").value = "";
+  updateTransportFields();
   fillPresetFields(defaultPresets());
   document.getElementById("wfSubmit").textContent = "保存する";
   wpForm.classList.remove("hidden");
@@ -2679,6 +3174,14 @@ wpForm.addEventListener("submit", function(e){
     wage: Number(document.getElementById("wfWage").value) || 0,
     premium: Number(document.getElementById("wfPremium").value) || 0,
     color: document.getElementById("wfColor").value || "#2563eb",
+    transportMode: document.getElementById("wfTransportMode").value,
+    transportDaily: Math.max(0, Math.floor(Number(document.getElementById("wfTransportDaily").value) || 0)),
+    transportCap: Math.max(0, Math.floor(Number(document.getElementById("wfTransportCap").value) || 0)),
+    transportFixed: Math.max(0, Math.floor(Number(document.getElementById("wfTransportFixed").value) || 0)),
+    transportPassAmount: Math.max(0, Math.floor(Number(document.getElementById("wfTransportPassAmount").value) || 0)),
+    transportPassMonths: Number(document.getElementById("wfTransportPassMonths").value) || 1,
+    stationFrom: document.getElementById("wfStationFrom").value.trim(),
+    stationTo: document.getElementById("wfStationTo").value.trim(),
     presets: readPresetFields()
   };
   if (!data.name){
@@ -2708,6 +3211,15 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     document.getElementById("wfWage").value = w.wage;
     document.getElementById("wfPremium").value = w.premium;
     document.getElementById("wfColor").value = w.color || "#2563eb";
+    document.getElementById("wfTransportMode").value = transportModeOf(w);
+    document.getElementById("wfTransportDaily").value = Number(w.transportDaily) || 0;
+    document.getElementById("wfTransportCap").value = Number(w.transportCap) || 0;
+    document.getElementById("wfTransportFixed").value = Number(w.transportFixed) || 0;
+    document.getElementById("wfTransportPassAmount").value = Number(w.transportPassAmount) || 0;
+    document.getElementById("wfTransportPassMonths").value = String((Number(w.transportPassMonths) === 3 || Number(w.transportPassMonths) === 6) ? Number(w.transportPassMonths) : 1);
+    document.getElementById("wfStationFrom").value = w.stationFrom || "";
+    document.getElementById("wfStationTo").value = w.stationTo || "";
+    updateTransportFields();
     fillPresetFields(w.presets);
     document.getElementById("wfSubmit").textContent = "更新する";
     wpForm.classList.remove("hidden");
@@ -5192,7 +5704,15 @@ const HELP_TEXTS = {
   },
   income: {
     title: "収入まとめ・もらえたチェック",
-    body: "表示中の月の収入を、バイト先ごとにまとめたものです。先月の収入との差も分かります。\n金額はシフトから計算した「見込み」です。実際に給料が振り込まれたら、バイト先ごとの「もらえた」にチェックを入れてください。\nチェックを入れると、「受け取り済み」と「まだ受け取っていない」の金額が分かれて表示されます。チェックは金額の計算には影響しません。"
+    body: "表示中の月の収入を、バイト先ごとにまとめたものです。先月の収入との差も分かります。\n金額はシフトから計算した「見込み」です。実際に給料が振り込まれたら、バイト先ごとの「もらえた」にチェックを入れてください。\nチェックを入れると、「受け取り済み」と「まだ受け取っていない」の金額が分かれて表示されます。チェックは金額の計算には影響しません。\n「実際の金額」に給与明細の金額を入れると、計算との差が分かります。差の基準は、給料見込みに交通費を加えた金額です（明細は交通費込みのことが多いため）。実際の金額を入れると「もらえた」も自動でチェックされます。\n交通費とその他収入がある月は、内訳と総合計（給料＋交通費＋その他収入）も表示されます。なお、「受け取り済み／まだ受け取っていない」の金額は給料見込みだけが対象です。"
+  },
+  transport: {
+    title: "交通費",
+    body: "交通費は給料とは別枠で計算し、収入まとめに分けて表示します。方式は4つです。\n1日あたり：1日あたりの金額×出勤分です。シフトの登録・編集のときに、その日だけ金額を変えることもできます（0円も可）。交通費が未設定のシフトは、バイト先の1日あたり金額で計算します。\n上限：1日あたりの合計が月の上限額を超えた分は切り捨てます（上限が0・未設定のときは上限なしです）。\n月固定額：出勤日数によらず、月に固定額を計上します。\n定期代：定期の金額÷期間（月数）を、月換算（四捨五入）で計上します。\n定期代は自動では入力されません。「定期代を調べる」でYahoo!路線情報の検索結果を新しいタブで開き、各ルートの「定期券」から1か月・3か月・6か月の定期代を確認して、自分で入力してください。駅名はバイト先の設定に保存され、バックアップにも含まれます。"
+  },
+  otherIncome: {
+    title: "その他収入",
+    body: "ボーナスなど、シフトの給料以外の収入を月ごとに登録できます。名前と金額を入れて「この月に追加する」を押してください。バイト先の指定は任意です。\n収入まとめでは、給料・交通費とは分けて「その他収入」として表示され、総合計（給料＋交通費＋その他収入）に含まれます。給料の計算や「実際の金額」との差には含めません。"
   },
   backup: {
     title: "バックアップ",
@@ -5235,7 +5755,9 @@ function buildBackupData(){
     templates: templates,
     dayMemos: dayMemos,
     notes: notes,
-    received: receivedMap
+    received: receivedMap,
+    actualPay: actualPayMap,
+    otherIncome: otherIncomeMap
   };
 }
 document.getElementById("exportDataBtn").addEventListener("click", function(){
@@ -5275,7 +5797,7 @@ importFileInput.addEventListener("change", function(){
       statusEl.textContent = "読み込めませんでした。このアプリのバックアップファイル（JSON）を選んでください。";
       return;
     }
-    if (!window.confirm("現在のデータ（バイト先・シフト・画像・設定・下書き・パターン・日付メモ・メモ帳・受け取り確認）を、読み込んだ内容で置き換えます。よろしいですか？")){
+    if (!window.confirm("現在のデータ（バイト先・シフト・画像・設定・下書き・パターン・日付メモ・メモ帳・受け取り確認・実際の金額・その他収入）を、読み込んだ内容で置き換えます。よろしいですか？")){
       statusEl.textContent = "読み込みをやめました。現在のデータはそのままです。";
       return;
     }
@@ -5289,6 +5811,8 @@ importFileInput.addEventListener("change", function(){
     dayMemos = normalizeDayMemos((data.dayMemos && typeof data.dayMemos === "object" && !Array.isArray(data.dayMemos)) ? data.dayMemos : {});
     notes = normalizeNotes(Array.isArray(data.notes) ? data.notes : []);
     receivedMap = normalizeReceived((data.received && typeof data.received === "object" && !Array.isArray(data.received)) ? data.received : {});
+    actualPayMap = normalizeActualPay((data.actualPay && typeof data.actualPay === "object" && !Array.isArray(data.actualPay)) ? data.actualPay : {});
+    otherIncomeMap = normalizeOtherIncome((data.otherIncome && typeof data.otherIncome === "object" && !Array.isArray(data.otherIncome)) ? data.otherIncome : {});
     saveAll();
     saveSettings();
     saveImages();
@@ -5297,6 +5821,8 @@ importFileInput.addEventListener("change", function(){
     saveDayMemos();
     saveNotes();
     saveReceived();
+    saveActualPay();
+    saveOtherIncome();
     myNamesInput.value = settings.myNames || "";
     setOcrImage(null);
     renderOcrSources();
