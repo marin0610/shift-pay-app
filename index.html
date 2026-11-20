@@ -109,6 +109,14 @@
   html[data-simple="on"] .month-nav button{min-height:52px;}
   html[data-simple="on"] form input,html[data-simple="on"] form select{min-height:52px;font-size:18px;}
   html[data-simple="on"] .total-pay{font-size:42px;}
+  /* かんたんモード：シフト追加ボタンは今月の合計のすぐ下に固定（カードの外に出るため余白とフォームの枠を付ける） */
+  html[data-simple="on"] #toggleShiftForm{margin-bottom:16px;}
+  html[data-simple="on"] #shiftForm{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;}
+  /* かんたんモード専用の見出し（通常モードでは出さない） */
+  .simple-block-title{display:none;}
+  html[data-simple="on"] .simple-block-title{display:block;font-size:19px;margin:10px 0;}
+  html[data-simple="on"] #shiftCalendarBlock .simple-block-title{margin-top:20px;}
+  html[data-simple="on"] .shift-list-main-title{display:none;}
   .month-nav{
     display:flex;align-items:center;justify-content:space-between;
     margin-bottom:8px;
@@ -555,7 +563,7 @@
   </nav>
   <div data-tab-panel="shift">
   <!-- 月サマリー -->
-  <section class="card">
+  <section class="card" id="monthSummaryCard">
     <div class="month-nav">
       <button id="prevMonth" aria-label="前月">◀</button>
       <div class="month-label" id="monthLabel"></div>
@@ -563,7 +571,7 @@
       <button id="nextMonth" aria-label="翌月">▶</button>
     </div>
     <div class="total-pay" id="totalPay">¥0</div>
-    <div class="total-pay-label">この月の給料見込み</div>
+    <div class="total-pay-label" id="totalPayLabel">この月の給料見込み</div>
     <div class="total-hours" id="totalHours">労働時間 合計 0時間0分</div>
     <div class="subtotals" id="subtotalsWrap">
       <h3>バイト先ごとの小計</h3>
@@ -573,32 +581,25 @@
       <h3>区分ごとの件数</h3>
       <div id="categoryCounts"></div>
     </div>
-    <div class="subtotals" id="weekCopyWrap" data-simple-hide>
-      <h3>週のコピー</h3>
-      <p class="note">ある週（月〜日）のシフトを、別の週にまとめてコピーできます。</p>
-      <label class="field-label" for="wcSrc">コピー元の週（週内の日付）</label>
-      <input type="date" id="wcSrc" class="text-input">
-      <label class="field-label" for="wcDst" style="margin-top:8px;">コピー先の週（週内の日付）</label>
-      <input type="date" id="wcDst" class="text-input">
-      <div class="crop-btns">
-        <button id="wcNextWeekBtn">コピー先を翌週にする</button>
-        <button id="wcRunBtn">週をコピー</button>
-      </div>
-      <p class="note" id="wcInfo"></p>
-    </div>
   </section>
 
   <!-- シフト一覧 -->
-  <section class="card">
-    <h2>シフト一覧<button type="button" class="help-btn" data-help="calendar" aria-label="カレンダー表示の説明を表示">？</button></h2>
+  <section class="card" id="shiftScheduleCard">
+    <h2 class="shift-list-main-title">シフト一覧<button type="button" class="help-btn" data-help="calendar" aria-label="カレンダー表示の説明を表示">？</button></h2>
     <div id="stickyTotal" class="sticky-total"></div>
-    <div class="seg-control" role="group" aria-label="一覧の表示方法" style="margin-top:0;">
+    <div class="seg-control" role="group" aria-label="一覧の表示方法" style="margin-top:0;" data-simple-hide>
       <button type="button" data-view-mode-btn="list" class="active">リスト</button>
       <button type="button" data-view-mode-btn="calendar">カレンダー</button>
     </div>
-    <div id="shiftList"></div>
-    <div id="shiftCalendar" class="hidden"></div>
-    <div id="calDayDetail" class="hidden"></div>
+    <div id="shiftListBlock">
+      <h3 class="simple-block-title">予定（シフト一覧）</h3>
+      <div id="shiftList"></div>
+    </div>
+    <div id="shiftCalendarBlock" class="hidden">
+      <h3 class="simple-block-title">カレンダー</h3>
+      <div id="shiftCalendar"></div>
+      <div id="calDayDetail" class="hidden"></div>
+    </div>
     <button class="primary" id="toggleShiftForm">＋ シフトを追加</button>
 
     <form id="shiftForm" class="hidden">
@@ -687,6 +688,21 @@
         <button type="button" id="sfCancel">キャンセル</button>
       </div>
     </form>
+  </section>
+
+  <!-- 週のコピー（シフト一覧より下に配置） -->
+  <section class="card" id="weekCopyWrap" data-simple-hide>
+    <h2>週のコピー</h2>
+    <p class="note">ある週（月〜日）のシフトを、別の週にまとめてコピーできます。</p>
+    <label class="field-label" for="wcSrc">コピー元の週（週内の日付）</label>
+    <input type="date" id="wcSrc" class="text-input">
+    <label class="field-label" for="wcDst" style="margin-top:8px;">コピー先の週（週内の日付）</label>
+    <input type="date" id="wcDst" class="text-input">
+    <div class="crop-btns">
+      <button id="wcNextWeekBtn">コピー先を翌週にする</button>
+      <button id="wcRunBtn">週をコピー</button>
+    </div>
+    <p class="note" id="wcInfo"></p>
   </section>
 
   <!-- 収入まとめ -->
@@ -1167,7 +1183,7 @@
   <section class="card">
     <h2>自分の設定</h2>
     <label class="ocr-check" style="margin-top:0;"><input type="checkbox" id="simpleModeToggle"> かんたんモード</label><button type="button" class="help-btn" data-help="simple" aria-label="かんたんモードの説明を表示">？</button>
-    <p class="note">ONにすると、高度な機能（読み取り・期間別時給・研修時給・天引き率・交通費の細かい設定・その他収入・テンプレート・一括作成・月の添付など）が隠れ、「シフトを入れる」「一覧を見る」「今月の合計」だけのシンプルな画面になります。ボタンと文字も大きくなります。データはそのまま残り、OFFに戻せば全部元通りになります。</p>
+    <p class="note">ONにすると、高度な機能（読み取り・期間別時給・研修時給・天引き率・交通費の細かい設定・その他収入・テンプレート・一括作成・月の添付など）が隠れ、「今月の合計 → 予定（シフト一覧） → カレンダー」の順に並ぶシンプルな画面になります（シフトが6件以上ある月は、予定のリストが長くなるためカレンダーが先に来ます）。「シフトを追加」ボタンは今月の合計のすぐ下に固定されます。ボタンと文字も大きくなります。データはそのまま残り、OFFに戻せば全部元通りになります。</p>
     <label class="field-label" for="myNamesInput">自分の名前</label>
     <input type="text" id="myNamesInput" class="text-input" placeholder="例：山田太郎、やまだ">
     <p class="note">カンマ（、）区切りで複数の表記を登録できます。シフト表を読み取るとき、登録した名前の列（または行）に属するシフトだけを抽出対象にします。未登録の場合は全体が対象です。</p>
@@ -3066,39 +3082,57 @@ function setListViewMode(mode){
   render();
 }
 
-// 表示方法に応じて、リスト／カレンダーのどちらかを描画する
+// 予定（シフト一覧）の中身を描画する
+function renderShiftListItems(monthShifts){
+  const listEl = document.getElementById("shiftList");
+  if (monthShifts.length === 0){
+    listEl.innerHTML = '<div class="empty">この月のシフトはまだありません</div>';
+    return;
+  }
+  // 日付メモがある日は、その日のシフト行の直前にメモを表示する
+  let html = "";
+  let lastDate = null;
+  monthShifts.forEach(function(s){
+    if (s.date !== lastDate){
+      lastDate = s.date;
+      html += dayMemoViewHtml(s.date);
+    }
+    html += shiftItemHtml(s);
+  });
+  listEl.innerHTML = html;
+}
+
+// 表示方法に応じて、リスト／カレンダーを描画する
+// かんたんモードでは切り替えず、「予定（シフト一覧）→カレンダー」の順に両方を並べる。
+// ただしシフト件数が多い月（6件以上）は予定リストが長くなるため、カレンダーを先に並べ替える
 function renderShiftListArea(monthShifts){
   const mode = getListViewMode();
-  const listEl = document.getElementById("shiftList");
-  const calEl = document.getElementById("shiftCalendar");
+  const listBlock = document.getElementById("shiftListBlock");
+  const calBlock = document.getElementById("shiftCalendarBlock");
   const detEl = document.getElementById("calDayDetail");
   document.querySelectorAll("[data-view-mode-btn]").forEach(function(b){
     b.classList.toggle("active", b.getAttribute("data-view-mode-btn") === mode);
   });
-  if (mode === "calendar"){
-    listEl.classList.add("hidden");
-    calEl.classList.remove("hidden");
+  if (isSimpleMode()){
+    const parent = listBlock.parentNode;
+    if (parent && calBlock.parentNode === parent){
+      if (monthShifts.length >= 6) parent.insertBefore(calBlock, listBlock);
+      else parent.insertBefore(listBlock, calBlock);
+    }
+    listBlock.classList.remove("hidden");
+    calBlock.classList.remove("hidden");
+    renderShiftListItems(monthShifts);
+    renderCalendar(monthShifts);
+  } else if (mode === "calendar"){
+    listBlock.classList.add("hidden");
+    calBlock.classList.remove("hidden");
     renderCalendar(monthShifts);
   } else {
-    calEl.classList.add("hidden");
+    calBlock.classList.add("hidden");
     detEl.classList.add("hidden");
     detEl.innerHTML = "";
-    listEl.classList.remove("hidden");
-    if (monthShifts.length === 0){
-      listEl.innerHTML = '<div class="empty">この月のシフトはまだありません</div>';
-    } else {
-      // 日付メモがある日は、その日のシフト行の直前にメモを表示する
-      let html = "";
-      let lastDate = null;
-      monthShifts.forEach(function(s){
-        if (s.date !== lastDate){
-          lastDate = s.date;
-          html += dayMemoViewHtml(s.date);
-        }
-        html += shiftItemHtml(s);
-      });
-      listEl.innerHTML = html;
-    }
+    listBlock.classList.remove("hidden");
+    renderShiftListItems(monthShifts);
   }
 }
 
@@ -6525,12 +6559,34 @@ function applySimpleMode(){
   else document.documentElement.removeAttribute("data-simple");
   const chk = document.getElementById("simpleModeToggle");
   if (chk) chk.checked = isSimpleMode();
+  const totalLabel = document.getElementById("totalPayLabel");
+  if (totalLabel) totalLabel.textContent = isSimpleMode() ? "今月の合計" : "この月の給料見込み";
+  relocateShiftAdd();
   applyTimeInputMode();
+}
+// かんたんモードでは「シフトを追加」ボタンと入力フォームを今月の合計のすぐ下に固定する
+// （予定とカレンダーが入れ替わっても追加の場所は変わらない）。OFFでは元の位置（一覧カードの末尾）に戻す
+function relocateShiftAdd(){
+  const summary = document.getElementById("monthSummaryCard");
+  const schedule = document.getElementById("shiftScheduleCard");
+  const btn = document.getElementById("toggleShiftForm");
+  const form = document.getElementById("shiftForm");
+  if (!summary || !schedule || !btn || !form) return;
+  if (isSimpleMode()){
+    const panel = summary.parentNode;
+    if (!panel) return;
+    panel.insertBefore(btn, schedule);
+    panel.insertBefore(form, schedule);
+  } else {
+    schedule.appendChild(btn);
+    schedule.appendChild(form);
+  }
 }
 document.getElementById("simpleModeToggle").addEventListener("change", function(){
   settings.simpleMode = this.checked;
   saveSettings();
   applySimpleMode();
+  render();
 });
 applySimpleMode();
 
@@ -6679,7 +6735,7 @@ const HELP_TEXTS = {
   },
   simple: {
     title: "かんたんモード",
-    body: "年配の方でも使いやすいように、高度な機能を隠してシンプルにするモードです。\nONにすると、読み取り（OCR）・期間別時給・研修時給・天引き率・交通費の細かい設定・その他収入・テンプレート・一括作成・月の添付などが隠れ、「シフトを入れる」「一覧を見る」「今月の合計」だけの画面になります。ボタンと文字も大きくなります。\nデータには一切触らないので、OFFに戻せば全部元通りになります。設定は保存され、バックアップにも含まれます。"
+    body: "年配の方でも使いやすいように、高度な機能を隠してシンプルにするモードです。\nONにすると、読み取り（OCR）・期間別時給・研修時給・天引き率・交通費の細かい設定・その他収入・テンプレート・一括作成・月の添付などが隠れ、画面は「今月の合計 → 予定（シフト一覧） → カレンダー」の順に並びます（シフトが6件以上ある月は、予定のリストが長くなるためカレンダーが先に来ます）。「シフトを追加」ボタンは今月の合計のすぐ下に固定されます。ボタンと文字も大きくなります。\nデータには一切触らないので、OFFに戻せば全部元通りになります。設定は保存され、バックアップにも含まれます。"
   },
   memo: {
     title: "メモ",
