@@ -409,11 +409,11 @@
   <!-- いつものパターン（テンプレート） -->
   <section class="card">
     <h2>いつものパターン</h2>
-    <p class="note" style="margin-top:0;">バイト先・区分・時間・曜日を名前付きのパターンとして保存しておくと、期間を指定して一括でシフトを作れます（例：「MOOCA 平日・遅番」）。シフトが固定の人向けの機能です。</p>
+    <p class="note" style="margin-top:0;">バイト先・区分・時間・曜日を名前付きのパターンとして保存しておくと、期間を指定して一括でシフトを作れます（例：「カフェA 平日・遅番」）。シフトが固定の人向けの機能です。</p>
     <div id="tplList"></div>
     <form id="tplForm">
       <label for="tplName">パターンの名前</label>
-      <input type="text" id="tplName" placeholder="例：MOOCA 平日・遅番">
+      <input type="text" id="tplName" placeholder="例：カフェA 平日・遅番">
       <label for="tplWorkplace">バイト先</label>
       <select id="tplWorkplace"></select>
       <label for="tplCategory">区分</label>
@@ -482,7 +482,7 @@
   <section class="card">
     <h2>自分の設定</h2>
     <label class="field-label" for="myNamesInput">自分の名前</label>
-    <input type="text" id="myNamesInput" class="text-input" placeholder="例：まりん、山岡">
+    <input type="text" id="myNamesInput" class="text-input" placeholder="例：山田太郎、やまだ">
     <p class="note">カンマ（、）区切りで複数の表記を登録できます。シフト表を読み取るとき、登録した名前の列（または行）に属するシフトだけを抽出対象にします。未登録の場合は全体が対象です。</p>
 
     <label class="field-label" style="margin-top:16px;">データのバックアップ</label>
@@ -835,7 +835,7 @@ let shifts = loadJSON(LS_SH, []);
 // 既存のバイト先データに区分プリセットの初期値を持たせて移行する
 workplaces.forEach(function(w){ ensurePresets(w); });
 let monthImages = loadJSON(LS_IMG, {}); // { "YYYY-MM": [ {id, dataUrl}, ... ] }
-let settings = loadJSON(LS_SET, { myNames: "" }); // { myNames: "まりん、山岡" }
+let settings = loadJSON(LS_SET, { myNames: "" }); // { myNames: "" }
 let templates = normalizeTemplates(loadJSON(LS_TPL, [])); // いつものパターン
 
 function saveTemplates(){
