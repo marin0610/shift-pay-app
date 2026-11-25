@@ -203,6 +203,27 @@
   }
   .row2{display:flex;gap:10px;}
   .row2 > div{flex:1;}
+  /* バイト先設定のアコーディオン（ブロック分けして項目が少なく見えるようにする） */
+  .wp-acc{border:1px solid var(--line);border-radius:12px;margin:12px 0;overflow:hidden;background:var(--surface);}
+  .wp-acc-head{
+    width:100%;display:flex;align-items:center;gap:8px;text-align:left;
+    background:var(--fill);border:none;border-radius:0;padding:12px 14px;min-height:48px;cursor:pointer;
+  }
+  .wp-acc.open .wp-acc-head{background:var(--blue-light);}
+  .wp-acc-title{font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .wp-acc-sub{font-size:12px;color:var(--muted);flex:1;}
+  .wp-acc-arrow{color:var(--muted);font-size:14px;}
+  .wp-acc-body{display:none;padding:4px 14px 14px;}
+  .wp-acc.open .wp-acc-body{display:block;}
+  /* 給与設定内の「詳細設定」サブアコーディオン（タイプによって開閉の初期状態が変わる） */
+  .wp-subacc{border:1px dashed var(--line);border-radius:10px;margin:12px 0;overflow:hidden;}
+  .wp-subacc-head{
+    width:100%;display:flex;align-items:center;gap:8px;text-align:left;
+    background:transparent;border:none;border-radius:0;padding:10px 12px;min-height:44px;cursor:pointer;
+  }
+  .wp-subacc-title{font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .wp-subacc-body{display:none;padding:2px 12px 12px;}
+  .wp-subacc.open .wp-subacc-body{display:block;}
   .time-slider-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
   .time-slider-row input[type="range"]{
     flex:1;width:auto;min-height:36px;padding:0;border:none;background:transparent;
@@ -1092,14 +1113,63 @@
     <button class="primary" id="toggleWpForm">＋ バイト先を追加</button>
 
     <form id="wpForm" class="hidden">
+      <div class="wp-acc open">
+        <button type="button" class="wp-acc-head" aria-expanded="true">
+          <span class="wp-acc-title">基本情報</span>
+          <span class="wp-acc-sub">名前・ジャンル・場所・色</span>
+          <span class="wp-acc-arrow">∧</span>
+        </button>
+        <div class="wp-acc-body">
+      <label for="wfType">タイプ</label>
+      <select id="wfType">
+        <option value="">未選択（すべての項目を表示）</option>
+        <option value="multi">掛け持ちバイト向け</option>
+        <option value="fixed">固定シフト向け</option>
+        <option value="employee">社員向け</option>
+      </select>
+      <p class="note">タイプを選ぶと、その働き方でよく使う設定が開いた状態になります。どのタイプでも、すべての項目を開いて入力できます（あとから変更もできます）。</p>
       <label for="wfName">名前</label>
       <input type="text" id="wfName" placeholder="例：カフェA" required>
+      <label for="wfGenre">ジャンル</label>
+      <input type="text" id="wfGenre" list="wfGenreList" placeholder="例：飲食">
+      <datalist id="wfGenreList">
+        <option value="飲食"></option>
+        <option value="接客"></option>
+        <option value="販売"></option>
+        <option value="事務"></option>
+        <option value="軽作業"></option>
+        <option value="工場"></option>
+        <option value="医療・介護"></option>
+        <option value="教育"></option>
+        <option value="配送"></option>
+        <option value="その他"></option>
+      </datalist>
+      <label for="wfPlace">場所</label>
+      <input type="text" id="wfPlace" placeholder="例：難波">
+      <label for="wfColor">色</label>
+      <input type="color" id="wfColor" value="#2563eb">
+        </div>
+      </div>
+      <div class="wp-acc">
+        <button type="button" class="wp-acc-head" aria-expanded="false">
+          <span class="wp-acc-title">給与設定</span>
+          <span class="wp-acc-sub">給与形態・時給・深夜割増率・天引き率</span>
+          <span class="wp-acc-arrow">∨</span>
+        </button>
+        <div class="wp-acc-body">
       <label for="wfPayType">給与形態</label><button type="button" class="help-btn" data-help="paytype" aria-label="給与形態の説明を表示">？</button>
       <select id="wfPayType">
         <option value="hourly">時給</option>
         <option value="daily">日給</option>
         <option value="monthly">月給</option>
       </select>
+      <div class="wp-subacc open" id="wfPayDetail">
+        <button type="button" class="wp-subacc-head" aria-expanded="true">
+          <span class="wp-subacc-title">詳細設定（任意）</span>
+          <span class="wp-acc-sub">時給・深夜割増率・天引き率・期間別時給・研修期間</span>
+          <span class="wp-acc-arrow">∧</span>
+        </button>
+        <div class="wp-subacc-body">
       <div class="row2" id="wfHourlyWrap">
         <div>
           <label for="wfWage">時給（円）</label>
@@ -1109,16 +1179,6 @@
           <label for="wfPremium">深夜割増率（%）</label>
           <input type="number" id="wfPremium" min="0" step="1" value="25" inputmode="numeric">
         </div>
-      </div>
-      <div id="wfDailyWrap" class="hidden">
-        <label for="wfDailyWage">日給（円）</label>
-        <input type="number" id="wfDailyWage" min="0" step="1" value="0" inputmode="numeric">
-        <p class="note">1シフトあたりの日給額です。勤務時間の長さや深夜帯に関係なく、この金額で計算します（深夜割増は付けません）。</p>
-      </div>
-      <div id="wfMonthlyWrap" class="hidden">
-        <label for="wfMonthlySalary">月給（円）</label>
-        <input type="number" id="wfMonthlySalary" min="0" step="1" value="0" inputmode="numeric">
-        <p class="note">シフトは出勤記録として登録でき、収入まとめにはこの月額をそのまま計上します（その月にシフトが1件以上ある月だけ計上します）。</p>
       </div>
       <div data-simple-hide>
       <label for="wfDeductionRate">天引き率（%）</label>
@@ -1158,25 +1218,27 @@
         </div>
         <p class="note">研修期間内のシフトは研修時給で計算します（期間別時給より優先されます）。終了日か日数のどちらかを入力してください。両方とも空の場合は、開始日からずっと研修扱いになります。</p>
       </div>
-      <label for="wfGenre">ジャンル</label>
-      <input type="text" id="wfGenre" list="wfGenreList" placeholder="例：飲食">
-      <datalist id="wfGenreList">
-        <option value="飲食"></option>
-        <option value="接客"></option>
-        <option value="販売"></option>
-        <option value="事務"></option>
-        <option value="軽作業"></option>
-        <option value="工場"></option>
-        <option value="医療・介護"></option>
-        <option value="教育"></option>
-        <option value="配送"></option>
-        <option value="その他"></option>
-      </datalist>
-      <label for="wfPlace">場所</label>
-      <input type="text" id="wfPlace" placeholder="例：難波">
-      <label for="wfClosingTime">閉店時間（任意）</label>
-      <input type="time" id="wfClosingTime">
-      <p class="note">「17」のように開始時刻だけが書かれたシフト表のバイト先向けです。読み取りの下書きで、終了が空欄の行にこの時刻を終了として自動で入れます（ラスト＝閉店まで働く想定）。0:00や翌1:00など日をまたぐ時刻も、そのまま入力してください。</p>
+        </div>
+      </div>
+      <div id="wfDailyWrap" class="hidden">
+        <label for="wfDailyWage">日給（円）</label>
+        <input type="number" id="wfDailyWage" min="0" step="1" value="0" inputmode="numeric">
+        <p class="note">1シフトあたりの日給額です。勤務時間の長さや深夜帯に関係なく、この金額で計算します（深夜割増は付けません）。</p>
+      </div>
+      <div id="wfMonthlyWrap" class="hidden">
+        <label for="wfMonthlySalary">月給（円）</label>
+        <input type="number" id="wfMonthlySalary" min="0" step="1" value="0" inputmode="numeric">
+        <p class="note">シフトは出勤記録として登録でき、収入まとめにはこの月額をそのまま計上します（その月にシフトが1件以上ある月だけ計上します）。</p>
+      </div>
+        </div>
+      </div>
+      <div class="wp-acc">
+        <button type="button" class="wp-acc-head" aria-expanded="false">
+          <span class="wp-acc-title">締日・給料日</span>
+          <span class="wp-acc-sub">締日・給料日の種類・給料日・受け取り方法</span>
+          <span class="wp-acc-arrow">∨</span>
+        </button>
+        <div class="wp-acc-body">
       <div class="row2">
         <div>
           <label for="wfClosingDay">締日</label>
@@ -1217,8 +1279,15 @@
         <option value="当月末"></option>
         <option value="当月25日"></option>
       </datalist>
-      <label for="wfColor">色</label>
-      <input type="color" id="wfColor" value="#2563eb">
+        </div>
+      </div>
+      <div class="wp-acc" data-simple-hide>
+        <button type="button" class="wp-acc-head" aria-expanded="false">
+          <span class="wp-acc-title">交通費</span>
+          <span class="wp-acc-sub">交通費の方式・金額</span>
+          <span class="wp-acc-arrow">∨</span>
+        </button>
+        <div class="wp-acc-body">
       <div data-simple-hide>
       <label for="wfTransportMode">交通費の方式</label><button type="button" class="help-btn" data-help="transport" aria-label="交通費の説明を表示">？</button>
       <select id="wfTransportMode">
@@ -1269,11 +1338,25 @@
         </div>
         <p class="note">定期代は自動では入力されません。「定期代を調べる」で路線検索のページを開き、定期代を確認して、上の「定期代」欄に自分で入力してください。収入まとめには、定期代÷期間（月数）の月換算（四捨五入）で計上します。</p>
       </div>
+        </div>
       </div>
+      </div>
+      <div class="wp-acc">
+        <button type="button" class="wp-acc-head" aria-expanded="false">
+          <span class="wp-acc-title">シフト設定</span>
+          <span class="wp-acc-sub">閉店時間・勤務区分</span>
+          <span class="wp-acc-arrow">∨</span>
+        </button>
+        <div class="wp-acc-body">
+      <label for="wfClosingTime">閉店時間（任意）</label>
+      <input type="time" id="wfClosingTime">
+      <p class="note">「17」のように開始時刻だけが書かれたシフト表のバイト先向けです。読み取りの下書きで、終了が空欄の行にこの時刻を終了として自動で入れます（ラスト＝閉店まで働く想定）。0:00や翌1:00など日をまたぐ時刻も、そのまま入力してください。</p>
       <p class="note" style="margin-bottom:0;">勤務区分（このバイト先用）。区分名・開始・終了・休憩を自由に追加・編集・削除できます。シフト登録で区分を選ぶと、この時刻と休憩が自動入力されます。</p>
       <div id="wfPresetList"></div>
       <div class="form-actions" style="justify-content:flex-start;margin-top:4px;">
         <button type="button" id="wfPresetAdd">＋ 区分を追加</button>
+      </div>
+        </div>
       </div>
       <div class="form-actions">
         <button type="submit" class="primary" id="wfSubmit">保存する</button>
@@ -1780,6 +1863,9 @@ function normalizeWorkplace(w){
   w.payDayType = (w.payDayType === "lastday") ? "lastday" : "date";
   // 受け取り方法： "cash"＝手渡し、それ以外（既存データ含む）は "bank"＝振り込みとして扱う。
   w.paymentMethod = (w.paymentMethod === "cash") ? "cash" : "bank";
+  // タイプ（働き方）： "multi"＝掛け持ち向け、"fixed"＝固定シフト向け、"employee"＝社員向け。
+  // それ以外（タイプ導入前の既存データ含む）は ""＝未選択として扱い、すべての項目を表示する。
+  w.type = (w.type === "multi" || w.type === "fixed" || w.type === "employee") ? w.type : "";
   w.trainingStart = isValidDateStr(w.trainingStart) ? w.trainingStart : "";
   w.trainingEnd = isValidDateStr(w.trainingEnd) ? w.trainingEnd : "";
   const td = Math.floor(Number(w.trainingDays) || 0);
@@ -4470,6 +4556,65 @@ document.getElementById("wfPassSearchBtn").addEventListener("click", function(){
   window.open(url, "_blank");
 });
 
+// バイト先設定のアコーディオン開閉（見た目のグルーピングのみ。データには触らない）
+function setWpAccOpen(acc, open){
+  if (!acc) return;
+  acc.classList.toggle("open", open);
+  const head = acc.querySelector(".wp-acc-head, .wp-subacc-head");
+  if (head){
+    head.setAttribute("aria-expanded", open ? "true" : "false");
+    const arrow = head.querySelector(".wp-acc-arrow");
+    if (arrow) arrow.textContent = open ? "∧" : "∨";
+  }
+}
+document.querySelectorAll("#wpForm .wp-acc-head, #wpForm .wp-subacc-head").forEach(function(head){
+  head.addEventListener("click", function(){
+    const acc = head.closest(".wp-acc, .wp-subacc");
+    setWpAccOpen(acc, !acc.classList.contains("open"));
+  });
+});
+
+// バイト先のタイプに合わせて、よく使うブロックを開いた状態にする（項目は消さず、開閉の初期状態だけを変える）
+function applyWpTypeLayout(type){
+  const accs = document.querySelectorAll("#wpForm > .wp-acc");
+  if (accs.length < 5) return;
+  const basic = accs[0], pay = accs[1], payday = accs[2], transport = accs[3], shift = accs[4];
+  const detail = document.getElementById("wfPayDetail");
+  // かんたんモードでは細かい項目が隠れるため、詳細設定は開いた状態にしておく
+  const simpleOn = document.documentElement.getAttribute("data-simple") === "on";
+  setWpAccOpen(basic, true);
+  if (type === "multi"){
+    // 掛け持ち向け：給料管理が中心なので、給与設定と締日・給料日を開く
+    setWpAccOpen(pay, true); setWpAccOpen(payday, true);
+    setWpAccOpen(transport, false); setWpAccOpen(shift, false);
+    setWpAccOpen(detail, true);
+  } else if (type === "fixed"){
+    // 固定シフト向け：シフト設定を開き、細かい給与項目（詳細設定）は畳む
+    setWpAccOpen(pay, false); setWpAccOpen(payday, false);
+    setWpAccOpen(transport, false); setWpAccOpen(shift, true);
+    setWpAccOpen(detail, simpleOn);
+  } else if (type === "employee"){
+    // 社員向け：給与設定を開き、時給まわりの詳細設定は畳んで任意表示にする
+    setWpAccOpen(pay, true); setWpAccOpen(payday, false);
+    setWpAccOpen(transport, false); setWpAccOpen(shift, false);
+    setWpAccOpen(detail, simpleOn);
+  } else {
+    // 未選択（既存データ含む）：従来どおり基本情報だけ開き、詳細設定は開いた状態
+    setWpAccOpen(pay, false); setWpAccOpen(payday, false);
+    setWpAccOpen(transport, false); setWpAccOpen(shift, false);
+    setWpAccOpen(detail, true);
+  }
+}
+document.getElementById("wfType").addEventListener("change", function(){
+  const t = this.value;
+  if (t === "employee"){
+    // 社員向けは月給前提にする（あとから給与形態を変えることもできる）
+    document.getElementById("wfPayType").value = "monthly";
+    updatePayTypeFields();
+  }
+  applyWpTypeLayout(t);
+});
+
 const wpForm = document.getElementById("wpForm");
 document.getElementById("toggleWpForm").addEventListener("click", function(){
   editingWpId = null;
@@ -4500,6 +4645,8 @@ document.getElementById("toggleWpForm").addEventListener("click", function(){
   document.getElementById("wfStationTo").value = "";
   updateTransportFields();
   renderPresetEditor(defaultPresets(), SHIFT_CATEGORIES.slice());
+  document.getElementById("wfType").value = "";
+  applyWpTypeLayout("");
   document.getElementById("wfSubmit").textContent = "保存する";
   wpForm.classList.remove("hidden");
 });
@@ -4519,6 +4666,7 @@ wpForm.addEventListener("submit", function(e){
     trainingWage = (isFinite(tw) && tw >= 0) ? tw : null;
   }
   const data = {
+    type: document.getElementById("wfType").value,
     name: document.getElementById("wfName").value.trim(),
     wage: Number(document.getElementById("wfWage").value) || 0,
     premium: Number(document.getElementById("wfPremium").value) || 0,
@@ -4574,6 +4722,7 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     const w = findWp(editBtn.getAttribute("data-edit-wp"));
     if (!w) return;
     editingWpId = w.id;
+    document.getElementById("wfType").value = (w.type === "multi" || w.type === "fixed" || w.type === "employee") ? w.type : "";
     document.getElementById("wfName").value = w.name;
     document.getElementById("wfWage").value = w.wage;
     document.getElementById("wfPremium").value = w.premium;
@@ -4607,6 +4756,7 @@ document.getElementById("workplaceList").addEventListener("click", function(e){
     document.getElementById("wfStationTo").value = w.stationTo || "";
     updateTransportFields();
     renderPresetEditor(w.presets, categoriesOf(w));
+    applyWpTypeLayout(document.getElementById("wfType").value);
     document.getElementById("wfSubmit").textContent = "更新する";
     wpForm.classList.remove("hidden");
     wpForm.scrollIntoView({ behavior: "smooth", block: "start" });
